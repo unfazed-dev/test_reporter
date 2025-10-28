@@ -32,9 +32,11 @@ class ReportUtils {
       if (file is! File) continue;
 
       final fileName = file.path.split('/').last;
-      final shouldDelete = prefixPatterns.any((pattern) =>
-          fileName.startsWith('${pathName}_$pattern@') ||
-          fileName.startsWith('${pathName.replaceAll('_', '')}_${pattern}__'));
+      final shouldDelete = prefixPatterns.any(
+        (pattern) =>
+            fileName.startsWith('${pathName}_$pattern@') ||
+            fileName.startsWith('${pathName.replaceAll('_', '')}_${pattern}__'),
+      );
 
       if (shouldDelete) {
         try {
@@ -57,7 +59,9 @@ class ReportUtils {
 
   /// Get full report path for a module
   static Future<String> getReportPath(
-      String moduleName, String timestamp) async {
+    String moduleName,
+    String timestamp,
+  ) async {
     final reportDir = await getReportDirectory();
     return p.join(reportDir, '${moduleName}_test_report@$timestamp.md');
   }

@@ -64,6 +64,21 @@ import 'dart:io';
 import 'dart:math' as math;
 
 class TestAnalyzer {
+  TestAnalyzer({
+    this.runCount = 3,
+    this.verbose = false,
+    this.interactive = false,
+    this.performanceMode = false,
+    this.watch = false,
+    this.generateFixes = true,
+    this.slowTestThreshold = 1.0, // seconds
+    this.targetFiles = const [],
+    this.parallel = false,
+    this.maxWorkers = 4,
+    this.dependencyAnalysis = false,
+    this.mutationTesting = false,
+    this.impactAnalysis = false,
+  });
   // Terminal colors
   static const String reset = '\x1B[0m';
   static const String red = '\x1B[31m';
@@ -104,22 +119,6 @@ class TestAnalyzer {
   final bool dependencyAnalysis;
   final bool mutationTesting;
   final bool impactAnalysis;
-
-  TestAnalyzer({
-    this.runCount = 3,
-    this.verbose = false,
-    this.interactive = false,
-    this.performanceMode = false,
-    this.watch = false,
-    this.generateFixes = true,
-    this.slowTestThreshold = 1.0, // seconds
-    this.targetFiles = const [],
-    this.parallel = false,
-    this.maxWorkers = 4,
-    this.dependencyAnalysis = false,
-    this.mutationTesting = false,
-    this.impactAnalysis = false,
-  });
 
   Future<void> run() async {
     _printHeader();
@@ -172,20 +171,22 @@ class TestAnalyzer {
     } catch (e, stackTrace) {
       print('${red}Error: $e$reset');
       if (verbose) {
-        print('${gray}$stackTrace$reset');
+        print('$gray$stackTrace$reset');
       }
       exit(2);
     }
   }
 
   void _printHeader() {
-    final width = 70;
-    print('${blue}${"═" * width}$reset');
+    const width = 70;
+    print('$blue${"═" * width}$reset');
     print(
-        '${blue}${bold}${_center("Flutter/Dart Test Analyzer", width)}$reset');
+      '$blue$bold${_center("Flutter/Dart Test Analyzer", width)}$reset',
+    );
     print(
-        '${blue}${_center("Advanced Test Debugging & Performance Tool", width)}$reset');
-    print('${blue}${"═" * width}$reset');
+      '$blue${_center("Advanced Test Debugging & Performance Tool", width)}$reset',
+    );
+    print('$blue${"═" * width}$reset');
   }
 
   String _center(String text, int width) {
@@ -195,7 +196,7 @@ class TestAnalyzer {
 
   /// Discover all test files
   Future<List<String>> _discoverTestFiles() async {
-    print('\n${yellow}▶ Discovering test files...$reset');
+    print('\n$yellow▶ Discovering test files...$reset');
 
     final testFiles = <String>[];
 
@@ -214,21 +215,23 @@ class TestAnalyzer {
       }
     }
 
-    print('  ${green}✓$reset Found ${testFiles.length} test files');
+    print('  $green✓$reset Found ${testFiles.length} test files');
     return testFiles;
   }
 
   /// Run tests multiple times to identify flaky tests
   Future<void> _runTestsMultipleTimes(List<String> testFiles) async {
     print(
-        '\n${yellow}▶ Running tests ${runCount}x to identify patterns...$reset');
+      '\n$yellow▶ Running tests ${runCount}x to identify patterns...$reset',
+    );
 
     if (parallel) {
       print(
-          '  ${cyan}Parallel execution enabled with $maxWorkers workers$reset');
+        '  ${cyan}Parallel execution enabled with $maxWorkers workers$reset',
+      );
     }
 
-    for (int run = 1; run <= runCount; run++) {
+    for (var run = 1; run <= runCount; run++) {
       print('\n  ${cyan}Run $run of $runCount:$reset');
 
       if (parallel) {
@@ -243,19 +246,21 @@ class TestAnalyzer {
 
       // Add delay between runs to avoid test pollution
       if (run < runCount) {
-        await Future.delayed(Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 500));
       }
     }
   }
 
   /// Run tests in parallel with worker pool
   Future<void> _runTestsInParallel(
-      List<String> testFiles, int runNumber) async {
+    List<String> testFiles,
+    int runNumber,
+  ) async {
     final chunks = <List<String>>[];
     final chunkSize = (testFiles.length / maxWorkers).ceil();
 
     // Split tests into chunks for parallel execution
-    for (int i = 0; i < testFiles.length; i += chunkSize) {
+    for (var i = 0; i < testFiles.length; i += chunkSize) {
       chunks.add(testFiles.skip(i).take(chunkSize).toList());
     }
 
@@ -296,7 +301,9 @@ class TestAnalyzer {
       if (line.startsWith('{')) {
         try {
           final json = jsonDecode(line);
-          _processTestEvent(json, testFile, runNumber, stopwatch.elapsed);
+          if (json is Map<String, dynamic>) {
+            _processTestEvent(json, testFile, runNumber, stopwatch.elapsed);
+          }
         } catch (_) {
           // Ignore JSON parse errors
         }
@@ -309,24 +316,30 @@ class TestAnalyzer {
     }
   }
 
-  void _processTestEvent(Map<String, dynamic> json, String testFile,
-      int runNumber, Duration totalDuration) {
+  void _processTestEvent(
+    Map<String, dynamic> json,
+    String testFile,
+    int runNumber,
+    Duration totalDuration,
+  ) {
     final type = json['type'];
 
     if (type == 'testStart') {
       final test = json['test'];
-      final testName = test['name'] ?? '';
-      final testId = test['id'];
+      final testName = (test['name'] as String?) ?? '';
+      final testId = test['id'] as int?;
 
       // Track loading events separately for performance metrics
       if (testName.startsWith('loading ')) {
         final filePath = testName.substring('loading '.length);
-        loadingEvents[testId] = LoadingEvent(
-          testId: testId,
-          filePath: filePath,
-          startTime: json['time'] ?? 0,
-          runNumber: runNumber,
-        );
+        if (testId != null) {
+          loadingEvents[testId] = LoadingEvent(
+            testId: testId,
+            filePath: filePath,
+            startTime: (json['time'] as int?) ?? 0,
+            runNumber: runNumber,
+          );
+        }
         return; // Don't treat as actual tests
       }
 
@@ -335,29 +348,33 @@ class TestAnalyzer {
         _testIdMap[testId] = '$testFile::$testName';
 
         testRuns.putIfAbsent(
-            '$testFile::$testName',
-            () => TestRun(
-                  testFile: testFile,
-                  testName: testName,
-                ));
+          '$testFile::$testName',
+          () => TestRun(
+            testFile: testFile,
+            testName: testName,
+          ),
+        );
       }
     } else if (type == 'testDone') {
-      final numericTestId = json['testID'];
-      final result = json['result'];
-      final time = json['time'] ?? 0;
-      final hidden = json['hidden'] ?? false;
+      final numericTestId = json['testID'] as int?;
+      final result = json['result'] as String?;
+      final time = (json['time'] as int?) ?? 0;
+      final hidden = (json['hidden'] as bool?) ?? false;
 
       // Handle completion of loading events
-      if (hidden && loadingEvents.containsKey(numericTestId)) {
+      if (hidden &&
+          numericTestId != null &&
+          loadingEvents.containsKey(numericTestId)) {
         final loadingEvent = loadingEvents[numericTestId]!;
         final loadTime = time - loadingEvent.startTime;
 
         // Store loading performance for this file
         fileLoadTimes.putIfAbsent(
-            loadingEvent.filePath,
-            () => LoadingPerformance(
-                  filePath: loadingEvent.filePath,
-                ));
+          loadingEvent.filePath,
+          () => LoadingPerformance(
+            filePath: loadingEvent.filePath,
+          ),
+        );
         fileLoadTimes[loadingEvent.filePath]!
             .addLoadTime(runNumber, loadTime, result == 'success');
 
@@ -369,16 +386,17 @@ class TestAnalyzer {
       if (hidden) return;
 
       // Look up the actual test ID from our map
-      final testId = _testIdMap[numericTestId];
+      final testId = numericTestId != null ? _testIdMap[numericTestId] : null;
       if (testId == null) {
         // Fallback: create a simple test ID
         final fallbackId = '$testFile::test_$numericTestId';
         testRuns.putIfAbsent(
-            fallbackId,
-            () => TestRun(
-                  testFile: testFile,
-                  testName: 'Test $numericTestId',
-                ));
+          fallbackId,
+          () => TestRun(
+            testFile: testFile,
+            testName: 'Test $numericTestId',
+          ),
+        );
 
         final testRun = testRuns[fallbackId]!;
         testRun.results[runNumber] = result == 'success';
@@ -395,11 +413,12 @@ class TestAnalyzer {
 
           // Track performance
           performance.putIfAbsent(
-              testId,
-              () => TestPerformance(
-                    testId: testId,
-                    testName: testRun.testName,
-                  ));
+            testId,
+            () => TestPerformance(
+              testId: testId,
+              testName: testRun.testName,
+            ),
+          );
           performance[testId]!.addDuration(time.toDouble());
 
           // Track failures
@@ -435,7 +454,10 @@ class TestAnalyzer {
   }
 
   void _processErrorEvent(
-      Map<String, dynamic> json, String testFile, int runNumber) {
+    Map<String, dynamic> json,
+    String testFile,
+    int runNumber,
+  ) {
     final error = json['error'] ?? '';
     final stackTrace = json['stackTrace'] ?? '';
     final testId = json['testID']?.toString() ?? '$testFile::unknown';
@@ -455,7 +477,8 @@ class TestAnalyzer {
     if (verbose) {
       print('    ${gray}stderr from $testFile (run $runNumber):$reset');
       print(
-          '    ${red}${stderr.split('\n').map((l) => '    $l').join('\n')}$reset');
+        '    $red${stderr.split('\n').map((l) => '    $l').join('\n')}$reset',
+      );
     }
   }
 
@@ -570,9 +593,9 @@ class TestAnalyzer {
 
   /// Analyze failures to identify flaky vs consistent
   void _analyzeFailures() {
-    print('\n${yellow}▶ Analyzing failure patterns...$reset');
+    print('\n$yellow▶ Analyzing failure patterns...$reset');
 
-    int testsWithResults = 0;
+    var testsWithResults = 0;
     final testsWithoutResults = <String>[];
     final setupTeardownHooks = <String>[];
 
@@ -608,43 +631,48 @@ class TestAnalyzer {
       }
     }
 
-    print('  ${green}✓$reset Analysis complete');
+    print('  $green✓$reset Analysis complete');
     print('    • Tests with results: $testsWithResults/${testRuns.length}');
     print('    • Consistent failures: ${consistentFailures.length}');
     print('    • Flaky tests: ${flakyTests.length}');
     print(
-        '    • Passing tests: ${testsWithResults - consistentFailures.length - flakyTests.length}');
+      '    • Passing tests: ${testsWithResults - consistentFailures.length - flakyTests.length}',
+    );
 
     if (setupTeardownHooks.isNotEmpty) {
       print(
-          '    ${dim}• Setup/teardown hooks: ${setupTeardownHooks.length}$reset');
+        '    $dim• Setup/teardown hooks: ${setupTeardownHooks.length}$reset',
+      );
     }
 
     if (testsWithoutResults.isNotEmpty) {
       print(
-          '    ${yellow}⚠ ${testsWithoutResults.length} tests had no results recorded:$reset');
+        '    $yellow⚠ ${testsWithoutResults.length} tests had no results recorded:$reset',
+      );
       for (final testId in testsWithoutResults) {
-        print('      ${dim}• $testId$reset');
+        print('      $dim• $testId$reset');
       }
     }
   }
 
   /// Analyze performance metrics
   void _analyzePerformance() {
-    print('\n${yellow}▶ Analyzing test performance...$reset');
+    print('\n$yellow▶ Analyzing test performance...$reset');
 
     // Find slow tests
     final slowTests = performance.entries
         .where((e) => e.value.averageDuration > slowTestThreshold * 1000)
         .toList()
       ..sort(
-          (a, b) => b.value.averageDuration.compareTo(a.value.averageDuration));
+        (a, b) => b.value.averageDuration.compareTo(a.value.averageDuration),
+      );
 
     if (slowTests.isNotEmpty) {
       print(
-          '  ${yellow}⚠$reset Found ${slowTests.length} slow tests (>${slowTestThreshold}s)');
+        '  $yellow⚠$reset Found ${slowTests.length} slow tests (>${slowTestThreshold}s)',
+      );
     } else {
-      print('  ${green}✓$reset All tests run within performance threshold');
+      print('  $green✓$reset All tests run within performance threshold');
     }
 
     // Analyze loading performance
@@ -653,14 +681,16 @@ class TestAnalyzer {
           fileLoadTimes.values.where((p) => p.averageLoadTime > 500).toList();
       if (slowLoading.isNotEmpty) {
         print(
-            '  ${yellow}⚠$reset Found ${slowLoading.length} slow-loading test files (>500ms)');
+          '  $yellow⚠$reset Found ${slowLoading.length} slow-loading test files (>500ms)',
+        );
       }
 
       final failedLoading =
           fileLoadTimes.values.where((p) => p.hasFailures).toList();
       if (failedLoading.isNotEmpty) {
         print(
-            '  ${red}✗$reset ${failedLoading.length} test file(s) had loading failures');
+          '  $red✗$reset ${failedLoading.length} test file(s) had loading failures',
+        );
       }
     }
   }
@@ -698,7 +728,8 @@ class TestAnalyzer {
     report.writeln('# 🧪 Test Analysis Report');
     report.writeln('**Generated:** ${DateTime.now().toIso8601String()}');
     report.writeln(
-        '**Test Path:** `${targetFiles.isNotEmpty ? targetFiles.first : "all tests"}`');
+      '**Test Path:** `${targetFiles.isNotEmpty ? targetFiles.first : "all tests"}`',
+    );
     report.writeln('**Analysis Runs:** $runCount');
     report.writeln();
 
@@ -718,16 +749,21 @@ class TestAnalyzer {
     report.writeln('| Metric | Value | Status |');
     report.writeln('|--------|-------|--------|');
     report.writeln(
-        '| **Overall Pass Rate** | **${passRate.toStringAsFixed(1)}%** | ${_getStatusBadge(passRate)} |');
+      '| **Overall Pass Rate** | **${passRate.toStringAsFixed(1)}%** | ${_getStatusBadge(passRate)} |',
+    );
     report.writeln(
-        '| **Test Stability** | **${stabilityScore.toStringAsFixed(1)}%** | ${_getStatusBadge(stabilityScore)} |');
+      '| **Test Stability** | **${stabilityScore.toStringAsFixed(1)}%** | ${_getStatusBadge(stabilityScore)} |',
+    );
     report.writeln('| Total Tests | $total | - |');
     report.writeln(
-        '| Passed Consistently | $passed | ${passed == total ? "✅" : passed > total * 0.8 ? "⚠️" : "❌"} |');
+      '| Passed Consistently | $passed | ${passed == total ? "✅" : passed > total * 0.8 ? "⚠️" : "❌"} |',
+    );
     report.writeln(
-        '| Consistent Failures | ${consistentFailures.length} | ${consistentFailures.isEmpty ? "✅" : "❌"} |');
+      '| Consistent Failures | ${consistentFailures.length} | ${consistentFailures.isEmpty ? "✅" : "❌"} |',
+    );
     report.writeln(
-        '| Flaky Tests | ${flakyTests.length} | ${flakyTests.isEmpty ? "✅" : flakyTests.length < 3 ? "⚠️" : "❌"} |');
+      '| Flaky Tests | ${flakyTests.length} | ${flakyTests.isEmpty ? "✅" : flakyTests.length < 3 ? "⚠️" : "❌"} |',
+    );
     report.writeln('| Test Runs | $runCount | - |');
     report.writeln();
 
@@ -754,9 +790,9 @@ class TestAnalyzer {
     report.writeln();
 
     // Count tests with and without results
-    int testsWithoutResults = 0;
-    int setupTeardownHooks = 0;
-    int testsWithResults = 0;
+    var testsWithoutResults = 0;
+    var setupTeardownHooks = 0;
+    var testsWithResults = 0;
 
     // Create reliability buckets (only for tests with results)
     final buckets = <String, int>{
@@ -798,7 +834,8 @@ class TestAnalyzer {
     // Show note about setup/teardown hooks if any
     if (setupTeardownHooks > 0) {
       report.writeln(
-          '> ℹ️ **Setup/Teardown Hooks:** $setupTeardownHooks lifecycle hooks detected');
+        '> ℹ️ **Setup/Teardown Hooks:** $setupTeardownHooks lifecycle hooks detected',
+      );
       for (final entry in testRuns.entries) {
         final testId = entry.key;
         if (entry.value.results.isEmpty &&
@@ -815,7 +852,8 @@ class TestAnalyzer {
     // Show note about tests without results if any
     if (testsWithoutResults > 0) {
       report.writeln(
-          '> ℹ️ **Note:** $testsWithoutResults test(s) discovered but no results recorded');
+        '> ℹ️ **Note:** $testsWithoutResults test(s) discovered but no results recorded',
+      );
       report.writeln();
     }
 
@@ -833,7 +871,8 @@ class TestAnalyzer {
                   ? '🟠'
                   : '🔴';
       report.writeln(
-          '| $icon ${entry.key} | ${entry.value} | ${percentage.toStringAsFixed(1)}% | $bar |');
+        '| $icon ${entry.key} | ${entry.value} | ${percentage.toStringAsFixed(1)}% | $bar |',
+      );
     }
     report.writeln();
 
@@ -857,12 +896,14 @@ class TestAnalyzer {
             : '🟡 Medium';
 
         report.writeln(
-            '| `${_truncate(test, 40)}` | `$file` | $category | $priority |');
+          '| `${_truncate(test, 40)}` | `$file` | $category | $priority |',
+        );
       }
 
       if (consistentFailures.length > 20) {
         report.writeln(
-            '| ... | *${consistentFailures.length - 20} more failures* | ... | ... |');
+          '| ... | *${consistentFailures.length - 20} more failures* | ... | ... |',
+        );
       }
       report.writeln();
 
@@ -902,7 +943,7 @@ class TestAnalyzer {
         final test = parts.length > 1 ? parts[1] : 'unknown';
         final run = testRuns[testId]!;
         final successCount = run.results.values.where((r) => r).length;
-        final successRate = (successCount / runCount * 100);
+        final successRate = successCount / runCount * 100;
         final flakiness = successRate >= 75
             ? '🟡 Low'
             : successRate >= 50
@@ -910,12 +951,14 @@ class TestAnalyzer {
                 : '🔴 High';
 
         report.writeln(
-            '| `${_truncate(test, 40)}` | `$file` | ${successRate.toStringAsFixed(0)}% | $flakiness |');
+          '| `${_truncate(test, 40)}` | `$file` | ${successRate.toStringAsFixed(0)}% | $flakiness |',
+        );
       }
 
       if (flakyTests.length > 15) {
         report.writeln(
-            '| ... | *${flakyTests.length - 15} more flaky tests* | ... | ... |');
+          '| ... | *${flakyTests.length - 15} more flaky tests* | ... | ... |',
+        );
       }
       report.writeln();
     }
@@ -939,11 +982,12 @@ class TestAnalyzer {
       for (final entry in sorted) {
         final typeName = entry.key.toString().split('.').last;
         final formattedName = typeName[0].toUpperCase() + typeName.substring(1);
-        final percentage = (entry.value / totalPatterns * 100);
+        final percentage = entry.value / totalPatterns * 100;
         final bar = _generateBar(percentage, 20);
 
         report.writeln(
-            '| $formattedName | ${entry.value} | ${percentage.toStringAsFixed(1)}% | $bar |');
+          '| $formattedName | ${entry.value} | ${percentage.toStringAsFixed(1)}% | $bar |',
+        );
       }
       report.writeln();
     }
@@ -954,8 +998,9 @@ class TestAnalyzer {
       report.writeln();
 
       final sorted = performance.entries.toList()
-        ..sort((a, b) =>
-            b.value.averageDuration.compareTo(a.value.averageDuration));
+        ..sort(
+          (a, b) => b.value.averageDuration.compareTo(a.value.averageDuration),
+        );
 
       final totalTime =
           performance.values.fold(0.0, (sum, p) => sum + p.totalDuration);
@@ -970,15 +1015,20 @@ class TestAnalyzer {
       report.writeln('| Metric | Value | Status |');
       report.writeln('|--------|-------|--------|');
       report.writeln(
-          '| Total Execution Time | ${(totalTime / 1000).toStringAsFixed(2)}s | - |');
+        '| Total Execution Time | ${(totalTime / 1000).toStringAsFixed(2)}s | - |',
+      );
       report.writeln(
-          '| Average Test Time | ${avgTestTime.toStringAsFixed(3)}s | ${avgTestTime < 0.1 ? "✅" : avgTestTime < 0.5 ? "⚠️" : "❌"} |');
+        '| Average Test Time | ${avgTestTime.toStringAsFixed(3)}s | ${avgTestTime < 0.1 ? "✅" : avgTestTime < 0.5 ? "⚠️" : "❌"} |',
+      );
       report.writeln(
-          '| Slow Tests (>${slowTestThreshold}s) | $slowTests | ${slowTests == 0 ? "✅" : slowTests < 5 ? "⚠️" : "❌"} |');
+        '| Slow Tests (>${slowTestThreshold}s) | $slowTests | ${slowTests == 0 ? "✅" : slowTests < 5 ? "⚠️" : "❌"} |',
+      );
       report.writeln(
-          '| Fastest Test | ${(sorted.last.value.minDuration / 1000).toStringAsFixed(3)}s | - |');
+        '| Fastest Test | ${(sorted.last.value.minDuration / 1000).toStringAsFixed(3)}s | - |',
+      );
       report.writeln(
-          '| Slowest Test | ${(sorted.first.value.maxDuration / 1000).toStringAsFixed(3)}s | - |');
+        '| Slowest Test | ${(sorted.first.value.maxDuration / 1000).toStringAsFixed(3)}s | - |',
+      );
       report.writeln();
 
       report.writeln('### Top 10 Slowest Tests');
@@ -986,7 +1036,7 @@ class TestAnalyzer {
       report.writeln('| # | Test Name | Avg Time | Max Time | Status |');
       report.writeln('|---|-----------|----------|----------|--------|');
 
-      int rank = 1;
+      var rank = 1;
       for (final entry in sorted.take(10)) {
         final parts = entry.key.split('::');
         final test = parts.length > 1 ? parts[1] : 'unknown';
@@ -999,7 +1049,8 @@ class TestAnalyzer {
                 : '🟢';
 
         report.writeln(
-            '| $rank | `${_truncate(test, 35)}` | ${avgTime.toStringAsFixed(2)}s | ${maxTime.toStringAsFixed(2)}s | $status |');
+          '| $rank | `${_truncate(test, 35)}` | ${avgTime.toStringAsFixed(2)}s | ${maxTime.toStringAsFixed(2)}s | $status |',
+        );
         rank++;
       }
       report.writeln();
@@ -1011,8 +1062,9 @@ class TestAnalyzer {
       report.writeln();
 
       final sortedLoadTimes = fileLoadTimes.entries.toList()
-        ..sort((a, b) =>
-            b.value.averageLoadTime.compareTo(a.value.averageLoadTime));
+        ..sort(
+          (a, b) => b.value.averageLoadTime.compareTo(a.value.averageLoadTime),
+        );
 
       final totalLoadTime = fileLoadTimes.values
           .map((p) => p.averageLoadTime)
@@ -1029,11 +1081,14 @@ class TestAnalyzer {
       report.writeln('|--------|-------|--------|');
       report.writeln('| Total Files Loaded | ${fileLoadTimes.length} | - |');
       report.writeln(
-          '| Average Load Time | ${avgLoadTime.toStringAsFixed(1)}ms | ${avgLoadTime < 500 ? "✅" : avgLoadTime < 1000 ? "⚠️" : "❌"} |');
+        '| Average Load Time | ${avgLoadTime.toStringAsFixed(1)}ms | ${avgLoadTime < 500 ? "✅" : avgLoadTime < 1000 ? "⚠️" : "❌"} |',
+      );
       report.writeln(
-          '| Slow Loading (>500ms) | $slowFiles | ${slowFiles == 0 ? "✅" : slowFiles < 3 ? "⚠️" : "❌"} |');
+        '| Slow Loading (>500ms) | $slowFiles | ${slowFiles == 0 ? "✅" : slowFiles < 3 ? "⚠️" : "❌"} |',
+      );
       report.writeln(
-          '| Failed to Load | $failedFiles | ${failedFiles == 0 ? "✅" : "❌"} |');
+        '| Failed to Load | $failedFiles | ${failedFiles == 0 ? "✅" : "❌"} |',
+      );
       report.writeln();
 
       if (sortedLoadTimes.isNotEmpty) {
@@ -1055,14 +1110,16 @@ class TestAnalyzer {
                       : '🟢';
 
           report.writeln(
-              '| `${_truncate(fileName, 40)}` | ${avgTime.toStringAsFixed(1)}ms | ${maxTime}ms | $status |');
+            '| `${_truncate(fileName, 40)}` | ${avgTime.toStringAsFixed(1)}ms | ${maxTime}ms | $status |',
+          );
         }
         report.writeln();
       }
 
       if (slowFiles > 0 || failedFiles > 0) {
         report.writeln(
-            '> **💡 Tip:** Slow loading times may indicate heavy test setup, large imports, or initialization issues.');
+          '> **💡 Tip:** Slow loading times may indicate heavy test setup, large imports, or initialization issues.',
+        );
         report.writeln();
       }
     }
@@ -1114,7 +1171,7 @@ class TestAnalyzer {
     if (insights.isNotEmpty) {
       report.writeln('### Priority Actions');
       report.writeln();
-      int priority = 1;
+      var priority = 1;
       for (final entry in insights.entries) {
         report.writeln('$priority. **${entry.key}**: ${entry.value}');
         priority++;
@@ -1126,10 +1183,12 @@ class TestAnalyzer {
     report.writeln('### Best Practices Checklist');
     report.writeln();
     report.writeln(
-        '- [ ] All tests pass consistently (${consistentFailures.isEmpty ? "✅" : "❌"})');
+      '- [ ] All tests pass consistently (${consistentFailures.isEmpty ? "✅" : "❌"})',
+    );
     report.writeln('- [ ] No flaky tests (${flakyTests.isEmpty ? "✅" : "❌"})');
     report.writeln(
-        '- [ ] Tests run in < ${slowTestThreshold}s (${performance.values.where((p) => p.averageDuration > slowTestThreshold * 1000).isEmpty ? "✅" : "❌"})');
+      '- [ ] Tests run in < ${slowTestThreshold}s (${performance.values.where((p) => p.averageDuration > slowTestThreshold * 1000).isEmpty ? "✅" : "❌"})',
+    );
     report.writeln('- [ ] Test coverage > 80% (run coverage tool to verify)');
     report.writeln('- [ ] Tests are isolated and independent');
     report.writeln('- [ ] Error scenarios are tested');
@@ -1140,7 +1199,8 @@ class TestAnalyzer {
     report.writeln('---');
     report.writeln('*Generated by test_analyzer.dart v2.0 - Enhanced Edition*');
     report.writeln(
-        '*Run with `--verbose` for detailed output, `--performance` for timing metrics*');
+      '*Run with `--verbose` for detailed output, `--performance` for timing metrics*',
+    );
 
     // Save to file
     try {
@@ -1156,10 +1216,10 @@ class TestAnalyzer {
           '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
 
       // Extract meaningful name from tested paths
-      String pathName = '';
+      var pathName = '';
       if (targetFiles.isNotEmpty) {
         // Extract just the module name (last part of the path)
-        final path = targetFiles.first.replaceAll('\\', '/');
+        final path = targetFiles.first.replaceAll(r'\', '/');
         final segments = path.split('/');
         pathName = segments.last.replaceAll('.dart', '');
 
@@ -1181,21 +1241,22 @@ class TestAnalyzer {
       await reportFile.writeAsString(report.toString());
 
       print(
-          '\n${green}✅ Report saved to: analyzer/reports/test_analysis/${pathName}_ta@$timestamp.md$reset');
+        '\n$green✅ Report saved to: analyzer/reports/test_analysis/${pathName}_ta@$timestamp.md$reset',
+      );
     } catch (e) {
-      print('\n${yellow}⚠️ Could not save report to file: $e$reset');
+      print('\n$yellow⚠️ Could not save report to file: $e$reset');
     }
   }
 
   void _printReportHeader() {
-    print('\n${green}${"═" * 70}$reset');
-    print('${green}${bold}                      TEST ANALYSIS REPORT$reset');
-    print('${green}${"═" * 70}$reset\n');
+    print('\n$green${"═" * 70}$reset');
+    print('$green$bold                      TEST ANALYSIS REPORT$reset');
+    print('$green${"═" * 70}$reset\n');
   }
 
   void _printSummaryStatistics() {
-    print('${cyan}📊 Summary Statistics$reset');
-    print('${"─" * 50}');
+    print('$cyan📊 Summary Statistics$reset');
+    print('─' * 50);
 
     final total = testRuns.length;
     final passed = total - consistentFailures.length - flakyTests.length;
@@ -1203,12 +1264,21 @@ class TestAnalyzer {
 
     _printStatRow('Total tests', total.toString());
     _printStatRow('Passed consistently', passed.toString(), green);
-    _printStatRow('Consistent failures', consistentFailures.length.toString(),
-        consistentFailures.isNotEmpty ? red : green);
-    _printStatRow('Flaky tests', flakyTests.length.toString(),
-        flakyTests.isNotEmpty ? yellow : green);
-    _printStatRow('Pass rate', '${passRate.toStringAsFixed(1)}%',
-        _getColorForPercentage(passRate));
+    _printStatRow(
+      'Consistent failures',
+      consistentFailures.length.toString(),
+      consistentFailures.isNotEmpty ? red : green,
+    );
+    _printStatRow(
+      'Flaky tests',
+      flakyTests.length.toString(),
+      flakyTests.isNotEmpty ? yellow : green,
+    );
+    _printStatRow(
+      'Pass rate',
+      '${passRate.toStringAsFixed(1)}%',
+      _getColorForPercentage(passRate),
+    );
     _printStatRow('Test runs', runCount.toString());
 
     print('');
@@ -1221,19 +1291,19 @@ class TestAnalyzer {
 
   void _printConsistentFailures() {
     if (consistentFailures.isEmpty) {
-      print('${green}✅ No consistent failures found!$reset\n');
+      print('$green✅ No consistent failures found!$reset\n');
       return;
     }
 
-    print('${red}❌ Consistent Failures (failed all $runCount runs)$reset');
-    print('${"─" * 70}');
+    print('$red❌ Consistent Failures (failed all $runCount runs)$reset');
+    print('─' * 70);
 
     for (final testId in consistentFailures.take(10)) {
       final parts = testId.split('::');
       final file = _getRelativePath(parts[0]);
       final test = parts.length > 1 ? parts[1] : 'unknown';
 
-      print('\n  ${red}▸$reset $test');
+      print('\n  $red▸$reset $test');
       print('    ${gray}File: $file$reset');
 
       // Show failure details
@@ -1253,7 +1323,7 @@ class TestAnalyzer {
         if (verbose) {
           final errorLines = failure.error.split('\n').take(3);
           for (final line in errorLines) {
-            print('    ${gray}$line$reset');
+            print('    $gray$line$reset');
           }
         }
       }
@@ -1261,7 +1331,8 @@ class TestAnalyzer {
 
     if (consistentFailures.length > 10) {
       print(
-          '\n  ${gray}... and ${consistentFailures.length - 10} more consistent failures$reset');
+        '\n  $gray... and ${consistentFailures.length - 10} more consistent failures$reset',
+      );
     }
 
     print('');
@@ -1270,8 +1341,8 @@ class TestAnalyzer {
   void _printFlakyTests() {
     if (flakyTests.isEmpty) return;
 
-    print('${yellow}⚡ Flaky Tests (intermittent failures)$reset');
-    print('${"─" * 70}');
+    print('$yellow⚡ Flaky Tests (intermittent failures)$reset');
+    print('─' * 70);
 
     for (final testId in flakyTests.take(10)) {
       final parts = testId.split('::');
@@ -1282,10 +1353,11 @@ class TestAnalyzer {
       final successCount = run.results.values.where((r) => r).length;
       final failureCount = runCount - successCount;
 
-      print('\n  ${yellow}▸$reset $test');
+      print('\n  $yellow▸$reset $test');
       print('    ${gray}File: $file$reset');
       print(
-          '    ${gray}Results: $successCount passed, $failureCount failed$reset');
+        '    ${gray}Results: $successCount passed, $failureCount failed$reset',
+      );
 
       // Show failure pattern
       final pattern = patterns[testId];
@@ -1296,7 +1368,8 @@ class TestAnalyzer {
 
     if (flakyTests.length > 10) {
       print(
-          '\n  ${gray}... and ${flakyTests.length - 10} more flaky tests$reset');
+        '\n  $gray... and ${flakyTests.length - 10} more flaky tests$reset',
+      );
     }
 
     print('');
@@ -1305,8 +1378,8 @@ class TestAnalyzer {
   void _printFailurePatterns() {
     if (patterns.isEmpty) return;
 
-    print('${cyan}🔍 Failure Patterns$reset');
-    print('${"─" * 50}');
+    print('$cyan🔍 Failure Patterns$reset');
+    print('─' * 50);
 
     // Group patterns by type
     final patternsByType = <FailureType, int>{};
@@ -1323,7 +1396,7 @@ class TestAnalyzer {
       final count = entry.value;
       final bar = '█' * (count * 2).clamp(0, 30);
 
-      String typeName = type.toString().split('.').last;
+      var typeName = type.toString().split('.').last;
       typeName = typeName[0].toUpperCase() + typeName.substring(1);
 
       print('  ${typeName.padRight(15)} $cyan$bar$reset $count');
@@ -1333,13 +1406,14 @@ class TestAnalyzer {
   }
 
   void _printPerformanceMetrics() {
-    print('${cyan}⏱️ Performance Metrics$reset');
-    print('${"─" * 50}');
+    print('$cyan⏱️ Performance Metrics$reset');
+    print('─' * 50);
 
     // Find slowest tests
     final sorted = performance.entries.toList()
       ..sort(
-          (a, b) => b.value.averageDuration.compareTo(a.value.averageDuration));
+        (a, b) => b.value.averageDuration.compareTo(a.value.averageDuration),
+      );
 
     print('\n  ${yellow}Slowest tests:$reset');
     for (final entry in sorted.take(5)) {
@@ -1357,7 +1431,8 @@ class TestAnalyzer {
       print('    $color${avgTime.toStringAsFixed(2)}s$reset $test');
       if (verbose) {
         print(
-            '      ${gray}Max: ${maxTime.toStringAsFixed(2)}s, Min: ${(entry.value.minDuration / 1000).toStringAsFixed(2)}s$reset');
+          '      ${gray}Max: ${maxTime.toStringAsFixed(2)}s, Min: ${(entry.value.minDuration / 1000).toStringAsFixed(2)}s$reset',
+        );
       }
     }
 
@@ -1377,8 +1452,8 @@ class TestAnalyzer {
   void _printSuggestedFixes() {
     if (patterns.isEmpty) return;
 
-    print('${magenta}🔧 Suggested Fixes$reset');
-    print('${"─" * 70}');
+    print('$magenta🔧 Suggested Fixes$reset');
+    print('─' * 70);
 
     // Group suggestions by type
     final suggestionsByType = <String, List<String>>{};
@@ -1393,7 +1468,7 @@ class TestAnalyzer {
     }
 
     for (final entry in suggestionsByType.entries) {
-      print('\n  ${yellow}${entry.key}:$reset');
+      print('\n  $yellow${entry.key}:$reset');
       for (final suggestion in entry.value.take(3)) {
         print('    $suggestion');
       }
@@ -1403,12 +1478,12 @@ class TestAnalyzer {
   }
 
   void _printTestReliabilityMatrix() {
-    print('${cyan}📈 Test Reliability Matrix$reset');
-    print('${"─" * 50}');
+    print('$cyan📈 Test Reliability Matrix$reset');
+    print('─' * 50);
 
     // Count tests with and without results
-    int testsWithoutResults = 0;
-    int setupTeardownHooks = 0;
+    var testsWithoutResults = 0;
+    var setupTeardownHooks = 0;
 
     // Create reliability buckets (only for tests with results)
     final buckets = <String, int>{
@@ -1451,7 +1526,8 @@ class TestAnalyzer {
     // Show info about setup/teardown hooks if any
     if (setupTeardownHooks > 0) {
       print(
-          '  ${dim}ℹ️  $setupTeardownHooks setup/teardown hooks detected$reset');
+        '  $dimℹ️  $setupTeardownHooks setup/teardown hooks detected$reset',
+      );
       for (final entry in testRuns.entries) {
         final testId = entry.key;
         if (entry.value.results.isEmpty &&
@@ -1459,7 +1535,7 @@ class TestAnalyzer {
                 testId.contains('(tearDownAll)') ||
                 testId.contains('(setUp)') ||
                 testId.contains('(tearDown)'))) {
-          print('  ${dim}  • $testId$reset');
+          print('  $dim  • $testId$reset');
         }
       }
       print('');
@@ -1468,7 +1544,8 @@ class TestAnalyzer {
     // Show info about tests without results if any
     if (testsWithoutResults > 0) {
       print(
-          '  ${dim}ℹ️  $testsWithoutResults test(s) discovered but no results recorded$reset');
+        '  $dimℹ️  $testsWithoutResults test(s) discovered but no results recorded$reset',
+      );
       print('');
     }
 
@@ -1492,27 +1569,30 @@ class TestAnalyzer {
                   : red;
 
       print(
-          '  ${entry.key.padRight(15)} $color$bar$reset ${entry.value} tests');
+        '  ${entry.key.padRight(15)} $color$bar$reset ${entry.value} tests',
+      );
     }
 
     print('');
   }
 
   void _printActionableInsights() {
-    print('${magenta}💡 Actionable Insights$reset');
-    print('${"─" * 50}');
+    print('$magenta💡 Actionable Insights$reset');
+    print('─' * 50);
 
     final insights = <String>[];
 
     // Analyze test health
     if (consistentFailures.isNotEmpty) {
       insights.add(
-          '${red}Critical:$reset Fix ${consistentFailures.length} consistently failing tests first');
+        '${red}Critical:$reset Fix ${consistentFailures.length} consistently failing tests first',
+      );
     }
 
     if (flakyTests.length > testRuns.length * 0.1) {
       insights.add(
-          '${yellow}Warning:$reset ${(flakyTests.length / testRuns.length * 100).toStringAsFixed(1)}% of tests are flaky - investigate test isolation');
+        '${yellow}Warning:$reset ${(flakyTests.length / testRuns.length * 100).toStringAsFixed(1)}% of tests are flaky - investigate test isolation',
+      );
     }
 
     // Pattern-based insights
@@ -1520,14 +1600,16 @@ class TestAnalyzer {
         patterns.values.where((p) => p.type == FailureType.nullError).length;
     if (nullErrors > 3) {
       insights.add(
-          'Multiple null reference errors detected - review initialization logic');
+        'Multiple null reference errors detected - review initialization logic',
+      );
     }
 
     final timeouts =
         patterns.values.where((p) => p.type == FailureType.timeout).length;
     if (timeouts > 0) {
       insights.add(
-          'Timeout issues detected - consider increasing timeout or optimizing tests');
+        'Timeout issues detected - consider increasing timeout or optimizing tests',
+      );
     }
 
     // Performance insights
@@ -1537,7 +1619,8 @@ class TestAnalyzer {
           .length;
       if (slowCount > 0) {
         insights.add(
-            '$slowCount tests exceed ${slowTestThreshold}s - consider optimization or parallelization');
+          '$slowCount tests exceed ${slowTestThreshold}s - consider optimization or parallelization',
+        );
       }
     }
 
@@ -1551,7 +1634,8 @@ class TestAnalyzer {
             100);
 
     insights.add(
-        'Overall test stability: ${_getStabilityEmoji(stabilityScore)} ${stabilityScore.toStringAsFixed(1)}%');
+      'Overall test stability: ${_getStabilityEmoji(stabilityScore)} ${stabilityScore.toStringAsFixed(1)}%',
+    );
 
     // Print insights
     for (final insight in insights) {
@@ -1583,7 +1667,7 @@ class TestAnalyzer {
 
   /// Analyze test dependencies and generate dependency graph
   Future<void> _analyzeTestDependencies(List<String> testFiles) async {
-    print('\n${yellow}▶ Analyzing test dependencies...$reset');
+    print('\n$yellow▶ Analyzing test dependencies...$reset');
 
     final dependencies = <String, Set<String>>{};
 
@@ -1611,16 +1695,16 @@ class TestAnalyzer {
     print('\n  ${cyan}Test Dependency Graph:$reset');
     for (final entry in dependencies.entries) {
       final testName = entry.key.split('/').last;
-      print('    ${green}▸$reset $testName');
+      print('    $green▸$reset $testName');
       for (final dep in entry.value) {
-        print('      ${gray}└─$reset $dep');
+        print('      $gray└─$reset $dep');
       }
     }
 
     // Find circular dependencies
     final circular = _findCircularDependencies(dependencies);
     if (circular.isNotEmpty) {
-      print('\n  ${red}⚠ Circular dependencies detected:$reset');
+      print('\n  $red⚠ Circular dependencies detected:$reset');
       for (final cycle in circular) {
         print('    ${cycle.join(' → ')}');
       }
@@ -1633,13 +1717,15 @@ class TestAnalyzer {
         .toList();
     if (isolated.isNotEmpty) {
       print(
-          '\n  ${green}✓ Isolated tests (no dependencies):$reset ${isolated.length}');
+        '\n  $green✓ Isolated tests (no dependencies):$reset ${isolated.length}',
+      );
     }
   }
 
   /// Find circular dependencies in the dependency graph
   List<List<String>> _findCircularDependencies(
-      Map<String, Set<String>> dependencies) {
+    Map<String, Set<String>> dependencies,
+  ) {
     final cycles = <List<String>>[];
     final visited = <String>{};
     final recursionStack = <String>[];
@@ -1676,9 +1762,10 @@ class TestAnalyzer {
 
   /// Run mutation testing to verify test effectiveness
   Future<void> _runMutationTesting(List<String> testFiles) async {
-    print('\n${yellow}▶ Running mutation testing...$reset');
+    print('\n$yellow▶ Running mutation testing...$reset');
     print(
-        '  ${cyan}Mutation testing helps verify that tests actually catch bugs$reset');
+      '  ${cyan}Mutation testing helps verify that tests actually catch bugs$reset',
+    );
 
     final mutations = <String, int>{
       'Operator mutations': 0,
@@ -1707,14 +1794,14 @@ class TestAnalyzer {
       mutations['Literal mutations'] = mutations['Literal mutations']! +
           RegExp(r'\b\d+\b').allMatches(content).length;
       mutations['Statement deletions'] = mutations['Statement deletions']! +
-          RegExp(r';').allMatches(content).length ~/ 2;
+          RegExp(';').allMatches(content).length ~/ 2;
       mutations['Condition inversions'] = mutations['Condition inversions']! +
           RegExp(r'if\s*\(').allMatches(content).length;
     }
 
     // Print mutation testing summary
     print('\n  ${cyan}Mutation Testing Summary:$reset');
-    int totalMutations = 0;
+    var totalMutations = 0;
     for (final entry in mutations.entries) {
       print('    ${entry.key}: ${entry.value}');
       totalMutations += entry.value;
@@ -1722,18 +1809,21 @@ class TestAnalyzer {
 
     print('\n  ${yellow}Total potential mutations: $totalMutations$reset');
     print(
-        '  ${dim}Note: Run tests after each mutation to verify test effectiveness$reset');
+      '  ${dim}Note: Run tests after each mutation to verify test effectiveness$reset',
+    );
 
     // Mutation score calculation (simulated)
-    final mutationScore =
+    const mutationScore =
         85.0; // In real implementation, calculate actual score
     print(
-        '\n  ${cyan}Mutation Score: ${_getMutationScoreEmoji(mutationScore)} ${mutationScore.toStringAsFixed(1)}%$reset');
+      '\n  ${cyan}Mutation Score: ${_getMutationScoreEmoji(mutationScore)} ${mutationScore.toStringAsFixed(1)}%$reset',
+    );
 
     if (mutationScore < 80) {
-      print('  ${red}⚠ Low mutation score indicates weak test coverage$reset');
+      print('  $red⚠ Low mutation score indicates weak test coverage$reset');
       print(
-          '  ${dim}Consider adding more assertions and edge case tests$reset');
+        '  ${dim}Consider adding more assertions and edge case tests$reset',
+      );
     }
   }
 
@@ -1746,7 +1836,7 @@ class TestAnalyzer {
 
   /// Analyze test impact based on code changes
   Future<void> _analyzeTestImpact(List<String> testFiles) async {
-    print('\n${yellow}▶ Analyzing test impact...$reset');
+    print('\n$yellow▶ Analyzing test impact...$reset');
 
     // Get git diff to find changed files
     final gitDiff = await Process.run('git', ['diff', '--name-only', 'HEAD~1']);
@@ -1757,7 +1847,7 @@ class TestAnalyzer {
         .toList();
 
     if (changedFiles.isEmpty) {
-      print('  ${green}✓$reset No code changes detected');
+      print('  $green✓$reset No code changes detected');
       return;
     }
 
@@ -1792,11 +1882,11 @@ class TestAnalyzer {
 
     print('\n  ${cyan}Impacted tests (${impactedTests.length}):$reset');
     for (final test in impactedTests) {
-      print('    ${green}▸$reset ${test.split('/').last}');
+      print('    $green▸$reset ${test.split('/').last}');
     }
 
     if (impactedTests.isEmpty) {
-      print('  ${yellow}⚠ No tests found for changed files$reset');
+      print('  $yellow⚠ No tests found for changed files$reset');
       print('  ${dim}Consider adding tests for the modified code$reset');
     } else {
       final percentage =
@@ -1804,7 +1894,7 @@ class TestAnalyzer {
       print('\n  ${cyan}Impact scope: $percentage% of tests affected$reset');
 
       // Suggest running only impacted tests
-      print('\n  ${green}💡 Optimization suggestion:$reset');
+      print('\n  $green💡 Optimization suggestion:$reset');
       print('    Run only impacted tests to save time:');
       print('    ${dim}dart test ${impactedTests.join(' ')}$reset');
     }
@@ -1812,12 +1902,12 @@ class TestAnalyzer {
 
   /// Interactive mode for debugging specific failures
   Future<void> _enterInteractiveMode() async {
-    print('${cyan}🔍 Interactive Debug Mode$reset');
+    print('$cyan🔍 Interactive Debug Mode$reset');
     print('Type test number to inspect, "q" to quit\n');
 
     // List failed tests with numbers
     final failedTests = [...consistentFailures, ...flakyTests];
-    for (int i = 0; i < failedTests.length && i < 20; i++) {
+    for (var i = 0; i < failedTests.length && i < 20; i++) {
       final parts = failedTests[i].split('::');
       final test = parts.length > 1 ? parts[1] : 'unknown';
       final icon = consistentFailures.contains(failedTests[i]) ? '❌' : '⚡';
@@ -1843,7 +1933,7 @@ class TestAnalyzer {
   }
 
   Future<void> _inspectTest(String testId) async {
-    print('\n${cyan}${"─" * 70}$reset');
+    print('\n$cyan${"─" * 70}$reset');
 
     final parts = testId.split('::');
     final file = parts[0];
@@ -1856,16 +1946,16 @@ class TestAnalyzer {
     final testFailures = failures[testId] ?? [];
     print('\n${yellow}Failure Details:$reset');
 
-    for (int i = 0; i < testFailures.length; i++) {
+    for (var i = 0; i < testFailures.length; i++) {
       final failure = testFailures[i];
       print('\n  ${cyan}Run ${failure.runNumber}:$reset');
-      print('  ${red}${failure.error}$reset');
+      print('  $red${failure.error}$reset');
 
       if (verbose) {
         print('\n  ${gray}Stack trace:$reset');
         final stackLines = failure.stackTrace.split('\n').take(10);
         for (final line in stackLines) {
-          print('    ${gray}$line$reset');
+          print('    $gray$line$reset');
         }
       }
     }
@@ -1914,7 +2004,7 @@ class TestAnalyzer {
 
     print(result.stdout);
     if (result.stderr.toString().isNotEmpty) {
-      print('${red}${result.stderr}$reset');
+      print('$red${result.stderr}$reset');
     }
   }
 
@@ -1925,7 +2015,7 @@ class TestAnalyzer {
 
       // Find test definition
       int? startLine;
-      for (int i = 0; i < lines.length; i++) {
+      for (var i = 0; i < lines.length; i++) {
         if (lines[i].contains("test('$testName'") ||
             lines[i].contains('test("$testName"')) {
           startLine = i;
@@ -1939,7 +2029,7 @@ class TestAnalyzer {
         final start = (startLine - 2).clamp(0, lines.length);
         final end = (startLine + 20).clamp(0, lines.length);
 
-        for (int i = start; i < end; i++) {
+        for (var i = start; i < end; i++) {
           final lineNum = (i + 1).toString().padLeft(4);
           final marker = i == startLine ? '>' : ' ';
           print('$gray$lineNum$marker$reset ${lines[i]}');
@@ -1955,10 +2045,10 @@ class TestAnalyzer {
     final reportsDir = Directory('analyzer/reports/test_analysis');
     if (await reportsDir.exists()) {
       // Extract meaningful name from tested paths (same logic as in _saveReportToFile)
-      String pathName = '';
+      var pathName = '';
       if (targetFiles.isNotEmpty) {
         // Extract just the module name (last part of the path)
-        final path = targetFiles.first.replaceAll('\\', '/');
+        final path = targetFiles.first.replaceAll(r'\', '/');
         final segments = path.split('/');
         pathName = segments.last.replaceAll('.dart', '');
 
@@ -1996,14 +2086,15 @@ class TestAnalyzer {
 
   /// Watch mode for continuous testing
   Future<void> _enterWatchMode() async {
-    print('${cyan}👁️ Watch mode enabled. Press Ctrl+C to exit.$reset\n');
+    print('$cyan👁️ Watch mode enabled. Press Ctrl+C to exit.$reset\n');
 
     final watcher = Directory('test').watch(recursive: true);
 
     await for (final event in watcher) {
       if (event.path.endsWith('_test.dart')) {
         print(
-            '${yellow}📝 Test file changed: ${_getRelativePath(event.path)}$reset');
+          '$yellow📝 Test file changed: ${_getRelativePath(event.path)}$reset',
+        );
         print('${yellow}Re-running analysis...$reset\n');
 
         // Clear previous data
@@ -2049,31 +2140,31 @@ class TestAnalyzer {
 
   String _truncate(String str, int maxLength) {
     if (str.length <= maxLength) return str;
-    return str.substring(0, maxLength - 3) + '...';
+    return '${str.substring(0, maxLength - 3)}...';
   }
 }
 
 /// Data classes
 class LoadingEvent {
-  final int testId;
-  final String filePath;
-  final int startTime;
-  final int runNumber;
-
   LoadingEvent({
     required this.testId,
     required this.filePath,
     required this.startTime,
     required this.runNumber,
   });
+  final int testId;
+  final String filePath;
+  final int startTime;
+  final int runNumber;
 }
 
 class LoadingPerformance {
-  final String filePath;
-  final Map<int, int> loadTimes = {}; // run number -> load time in ms
-  final Map<int, bool> loadSuccess = {}; // run number -> success/failure
+  // run number -> success/failure
 
   LoadingPerformance({required this.filePath});
+  final String filePath;
+  final Map<int, int> loadTimes = {}; // run number -> load time in ms
+  final Map<int, bool> loadSuccess = {};
 
   void addLoadTime(int runNumber, int loadTime, bool success) {
     loadTimes[runNumber] = loadTime;
@@ -2092,24 +2183,17 @@ class LoadingPerformance {
 }
 
 class TestRun {
-  final String testFile;
-  final String testName;
-  final Map<int, bool> results = {};
-  final Map<int, int> durations = {};
-
   TestRun({
     required this.testFile,
     required this.testName,
   });
+  final String testFile;
+  final String testName;
+  final Map<int, bool> results = {};
+  final Map<int, int> durations = {};
 }
 
 class TestFailure {
-  final String testId;
-  final int runNumber;
-  final String error;
-  final String stackTrace;
-  final DateTime timestamp;
-
   TestFailure({
     required this.testId,
     required this.runNumber,
@@ -2117,9 +2201,18 @@ class TestFailure {
     required this.stackTrace,
     required this.timestamp,
   });
+  final String testId;
+  final int runNumber;
+  final String error;
+  final String stackTrace;
+  final DateTime timestamp;
 }
 
 class TestPerformance {
+  TestPerformance({
+    required this.testId,
+    required this.testName,
+  });
   final String testId;
   final String testName;
   final List<double> durations = [];
@@ -2132,12 +2225,7 @@ class TestPerformance {
 
   double get minDuration => durations.isEmpty ? 0 : durations.reduce(math.min);
 
-  double get totalDuration => durations.fold(0.0, (sum, d) => sum + d);
-
-  TestPerformance({
-    required this.testId,
-    required this.testName,
-  });
+  double get totalDuration => durations.fold(0, (sum, d) => sum + d);
 
   void addDuration(double duration) {
     durations.add(duration);
@@ -2156,17 +2244,16 @@ enum FailureType {
 }
 
 class FailurePattern {
-  final FailureType type;
-  final String category;
-  final int count;
-  final String? suggestion;
-
   FailurePattern({
     required this.type,
     required this.category,
     required this.count,
     this.suggestion,
   });
+  final FailureType type;
+  final String category;
+  final int count;
+  final String? suggestion;
 }
 
 /// Main entry point
@@ -2185,7 +2272,7 @@ void main(List<String> args) async {
   final impactAnalysis = args.contains('--impact');
 
   // Parse run count
-  int runCount = 3;
+  var runCount = 3;
   for (final arg in args) {
     if (arg.startsWith('--runs=')) {
       runCount = int.tryParse(arg.substring(7)) ?? 3;
@@ -2193,7 +2280,7 @@ void main(List<String> args) async {
   }
 
   // Parse slow threshold
-  double slowThreshold = 1.0;
+  var slowThreshold = 1.0;
   for (final arg in args) {
     if (arg.startsWith('--slow=')) {
       slowThreshold = double.tryParse(arg.substring(7)) ?? 1.0;
@@ -2201,7 +2288,7 @@ void main(List<String> args) async {
   }
 
   // Parse max workers for parallel execution
-  int maxWorkers = 4;
+  var maxWorkers = 4;
   for (final arg in args) {
     if (arg.startsWith('--workers=')) {
       maxWorkers = int.tryParse(arg.substring(10)) ?? 4;

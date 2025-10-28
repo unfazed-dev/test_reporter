@@ -15,10 +15,10 @@ class AnalyzerConstants {
   static const String reportSuffix = 'test_report';
 
   // Coverage thresholds
-  static const double defaultMinimumCoverage = 80.0;
-  static const double defaultWarningCoverage = 90.0;
-  static const double goodCoverageThreshold = 90.0;
-  static const double acceptableCoverageThreshold = 60.0;
+  static const double defaultMinimumCoverage = 80;
+  static const double defaultWarningCoverage = 90;
+  static const double goodCoverageThreshold = 90;
+  static const double acceptableCoverageThreshold = 60;
 
   // Colors (ANSI)
   static const String reset = '\x1B[0m';

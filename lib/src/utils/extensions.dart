@@ -5,7 +5,7 @@ extension DurationFormatting on Duration {
     if (inMinutes > 0) {
       return '${inMinutes}m ${inSeconds % 60}s';
     }
-    return '${inSeconds}.${(inMilliseconds % 1000).toString().padLeft(3, '0')}s';
+    return '$inSeconds.${(inMilliseconds % 1000).toString().padLeft(3, '0')}s';
   }
 }
 
@@ -20,7 +20,7 @@ extension ListChunking<T> on List<T> {
   /// Split list into chunks of specified size
   List<List<T>> chunk(int size) {
     final chunks = <List<T>>[];
-    for (int i = 0; i < length; i += size) {
+    for (var i = 0; i < length; i += size) {
       chunks.add(skip(i).take(size).toList());
     }
     return chunks;

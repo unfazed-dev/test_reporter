@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 class PathUtils {
   /// Extract meaningful name from test path for reports
   static String extractPathName(String path, {bool stripTest = true}) {
-    var name = path.replaceAll('/', '_').replaceAll('\\', '_');
+    var name = path.replaceAll('/', '_').replaceAll(r'\', '_');
 
     if (stripTest && name.startsWith('test_')) {
       name = name.substring(5);

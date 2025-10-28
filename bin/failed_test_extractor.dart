@@ -50,9 +50,9 @@
 /// flutter pub run analyzer/failed_test_extractor.dart test/ --watch --auto-rerun
 /// ```
 
-import 'dart:io';
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 // CLI argument parsing
 import 'package:args/args.dart';
@@ -65,6 +65,15 @@ void main(List<String> arguments) async {
 
 /// Represents a failed test with detailed information
 class FailedTest {
+  FailedTest({
+    required this.name,
+    required this.filePath,
+    required this.testId,
+    this.group,
+    this.error,
+    this.stackTrace,
+    this.runtime,
+  });
   final String name;
   final String filePath;
   final String? group;
@@ -73,28 +82,12 @@ class FailedTest {
   final Duration? runtime;
   final String testId;
 
-  FailedTest({
-    required this.name,
-    required this.filePath,
-    this.group,
-    this.error,
-    this.stackTrace,
-    this.runtime,
-    required this.testId,
-  });
-
   @override
   String toString() => '$filePath: $name';
 }
 
 /// Represents test execution results
 class TestResults {
-  final List<FailedTest> failedTests;
-  final int totalTests;
-  final int passedTests;
-  final Duration totalTime;
-  final DateTime timestamp;
-
   TestResults({
     required this.failedTests,
     required this.totalTests,
@@ -102,6 +95,11 @@ class TestResults {
     required this.totalTime,
     required this.timestamp,
   });
+  final List<FailedTest> failedTests;
+  final int totalTests;
+  final int passedTests;
+  final Duration totalTime;
+  final DateTime timestamp;
 
   int get failedCount => failedTests.length;
   double get successRate =>
@@ -110,6 +108,9 @@ class TestResults {
 
 /// Main class for extracting and managing failed tests
 class FailedTestExtractor {
+  FailedTestExtractor() {
+    _setupArgParser();
+  }
   late ArgParser _parser;
   late ArgResults _args;
 
@@ -122,10 +123,6 @@ class FailedTestExtractor {
   int _totalTests = 0;
   int _passedTests = 0;
   Duration _totalTime = Duration.zero;
-
-  FailedTestExtractor() {
-    _setupArgParser();
-  }
 
   void _setupArgParser() {
     _parser = ArgParser()
@@ -393,27 +390,21 @@ class FailedTestExtractor {
         if (_args['verbose'] as bool) {
           print('🎬 Test suite started');
         }
-        break;
 
       case 'suite':
         _handleSuite(event);
-        break;
 
       case 'testStart':
         _handleTestStart(event);
-        break;
 
       case 'testDone':
         _handleTestDone(event);
-        break;
 
       case 'done':
         _handleDone(event);
-        break;
 
       case 'error':
         _handleError(event);
-        break;
 
       default:
         // Ignore other event types
@@ -563,7 +554,7 @@ class FailedTestExtractor {
         }
       }
     } else {
-      for (int i = 0; i < results.failedTests.length; i++) {
+      for (var i = 0; i < results.failedTests.length; i++) {
         final test = results.failedTests[i];
         print('${i + 1}. ${test.filePath}: ${test.name}');
         if (test.error != null && _args['verbose'] as bool) {
@@ -590,19 +581,19 @@ class FailedTestExtractor {
 
       for (final entry in groupedTests.entries) {
         final testNames = entry.value.map((t) => t.name).toList();
-        final namePattern =
-            testNames.map((name) => _escapeRegex(name)).join('|');
+        final namePattern = testNames.map(_escapeRegex).join('|');
 
         print('\n# Rerun failed tests in ${entry.key}:');
         print('flutter test ${entry.key} --name "$namePattern"');
       }
     } else {
       // Generate individual commands
-      for (int i = 0; i < failedTests.length; i++) {
+      for (var i = 0; i < failedTests.length; i++) {
         final test = failedTests[i];
         print('\n# Rerun test ${i + 1}:');
         print(
-            'flutter test ${test.filePath} --name "${_escapeRegex(test.name)}"');
+          'flutter test ${test.filePath} --name "${_escapeRegex(test.name)}"',
+        );
       }
     }
 
@@ -615,7 +606,8 @@ class FailedTestExtractor {
     }
 
     print(
-        '\n💡 Tip: Copy and paste these commands to rerun specific failed tests');
+      '\n💡 Tip: Copy and paste these commands to rerun specific failed tests',
+    );
   }
 
   /// Automatically rerun failed tests
@@ -630,7 +622,7 @@ class FailedTestExtractor {
 
     for (final entry in groupedTests.entries) {
       final testNames = entry.value.map((t) => t.name).toList();
-      final namePattern = testNames.map((name) => _escapeRegex(name)).join('|');
+      final namePattern = testNames.map(_escapeRegex).join('|');
 
       print('🔄 Rerunning ${testNames.length} failed tests in ${entry.key}...');
 
@@ -684,15 +676,17 @@ class FailedTestExtractor {
         'executionTime': results.totalTime.inMilliseconds,
       },
       'failedTests': results.failedTests
-          .map((test) => {
-                'name': test.name,
-                'filePath': test.filePath,
-                'group': test.group,
-                'error': test.error,
-                'stackTrace': test.stackTrace,
-                'runtime': test.runtime?.inMilliseconds,
-                'testId': test.testId,
-              })
+          .map(
+            (test) => {
+              'name': test.name,
+              'filePath': test.filePath,
+              'group': test.group,
+              'error': test.error,
+              'stackTrace': test.stackTrace,
+              'runtime': test.runtime?.inMilliseconds,
+              'testId': test.testId,
+            },
+          )
           .toList(),
     };
 
@@ -740,14 +734,17 @@ class FailedTestExtractor {
   void _showUsage() {
     print('Failed Test Extractor - Extract and rerun only failing tests\n');
     print(
-        'Usage: flutter pub run analyzer/failed_test_extractor.dart [options] <test_path>\n');
+      'Usage: flutter pub run analyzer/failed_test_extractor.dart [options] <test_path>\n',
+    );
     print('Options:');
     print(_parser.usage);
     print('\nExamples:');
     print('  flutter pub run analyzer/failed_test_extractor.dart test/');
     print(
-        '  flutter pub run analyzer/failed_test_extractor.dart test/auth --list-only');
+      '  flutter pub run analyzer/failed_test_extractor.dart test/auth --list-only',
+    );
     print(
-        '  flutter pub run analyzer/failed_test_extractor.dart test/ --watch --save-results');
+      '  flutter pub run analyzer/failed_test_extractor.dart test/ --watch --save-results',
+    );
   }
 }

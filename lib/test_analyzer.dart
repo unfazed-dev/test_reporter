@@ -8,12 +8,12 @@
 /// - Unified reporting
 library test_analyzer;
 
+export 'src/utils/constants.dart';
+export 'src/utils/extensions.dart';
 // Export utilities
 export 'src/utils/formatting_utils.dart';
 export 'src/utils/path_utils.dart';
 export 'src/utils/report_utils.dart';
-export 'src/utils/constants.dart';
-export 'src/utils/extensions.dart';
 
 // Export models (when created)
 // export 'src/models/coverage_data.dart';

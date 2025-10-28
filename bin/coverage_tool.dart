@@ -28,42 +28,60 @@
 ///   --baseline <file>  Compare against baseline coverage
 ///   --impact           Analyze test impact mapping
 
-import 'dart:io';
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 class CoverageThresholds {
-  final double minimum;
-  final double warning;
-  final bool failOnDecrease;
-
   CoverageThresholds({
     this.minimum = 80.0,
     this.warning = 90.0,
     this.failOnDecrease = false,
   });
+  final double minimum;
+  final double warning;
+  final bool failOnDecrease;
 
   bool validate(double coverage, {double? baseline}) {
     if (coverage < minimum) {
       print(
-          '❌ Coverage ${coverage.toStringAsFixed(1)}% is below minimum ${minimum.toStringAsFixed(1)}%');
+        '❌ Coverage ${coverage.toStringAsFixed(1)}% is below minimum ${minimum.toStringAsFixed(1)}%',
+      );
       return false;
     }
     if (baseline != null && failOnDecrease && coverage < baseline) {
       print(
-          '❌ Coverage decreased from ${baseline.toStringAsFixed(1)}% to ${coverage.toStringAsFixed(1)}%');
+        '❌ Coverage decreased from ${baseline.toStringAsFixed(1)}% to ${coverage.toStringAsFixed(1)}%',
+      );
       return false;
     }
     if (coverage < warning) {
       print(
-          '⚠️  Coverage ${coverage.toStringAsFixed(1)}% is below warning threshold ${warning.toStringAsFixed(1)}%');
+        '⚠️  Coverage ${coverage.toStringAsFixed(1)}% is below warning threshold ${warning.toStringAsFixed(1)}%',
+      );
     }
     return true;
   }
 }
 
 class CoverageAnalyzer {
+  CoverageAnalyzer({
+    required this.libPath,
+    required this.testPath,
+    this.autoFix = false,
+    this.generateReport = true,
+    this.branchCoverage = false,
+    this.incremental = false,
+    this.mutationTesting = false,
+    this.watchMode = false,
+    this.parallel = false,
+    this.exportJson = false,
+    this.testImpactAnalysis = false,
+    this.excludePatterns = const [],
+    CoverageThresholds? thresholds,
+    this.baselineFile,
+  }) : thresholds = thresholds ?? CoverageThresholds();
   final String libPath;
   final String testPath;
   final bool autoFix;
@@ -82,23 +100,6 @@ class CoverageAnalyzer {
   // Track if thresholds were violated
   bool thresholdViolation = false;
 
-  CoverageAnalyzer({
-    required this.libPath,
-    required this.testPath,
-    this.autoFix = false,
-    this.generateReport = true,
-    this.branchCoverage = false,
-    this.incremental = false,
-    this.mutationTesting = false,
-    this.watchMode = false,
-    this.parallel = false,
-    this.exportJson = false,
-    this.testImpactAnalysis = false,
-    this.excludePatterns = const [],
-    CoverageThresholds? thresholds,
-    this.baselineFile,
-  }) : thresholds = thresholds ?? CoverageThresholds();
-
   // Track coverage data
   Map<String, FileAnalysis> sourceFiles = {};
   Map<String, FileAnalysis> testFiles = {};
@@ -114,7 +115,7 @@ class CoverageAnalyzer {
   Map<String, double> coverageDiff = {};
   List<String> changedFiles = [];
   Map<String, int> mutationScore = {};
-  double overallCoverage = 0.0;
+  double overallCoverage = 0;
 
   Future<void> analyze() async {
     print('=' * 80);
@@ -133,7 +134,8 @@ class CoverageAnalyzer {
         return;
       }
       print(
-          '🔄 Incremental mode: analyzing ${changedFiles.length} changed files');
+        '🔄 Incremental mode: analyzing ${changedFiles.length} changed files',
+      );
     }
 
     // Step 2: Fix import paths if needed
@@ -213,7 +215,7 @@ class CoverageAnalyzer {
     final testFile = File(testPath);
     final testDir = Directory(testPath);
 
-    List<File> testFiles = [];
+    final testFiles = <File>[];
 
     if (testFile.existsSync() && testPath.endsWith('_test.dart')) {
       // It's a single test file
@@ -235,9 +237,9 @@ class CoverageAnalyzer {
     final projectRoot = Directory.current.path;
 
     for (final file in testFiles) {
-      String content = await file.readAsString();
-      String originalContent = content;
-      bool hasChanges = false;
+      var content = await file.readAsString();
+      final originalContent = content;
+      var hasChanges = false;
 
       // Find all import statements
       final importRegex = RegExp(r'''import\s+['"](.*?)['"];''');
@@ -329,9 +331,9 @@ class CoverageAnalyzer {
     final toParts = _normalizePath(toFile).split('/');
 
     // Find common ancestor
-    int commonLength = 0;
+    var commonLength = 0;
     final minLength = math.min(fromParts.length, toParts.length);
-    for (int i = 0; i < minLength; i++) {
+    for (var i = 0; i < minLength; i++) {
       if (fromParts[i] == toParts[i]) {
         commonLength = i + 1;
       } else {
@@ -344,7 +346,7 @@ class CoverageAnalyzer {
     final downParts = toParts.skip(commonLength).toList();
 
     final pathSegments = <String>[];
-    for (int i = 0; i < upLevels; i++) {
+    for (var i = 0; i < upLevels; i++) {
       pathSegments.add('..');
     }
     pathSegments.addAll(downParts);
@@ -368,7 +370,7 @@ class CoverageAnalyzer {
   /// Normalize path separators and resolve .. and . components
   String _normalizePath(String path) {
     // Convert to forward slashes for consistency
-    path = path.replaceAll('\\', '/');
+    path = path.replaceAll(r'\', '/');
 
     // Split into parts and resolve . and ..
     final parts = path.split('/').where((part) => part.isNotEmpty).toList();
@@ -501,7 +503,7 @@ class CoverageAnalyzer {
           '--lcov',
           '--in=coverage',
           '--out=coverage/lcov.info',
-          '--report-on=lib'
+          '--report-on=lib',
         ],
         runInShell: true,
       );
@@ -521,10 +523,10 @@ class CoverageAnalyzer {
     // Parse lcov.info
     final lines = await lcovFile.readAsLines();
     String? currentFile;
-    Map<String, Set<int>> coveredLines = {};
-    Map<String, Set<int>> uncoveredLines = {};
-    Map<String, int> totalLines = {};
-    Map<String, int> hitLines = {};
+    final coveredLines = <String, Set<int>>{};
+    final uncoveredLines = <String, Set<int>>{};
+    final totalLines = <String, int>{};
+    final hitLines = <String, int>{};
 
     for (final line in lines) {
       if (line.startsWith('SF:')) {
@@ -555,14 +557,14 @@ class CoverageAnalyzer {
     }
 
     // Store coverage data for report generation
-    this.coveredLinesData = coveredLines;
-    this.uncoveredLinesData = uncoveredLines;
-    this.totalLinesData = totalLines;
-    this.hitLinesData = hitLines;
+    coveredLinesData = coveredLines;
+    uncoveredLinesData = uncoveredLines;
+    totalLinesData = totalLines;
+    hitLinesData = hitLines;
 
     // Calculate overall coverage for files in the analyzed path
-    int totalLinesInPath = 0;
-    int coveredLinesInPath = 0;
+    var totalLinesInPath = 0;
+    var coveredLinesInPath = 0;
     for (final file in totalLines.keys) {
       if (file.contains(libPath.replaceAll('lib/', ''))) {
         totalLinesInPath += totalLines[file] ?? 0;
@@ -571,7 +573,7 @@ class CoverageAnalyzer {
     }
 
     if (totalLinesInPath > 0) {
-      this.overallCoverage = (coveredLinesInPath / totalLinesInPath) * 100;
+      overallCoverage = (coveredLinesInPath / totalLinesInPath) * 100;
     }
 
     // Report uncovered lines based on path filter
@@ -629,7 +631,7 @@ class CoverageAnalyzer {
     final lines = content.split('\n');
     final analysis = FileAnalysis(file.path);
 
-    for (int i = 0; i < lines.length; i++) {
+    for (var i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
       final lineNum = i + 1;
 
@@ -721,21 +723,25 @@ class CoverageAnalyzer {
 
         // Check catch blocks
         if (sourceFile.catchBlocks.isNotEmpty) {
-          final hasErrorTests = testFile.testDescriptions.any((desc) =>
-              desc.toLowerCase().contains('error') ||
-              desc.toLowerCase().contains('exception') ||
-              desc.toLowerCase().contains('catch'));
+          final hasErrorTests = testFile.testDescriptions.any(
+            (desc) =>
+                desc.toLowerCase().contains('error') ||
+                desc.toLowerCase().contains('exception') ||
+                desc.toLowerCase().contains('catch'),
+          );
 
           if (!hasErrorTests) {
             print('  ⚠️  Catch blocks not tested in ${sourceFile.path}');
             uncoveredLines.addAll(
-                sourceFile.catchBlocks.map((l) => '${sourceFile.path}:$l'));
+              sourceFile.catchBlocks.map((l) => '${sourceFile.path}:$l'),
+            );
           }
         }
       } else {
         print('  ⚠️  No test file for: ${sourceFile.path}');
         uncoveredLines.addAll(
-            sourceFile.testableLines.map((l) => '${sourceFile.path}:$l'));
+          sourceFile.testableLines.map((l) => '${sourceFile.path}:$l'),
+        );
       }
     }
   }
@@ -751,7 +757,7 @@ class CoverageAnalyzer {
         '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
 
     // Extract meaningful name from tested path early for use throughout
-    String pathName = testPath.replaceAll('/', '_').replaceAll('\\', '_');
+    var pathName = testPath.replaceAll('/', '_').replaceAll(r'\', '_');
     if (pathName.startsWith('test_')) {
       pathName = pathName.substring(5);
     }
@@ -764,16 +770,16 @@ class CoverageAnalyzer {
 
     final report = StringBuffer();
     report.writeln('# 📊 Coverage Report');
-    report.writeln('');
+    report.writeln();
 
     report.writeln('**Generated:** ${DateTime.now()}');
     report.writeln('**Module:** `$libPath`');
-    report.writeln('');
+    report.writeln();
 
     // Calculate overall statistics
-    int totalLines = 0;
-    int coveredLines = 0;
-    Map<String, double> fileCoverages = {};
+    var totalLines = 0;
+    var coveredLines = 0;
+    final fileCoverages = <String, double>{};
 
     // Use lcov data if available
     for (final file in totalLinesData.keys) {
@@ -793,16 +799,17 @@ class CoverageAnalyzer {
 
     // Executive Summary
     report.writeln('## 📈 Executive Summary');
-    report.writeln('');
+    report.writeln();
     report.writeln('| Metric | Value |');
     report.writeln('|--------|-------|');
     report.writeln(
-        '| **Overall Coverage** | **${overallPercentage.toStringAsFixed(1)}%** |');
+      '| **Overall Coverage** | **${overallPercentage.toStringAsFixed(1)}%** |',
+    );
     report.writeln('| Total Lines | $totalLines |');
     report.writeln('| Covered Lines | $coveredLines |');
     report.writeln('| Uncovered Lines | ${totalLines - coveredLines} |');
     report.writeln('| Files Analyzed | ${fileCoverages.length} |');
-    report.writeln('');
+    report.writeln();
 
     // Coverage Status Badge
     final badge = overallPercentage >= 80
@@ -811,8 +818,9 @@ class CoverageAnalyzer {
             ? '🟡'
             : '🔴';
     report.writeln(
-        '### Coverage Status: $badge ${overallPercentage >= 80 ? "Good" : overallPercentage >= 60 ? "Needs Improvement" : "Critical"}');
-    report.writeln('');
+      '### Coverage Status: $badge ${overallPercentage >= 80 ? "Good" : overallPercentage >= 60 ? "Needs Improvement" : "Critical"}',
+    );
+    report.writeln();
 
     // New Features Section (v2.0)
     if (branchCoverage ||
@@ -820,17 +828,19 @@ class CoverageAnalyzer {
         mutationTesting ||
         baselineFile != null) {
       report.writeln('## 🚀 Advanced Coverage Metrics (v2.0)');
-      report.writeln('');
+      report.writeln();
 
       // Branch Coverage
       if (branchCoverage) {
         report.writeln('### 🌿 Branch Coverage');
         report.writeln(
-            'Branch coverage analysis provides deeper insights into conditional logic coverage.');
+          'Branch coverage analysis provides deeper insights into conditional logic coverage.',
+        );
         report.writeln('- **Status:** Enabled');
         report.writeln(
-            '- **Note:** Requires lcov 2.0+ for full branch coverage support');
-        report.writeln('');
+          '- **Note:** Requires lcov 2.0+ for full branch coverage support',
+        );
+        report.writeln();
       }
 
       // Incremental Coverage
@@ -848,7 +858,7 @@ class CoverageAnalyzer {
             report.writeln('  - ... and ${changedFiles.length - 5} more');
           }
         }
-        report.writeln('');
+        report.writeln();
       }
 
       // Coverage Diff
@@ -860,12 +870,15 @@ class CoverageAnalyzer {
           final diffColor = diff >= 0 ? '🟢' : '🔴';
           report.writeln('### 📊 Coverage Diff vs Baseline');
           report.writeln(
-              '- **Baseline Coverage:** ${baselineCov.toStringAsFixed(1)}%');
+            '- **Baseline Coverage:** ${baselineCov.toStringAsFixed(1)}%',
+          );
           report.writeln(
-              '- **Current Coverage:** ${overallPercentage.toStringAsFixed(1)}%');
+            '- **Current Coverage:** ${overallPercentage.toStringAsFixed(1)}%',
+          );
           report.writeln(
-              '- **Change:** $diffIcon ${diff >= 0 ? "+" : ""}${diff.toStringAsFixed(1)}% $diffColor');
-          report.writeln('');
+            '- **Change:** $diffIcon ${diff >= 0 ? "+" : ""}${diff.toStringAsFixed(1)}% $diffColor',
+          );
+          report.writeln();
         }
       }
 
@@ -873,10 +886,11 @@ class CoverageAnalyzer {
       if (mutationTesting) {
         report.writeln('### 🧬 Mutation Testing');
         report.writeln(
-            'Mutation testing helps verify test effectiveness by introducing controlled bugs.');
+          'Mutation testing helps verify test effectiveness by introducing controlled bugs.',
+        );
         report.writeln('- **Status:** Available (run with --mutation flag)');
         report.writeln('- **Note:** This is a time-intensive operation');
-        report.writeln('');
+        report.writeln();
       }
 
       // Test Impact Analysis
@@ -885,8 +899,9 @@ class CoverageAnalyzer {
         report.writeln('Mapping which tests cover which lines of code.');
         report.writeln('- **Status:** Enabled');
         report.writeln(
-            '- **Use Case:** Optimize test execution by running only affected tests');
-        report.writeln('');
+          '- **Use Case:** Optimize test execution by running only affected tests',
+        );
+        report.writeln();
       }
 
       // Performance Metrics
@@ -895,37 +910,41 @@ class CoverageAnalyzer {
         report.writeln('- **Parallel Execution:** Enabled');
         report.writeln('- **Workers:** ${Platform.numberOfProcessors}');
         report.writeln(
-            '- **Speed Improvement:** ~${(Platform.numberOfProcessors * 0.7).toStringAsFixed(0)}x faster');
-        report.writeln('');
+          '- **Speed Improvement:** ~${(Platform.numberOfProcessors * 0.7).toStringAsFixed(0)}x faster',
+        );
+        report.writeln();
       }
 
       report.writeln('---');
-      report.writeln('');
+      report.writeln();
     }
 
     // Thresholds Section
     if (thresholds.minimum > 0) {
       report.writeln('## 🎯 Coverage Thresholds');
-      report.writeln('');
+      report.writeln();
       report.writeln('| Threshold | Value | Status |');
       report.writeln('|-----------|-------|--------|');
       report.writeln(
-          '| Minimum | ${thresholds.minimum.toStringAsFixed(1)}% | ${overallPercentage >= thresholds.minimum ? "✅ Pass" : "❌ Fail"} |');
+        '| Minimum | ${thresholds.minimum.toStringAsFixed(1)}% | ${overallPercentage >= thresholds.minimum ? "✅ Pass" : "❌ Fail"} |',
+      );
       report.writeln(
-          '| Warning | ${thresholds.warning.toStringAsFixed(1)}% | ${overallPercentage >= thresholds.warning ? "✅ Pass" : "⚠️ Warning"} |');
+        '| Warning | ${thresholds.warning.toStringAsFixed(1)}% | ${overallPercentage >= thresholds.warning ? "✅ Pass" : "⚠️ Warning"} |',
+      );
       if (thresholds.failOnDecrease && baselineFile != null) {
         final baselineCov = await getBaselineCoverage();
         if (baselineCov != null) {
           report.writeln(
-              '| No Decrease | ${baselineCov.toStringAsFixed(1)}% | ${overallPercentage >= baselineCov ? "✅ Pass" : "❌ Fail"} |');
+            '| No Decrease | ${baselineCov.toStringAsFixed(1)}% | ${overallPercentage >= baselineCov ? "✅ Pass" : "❌ Fail"} |',
+          );
         }
       }
-      report.writeln('');
+      report.writeln();
     }
 
     // File-by-file breakdown
     report.writeln('## 📁 File Coverage Breakdown');
-    report.writeln('');
+    report.writeln();
     report.writeln('| File | Coverage | Lines | Covered | Uncovered |');
     report.writeln('|------|----------|-------|---------|-----------|');
 
@@ -941,19 +960,20 @@ class CoverageAnalyzer {
               : '❌';
 
       report.writeln(
-          '| $statusIcon `$fileName` | **${percentage.toStringAsFixed(1)}%** | $total | $hits | ${total - hits} |');
+        '| $statusIcon `$fileName` | **${percentage.toStringAsFixed(1)}%** | $total | $hits | ${total - hits} |',
+      );
     }
-    report.writeln('');
+    report.writeln();
 
     // Detailed uncovered lines section
     if (uncoveredLines.isNotEmpty) {
       report.writeln('## 🔍 Uncovered Lines Detail');
-      report.writeln('');
+      report.writeln();
       report.writeln('Below are the specific lines that need test coverage:');
-      report.writeln('');
+      report.writeln();
 
       // Group uncovered lines by file
-      Map<String, List<int>> uncoveredByFile = {};
+      final uncoveredByFile = <String, List<int>>{};
       for (final lineStr in uncoveredLines) {
         final parts = lineStr.split(':');
         final file = parts[0];
@@ -966,7 +986,7 @@ class CoverageAnalyzer {
         final lines = uncoveredByFile[file]!..sort();
 
         report.writeln('### 📄 `$fileName`');
-        report.writeln('');
+        report.writeln();
 
         // Group consecutive lines for better readability
         report.writeln('**Uncovered line numbers:**');
@@ -977,11 +997,12 @@ class CoverageAnalyzer {
         // Try to read the file and show the actual uncovered code
         final sourceFile = File(file);
         if (sourceFile.existsSync()) {
-          report.writeln('');
+          report.writeln();
           report.writeln('<details>');
           report.writeln(
-              '<summary>Click to see uncovered code snippets</summary>');
-          report.writeln('');
+            '<summary>Click to see uncovered code snippets</summary>',
+          );
+          report.writeln();
 
           final sourceLines = sourceFile.readAsLinesSync();
           for (final lineNum in lines) {
@@ -992,25 +1013,25 @@ class CoverageAnalyzer {
               }
             }
           }
-          report.writeln('');
+          report.writeln();
           report.writeln('</details>');
         }
-        report.writeln('');
+        report.writeln();
       }
     }
 
     // Test recommendations
     report.writeln('## 💡 Recommendations');
-    report.writeln('');
+    report.writeln();
 
     if (overallPercentage < 100) {
       report.writeln('To achieve 100% coverage, focus on:');
-      report.writeln('');
+      report.writeln();
 
       // Analyze patterns in uncovered lines
-      int catchBlocks = 0;
-      int conditionals = 0;
-      int otherLines = 0;
+      var catchBlocks = 0;
+      var conditionals = 0;
+      var otherLines = 0;
 
       for (final lineStr in uncoveredLines) {
         final parts = lineStr.split(':');
@@ -1024,9 +1045,9 @@ class CoverageAnalyzer {
             final lines = sourceFile.readAsLinesSync();
             if (lineNum <= lines.length) {
               final line = lines[lineNum - 1];
-              if (line.contains('catch'))
+              if (line.contains('catch')) {
                 catchBlocks++;
-              else if (line.contains('if') || line.contains('else'))
+              } else if (line.contains('if') || line.contains('else'))
                 conditionals++;
               else
                 otherLines++;
@@ -1039,26 +1060,27 @@ class CoverageAnalyzer {
         report.writeln('1. **Error Handling** ($catchBlocks catch blocks)');
         report.writeln('   - Add tests that throw exceptions');
         report.writeln('   - Test error recovery paths');
-        report.writeln('');
+        report.writeln();
       }
 
       if (conditionals > 0) {
         report.writeln('2. **Branch Coverage** ($conditionals conditionals)');
         report.writeln('   - Test both true and false conditions');
         report.writeln('   - Cover edge cases in if/else statements');
-        report.writeln('');
+        report.writeln();
       }
 
       if (otherLines > 0) {
         report.writeln('3. **Other Logic** ($otherLines lines)');
         report.writeln('   - Review untested methods');
         report.writeln('   - Add integration tests for complex flows');
-        report.writeln('');
+        report.writeln();
       }
     } else {
       report.writeln(
-          '🎉 **Congratulations!** You have achieved 100% code coverage!');
-      report.writeln('');
+        '🎉 **Congratulations!** You have achieved 100% code coverage!',
+      );
+      report.writeln();
       report.writeln('Next steps:');
       report.writeln('- Maintain coverage with pre-commit hooks');
       report.writeln('- Add coverage checks to CI/CD pipeline');
@@ -1067,72 +1089,79 @@ class CoverageAnalyzer {
 
     // How to use section
     report.writeln('## 🛠️ How to Improve Coverage');
-    report.writeln('');
+    report.writeln();
     report.writeln(
-        '1. **Run with auto-fix:** `dart coverage_tool.dart $libPath --fix`');
+      '1. **Run with auto-fix:** `dart coverage_tool.dart $libPath --fix`',
+    );
     report.writeln(
-        '2. **View HTML report:** `genhtml coverage/lcov.info -o coverage/html && open coverage/html/index.html`');
+      '2. **View HTML report:** `genhtml coverage/lcov.info -o coverage/html && open coverage/html/index.html`',
+    );
     report.writeln(
-        '3. **Run specific tests:** `flutter test test/${libPath.replaceAll("lib/src/", "")}/`');
-    report.writeln('');
+      '3. **Run specific tests:** `flutter test test/${libPath.replaceAll("lib/src/", "")}/`',
+    );
+    report.writeln();
 
     // Additional Resources
     if (exportJson) {
       report.writeln('## 📦 Generated Artifacts');
-      report.writeln('');
+      report.writeln();
 
       final jsonPath =
           'analyzer/reports/test_coverages/${pathName}_data@$simpleTimestamp.json';
       report.writeln('- **JSON Report:** [`$jsonPath`]($jsonPath)');
       report.writeln('  - Machine-readable format for CI/CD integration');
 
-      report.writeln('');
+      report.writeln();
     }
 
     // CLI Options
     report.writeln('## 🔧 Available Options');
-    report.writeln('');
+    report.writeln();
     report.writeln('```bash');
     report.writeln('# Basic usage');
     report.writeln('dart analyzer/coverage_tool.dart lib/src/core');
-    report.writeln('');
+    report.writeln();
     report.writeln('# With auto-fix');
     report.writeln('dart analyzer/coverage_tool.dart lib/src/core --fix');
-    report.writeln('');
+    report.writeln();
     report.writeln('# Incremental coverage (changed files only)');
     report
         .writeln('dart analyzer/coverage_tool.dart lib/src/core --incremental');
-    report.writeln('');
+    report.writeln();
     report.writeln('# With branch coverage');
     report.writeln('dart analyzer/coverage_tool.dart lib/src/core --branch');
-    report.writeln('');
+    report.writeln();
     report.writeln('# Parallel execution');
     report.writeln('dart analyzer/coverage_tool.dart lib/src/core --parallel');
-    report.writeln('');
+    report.writeln();
     report.writeln('# With coverage diff');
     report.writeln(
-        'dart analyzer/coverage_tool.dart lib/src/core --baseline=coverage_baseline.json');
-    report.writeln('');
+      'dart analyzer/coverage_tool.dart lib/src/core --baseline=coverage_baseline.json',
+    );
+    report.writeln();
     report.writeln('# Watch mode');
     report.writeln('dart analyzer/coverage_tool.dart lib/src/core --watch');
-    report.writeln('');
+    report.writeln();
     report.writeln('# Export JSON report');
     report.writeln('dart analyzer/coverage_tool.dart lib/src/core --json');
-    report.writeln('');
+    report.writeln();
     report.writeln('# With coverage thresholds');
     report.writeln(
-        'dart analyzer/coverage_tool.dart lib/src/core --min-coverage=80 --warn-coverage=60');
-    report.writeln('');
+      'dart analyzer/coverage_tool.dart lib/src/core --min-coverage=80 --warn-coverage=60',
+    );
+    report.writeln();
     report.writeln('# All features');
     report.writeln(
-        'dart analyzer/coverage_tool.dart lib/src/core --fix --branch --incremental --parallel --json');
+      'dart analyzer/coverage_tool.dart lib/src/core --fix --branch --incremental --parallel --json',
+    );
     report.writeln('```');
-    report.writeln('');
+    report.writeln();
 
     // Footer
     report.writeln('---');
     report.writeln(
-        '*Generated by coverage_tool.dart v2.0 - Enhanced with 11 new features*');
+      '*Generated by coverage_tool.dart v2.0 - Enhanced with 11 new features*',
+    );
 
     // Write report - save in analyzer/reports/test_coverages folder
     final reportsDir = Directory('analyzer/reports/test_coverages');
@@ -1141,20 +1170,22 @@ class CoverageAnalyzer {
     }
 
     final reportFile = File(
-        'analyzer/reports/test_coverages/${pathName}_tc@$simpleTimestamp.md');
+      'analyzer/reports/test_coverages/${pathName}_tc@$simpleTimestamp.md',
+    );
     await reportFile.writeAsString(report.toString());
     print(
-        '  ✅ Comprehensive report saved to: analyzer/reports/test_coverages/${pathName}_tc@$simpleTimestamp.md');
+      '  ✅ Comprehensive report saved to: analyzer/reports/test_coverages/${pathName}_tc@$simpleTimestamp.md',
+    );
   }
 
   String _formatLineRanges(List<int> lines) {
     if (lines.isEmpty) return '';
 
-    List<String> ranges = [];
-    int start = lines[0];
-    int end = lines[0];
+    final ranges = <String>[];
+    var start = lines[0];
+    var end = lines[0];
 
-    for (int i = 1; i < lines.length; i++) {
+    for (var i = 1; i < lines.length; i++) {
       if (lines[i] == end + 1) {
         end = lines[i];
       } else {
@@ -1170,14 +1201,14 @@ class CoverageAnalyzer {
 
   String _truncate(String str, int maxLength) {
     if (str.length <= maxLength) return str;
-    return str.substring(0, maxLength - 3) + '...';
+    return '${str.substring(0, maxLength - 3)}...';
   }
 
   Future<void> generateMissingTests() async {
     print('\n🔧 Generating missing test cases...');
 
     // Group uncovered lines by file
-    Map<String, List<int>> uncoveredByFile = {};
+    final uncoveredByFile = <String, List<int>>{};
     for (final line in uncoveredLines) {
       final parts = line.split(':');
       final file = parts[0];
@@ -1199,7 +1230,9 @@ class CoverageAnalyzer {
   }
 
   Future<File?> generateTestsForFile(
-      File sourceFile, List<int> uncoveredLines) async {
+    File sourceFile,
+    List<int> uncoveredLines,
+  ) async {
     final fileName = sourceFile.path.split('/').last;
     final testFileName = fileName.replaceAll('.dart', '_test.dart');
     final testFilePath = '$testPath/$testFileName';
@@ -1215,9 +1248,9 @@ class CoverageAnalyzer {
     final sourceLines = sourceContent.split('\n');
 
     final testContent = StringBuffer();
-    testContent.writeln("// Additional tests for uncovered lines");
-    testContent.writeln("// Generated by coverage_tool.dart");
-    testContent.writeln("");
+    testContent.writeln('// Additional tests for uncovered lines');
+    testContent.writeln('// Generated by coverage_tool.dart');
+    testContent.writeln();
 
     for (final lineNum in uncoveredLines) {
       if (lineNum <= sourceLines.length) {
@@ -1245,8 +1278,7 @@ class CoverageAnalyzer {
     // Append to existing test file
     final existingContent = await testFile.readAsString();
     if (!existingContent.contains('Additional tests for uncovered lines')) {
-      await testFile
-          .writeAsString(existingContent + '\n' + testContent.toString());
+      await testFile.writeAsString('$existingContent\n$testContent');
     }
 
     return testFile;
@@ -1265,8 +1297,9 @@ class CoverageAnalyzer {
     return result.stdout
         .toString()
         .split('\n')
-        .where((f) =>
-            f.endsWith('.dart') && !f.startsWith('test/') && f.isNotEmpty)
+        .where(
+          (f) => f.endsWith('.dart') && !f.startsWith('test/') && f.isNotEmpty,
+        )
         .toList();
   }
 
@@ -1307,7 +1340,7 @@ class CoverageAnalyzer {
     final chunks = <List<String>>[];
     final chunkSize = (testFiles.length / numWorkers).ceil();
 
-    for (int i = 0; i < testFiles.length; i += chunkSize) {
+    for (var i = 0; i < testFiles.length; i += chunkSize) {
       chunks.add(testFiles.skip(i).take(chunkSize).toList());
     }
 
@@ -1315,7 +1348,7 @@ class CoverageAnalyzer {
 
     // Run chunks in parallel
     final futures = <Future>[];
-    for (int i = 0; i < chunks.length; i++) {
+    for (var i = 0; i < chunks.length; i++) {
       futures.add(runCoverageForChunk(chunks[i], i));
     }
 
@@ -1328,7 +1361,7 @@ class CoverageAnalyzer {
     final args = [
       'test',
       '--coverage',
-      '--coverage-path=coverage/lcov_$chunkId.info'
+      '--coverage-path=coverage/lcov_$chunkId.info',
     ];
     if (branchCoverage) {
       args.add('--branch-coverage');
@@ -1376,7 +1409,8 @@ class CoverageAnalyzer {
         await Process.run('dart', ['pub', 'deps'], runInShell: true);
     if (!checkResult.stdout.toString().contains('mutation_test')) {
       print(
-          '  ⚠️  mutation_test package not found. Add it to dev_dependencies:');
+        '  ⚠️  mutation_test package not found. Add it to dev_dependencies:',
+      );
       print('      dev_dependencies:');
       print('        mutation_test: ^1.0.0');
       return;
@@ -1465,7 +1499,8 @@ class CoverageAnalyzer {
     }
 
     print(
-        '  ✅ Mapped ${lineToTestsMapping.length} lines to their covering tests');
+      '  ✅ Mapped ${lineToTestsMapping.length} lines to their covering tests',
+    );
   }
 
   /// Load baseline coverage for comparison
@@ -1521,7 +1556,7 @@ class CoverageAnalyzer {
     final coveragesDir = Directory('analyzer/reports/test_coverages');
 
     // Extract meaningful name from tested path (same logic as in generateCoverageReport)
-    String pathName = testPath.replaceAll('/', '_').replaceAll('\\', '_');
+    var pathName = testPath.replaceAll('/', '_').replaceAll(r'\', '_');
     if (pathName.startsWith('test_')) {
       pathName = pathName.substring(5);
     }
@@ -1556,9 +1591,9 @@ class CoverageAnalyzer {
     print('\n📄 Exporting JSON report...');
 
     // Calculate metrics for only the analyzed path
-    int filteredTotalLines = 0;
-    int filteredCoveredLines = 0;
-    int filteredFileCount = 0;
+    var filteredTotalLines = 0;
+    var filteredCoveredLines = 0;
+    var filteredFileCount = 0;
 
     for (final file in totalLinesData.keys) {
       if (file.contains(libPath.replaceAll('lib/', ''))) {
@@ -1632,7 +1667,7 @@ class CoverageAnalyzer {
         '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
 
     // Extract meaningful name from tested path (same logic as in generateCoverageReport)
-    String pathName = testPath.replaceAll('/', '_').replaceAll('\\', '_');
+    var pathName = testPath.replaceAll('/', '_').replaceAll(r'\', '_');
     if (pathName.startsWith('test_')) {
       pathName = pathName.substring(5);
     }
@@ -1641,8 +1676,10 @@ class CoverageAnalyzer {
     }
 
     final jsonFile = File(
-        'analyzer/reports/test_coverages/${pathName}_data@$simpleTimestamp.json');
-    await jsonFile.writeAsString(JsonEncoder.withIndent('  ').convert(json));
+      'analyzer/reports/test_coverages/${pathName}_data@$simpleTimestamp.json',
+    );
+    await jsonFile
+        .writeAsString(const JsonEncoder.withIndent('  ').convert(json));
 
     print('  ✅ JSON report saved to: ${jsonFile.path}');
   }
@@ -1665,7 +1702,7 @@ class CoverageAnalyzer {
     await for (final event in watchStream) {
       if (event.path.endsWith('.dart')) {
         debounceTimer?.cancel();
-        debounceTimer = Timer(Duration(seconds: 1), () async {
+        debounceTimer = Timer(const Duration(seconds: 1), () async {
           print('\n📝 File changed: ${event.path}');
           print('Re-running coverage analysis...\n');
 
@@ -1682,7 +1719,8 @@ class CoverageAnalyzer {
 
           // Show summary
           print(
-              '\n📊 Updated Coverage: ${overallCoverage.toStringAsFixed(1)}%');
+            '\n📊 Updated Coverage: ${overallCoverage.toStringAsFixed(1)}%',
+          );
           if (uncoveredLines.isNotEmpty) {
             print('  ⚠️  ${uncoveredLines.length} lines need coverage');
           }
@@ -1699,15 +1737,17 @@ class StreamGroup {
     final subscriptions = <StreamSubscription>[];
 
     for (final stream in streams) {
-      subscriptions.add(stream.listen(
-        controller.add,
-        onError: controller.addError,
-        onDone: () {
-          if (subscriptions.every((s) => s.isPaused)) {
-            controller.close();
-          }
-        },
-      ));
+      subscriptions.add(
+        stream.listen(
+          controller.add,
+          onError: controller.addError,
+          onDone: () {
+            if (subscriptions.every((s) => s.isPaused)) {
+              controller.close();
+            }
+          },
+        ),
+      );
     }
 
     return controller.stream;
@@ -1715,6 +1755,7 @@ class StreamGroup {
 }
 
 class FileAnalysis {
+  FileAnalysis(this.path);
   final String path;
   final Set<int> testableLines = {};
   final Set<String> methods = {};
@@ -1723,8 +1764,6 @@ class FileAnalysis {
   final Set<int> conditionals = {};
   final List<String> testDescriptions = [];
   final Set<String> testedMethods = {};
-
-  FileAnalysis(this.path);
 }
 
 void main(List<String> args) async {
@@ -1741,7 +1780,7 @@ void main(List<String> args) async {
 
   // Parse exclude patterns
   final excludePatterns = <String>[];
-  for (int i = 0; i < args.length; i++) {
+  for (var i = 0; i < args.length; i++) {
     if (args[i] == '--exclude' && i + 1 < args.length) {
       excludePatterns.add(args[i + 1]);
     }
@@ -1750,8 +1789,8 @@ void main(List<String> args) async {
   // Parse thresholds
   double minCoverage = 0;
   double warnCoverage = 0;
-  bool failOnDecrease = args.contains('--fail-on-decrease');
-  for (int i = 0; i < args.length; i++) {
+  final failOnDecrease = args.contains('--fail-on-decrease');
+  for (var i = 0; i < args.length; i++) {
     // Handle both --min-coverage=80 and --min-coverage 80 formats
     if (args[i].startsWith('--min-coverage')) {
       if (args[i].contains('=')) {
@@ -1770,19 +1809,19 @@ void main(List<String> args) async {
 
   // Parse baseline file
   String? baselineFile;
-  for (int i = 0; i < args.length; i++) {
+  for (var i = 0; i < args.length; i++) {
     if (args[i] == '--baseline' && i + 1 < args.length) {
       baselineFile = args[i + 1];
     }
   }
 
   // Parse paths
-  String libPath = 'lib/src';
-  String testPath = 'test';
+  var libPath = 'lib/src';
+  var testPath = 'test';
 
   // Collect non-flag arguments
   final nonFlagArgs = <String>[];
-  for (int i = 0; i < args.length; i++) {
+  for (var i = 0; i < args.length; i++) {
     if (args[i] == '--lib' && i + 1 < args.length) {
       libPath = args[i + 1];
       i++; // Skip the next arg since we consumed it
@@ -1791,7 +1830,7 @@ void main(List<String> args) async {
       i++; // Skip the next arg since we consumed it
     } else if (!args[i].startsWith('--')) {
       // Check if previous arg was a flag that takes a value
-      bool isPreviousFlag = i > 0 &&
+      final isPreviousFlag = i > 0 &&
           (args[i - 1] == '--lib' ||
               args[i - 1] == '--test' ||
               args[i - 1] == '--exclude' ||
@@ -1837,7 +1876,7 @@ void main(List<String> args) async {
   // Smart validation: if derived test path doesn't exist, try to find the actual test location
   if (!Directory(testPath).existsSync() && !File(testPath).existsSync()) {
     // Extract the module name from the lib path
-    String moduleName = '';
+    var moduleName = '';
     if (libPath.startsWith('lib/src/')) {
       moduleName = libPath.substring('lib/src/'.length);
     } else if (libPath.startsWith('lib/')) {
@@ -1879,17 +1918,21 @@ void main(List<String> args) async {
     print('  --incremental         Only analyze changed files (git diff)');
     print('  --mutation            Run mutation testing');
     print(
-        '  --watch               Enable watch mode for continuous monitoring');
+      '  --watch               Enable watch mode for continuous monitoring',
+    );
     print('  --parallel            Use parallel test execution');
     print('  --json                Export JSON report');
     print('  --impact              Enable test impact analysis');
     print(
-        '  --exclude <pattern>   Exclude files matching pattern (can be used multiple times)');
+      '  --exclude <pattern>   Exclude files matching pattern (can be used multiple times)',
+    );
     print('                        Common patterns:');
     print(
-        '                          --exclude "*.g.dart"        (generated files)');
+      '                          --exclude "*.g.dart"        (generated files)',
+    );
     print(
-        '                          --exclude "*.freezed.dart"  (Freezed files)');
+      '                          --exclude "*.freezed.dart"  (Freezed files)',
+    );
     print('                          --exclude "test/mocks/*"    (mock files)');
     print('  --baseline <file>     Compare against baseline coverage');
     print('  --min-coverage <n>    Minimum coverage threshold (0-100)');
@@ -1908,11 +1951,13 @@ void main(List<String> args) async {
     print('');
     print('  # Parallel execution with thresholds');
     print(
-        '  dart coverage_tool.dart --parallel --min-coverage=80 --warn-coverage=60');
+      '  dart coverage_tool.dart --parallel --min-coverage=80 --warn-coverage=60',
+    );
     print('');
     print('  # Exclude generated files');
     print(
-        '  dart coverage_tool.dart --exclude "*.g.dart" --exclude "*.freezed.dart"');
+      '  dart coverage_tool.dart --exclude "*.g.dart" --exclude "*.freezed.dart"',
+    );
     print('');
     print('  # Full analysis with all features');
     print('  dart coverage_tool.dart --fix --branch --parallel --json');
@@ -1954,7 +1999,8 @@ void main(List<String> args) async {
       exit(1); // Exit with error code for CI/CD
     } else {
       print(
-          '\n⚠️  INFO: ${analyzer.uncoveredLines.length} lines are not covered');
+        '\n⚠️  INFO: ${analyzer.uncoveredLines.length} lines are not covered',
+      );
       print('Run with --fix to generate missing tests automatically');
       exit(0); // Exit successfully - coverage is acceptable
     }
