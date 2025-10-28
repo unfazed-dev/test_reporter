@@ -1347,7 +1347,7 @@ class CoverageAnalyzer {
     print('  Running ${testFiles.length} tests across $numWorkers workers');
 
     // Run chunks in parallel
-    final futures = <Future>[];
+    final futures = <Future<void>>[];
     for (var i = 0; i < chunks.length; i++) {
       futures.add(runCoverageForChunk(chunks[i], i));
     }
@@ -1734,7 +1734,7 @@ class CoverageAnalyzer {
 class StreamGroup {
   static Stream<T> merge<T>(List<Stream<T>> streams) {
     final controller = StreamController<T>();
-    final subscriptions = <StreamSubscription>[];
+    final subscriptions = <StreamSubscription<T>>[];
 
     for (final stream in streams) {
       subscriptions.add(

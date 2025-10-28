@@ -246,7 +246,7 @@ class TestAnalyzer {
 
       // Add delay between runs to avoid test pollution
       if (run < runCount) {
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future<void>.delayed(const Duration(milliseconds: 500));
       }
     }
   }
@@ -265,7 +265,7 @@ class TestAnalyzer {
     }
 
     // Run chunks in parallel
-    final futures = <Future>[];
+    final futures = <Future<void>>[];
     for (final chunk in chunks) {
       futures.add(() async {
         for (final testFile in chunk) {
@@ -325,7 +325,8 @@ class TestAnalyzer {
     final type = json['type'];
 
     if (type == 'testStart') {
-      final test = json['test'];
+      final test = json['test'] as Map<String, dynamic>?;
+      if (test == null) return;
       final testName = (test['name'] as String?) ?? '';
       final testId = test['id'] as int?;
 
@@ -376,7 +377,7 @@ class TestAnalyzer {
           ),
         );
         fileLoadTimes[loadingEvent.filePath]!
-            .addLoadTime(runNumber, loadTime, result == 'success');
+            .addLoadTime(runNumber, loadTime, success: result == 'success');
 
         loadingEvents.remove(numericTestId);
         return;
@@ -2166,7 +2167,7 @@ class LoadingPerformance {
   final Map<int, int> loadTimes = {}; // run number -> load time in ms
   final Map<int, bool> loadSuccess = {};
 
-  void addLoadTime(int runNumber, int loadTime, bool success) {
+  void addLoadTime(int runNumber, int loadTime, {required bool success}) {
     loadTimes[runNumber] = loadTime;
     loadSuccess[runNumber] = success;
   }
