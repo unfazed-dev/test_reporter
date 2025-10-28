@@ -61,10 +61,13 @@ class ReportUtils {
   /// Get full report path for a module
   static Future<String> getReportPath(
     String moduleName,
-    String timestamp,
-  ) async {
+    String timestamp, {
+    String suffix = '',
+  }) async {
     final reportDir = await getReportDirectory();
-    return p.join(reportDir, '${moduleName}_test_report@$timestamp.md');
+    final suffixPart = suffix.isNotEmpty ? '_$suffix' : '';
+    return p.join(
+        reportDir, '${moduleName}_test_report$suffixPart@$timestamp.md');
   }
 
   /// Write a unified report with markdown content and embedded JSON data
@@ -88,9 +91,11 @@ class ReportUtils {
     required String timestamp,
     required String markdownContent,
     required Map<String, dynamic> jsonData,
+    String suffix = '',
     bool verbose = false,
   }) async {
-    final reportPath = await getReportPath(moduleName, timestamp);
+    final reportPath =
+        await getReportPath(moduleName, timestamp, suffix: suffix);
     final file = File(reportPath);
 
     // Build unified report content

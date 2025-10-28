@@ -1,6 +1,6 @@
 # 🧪 Test Analysis Report
-**Generated:** 2025-10-28T21:26:20.778692
-**Test Path:** `test/`
+**Generated:** 2025-10-28T21:40:40.073876
+**Test Path:** `test/test_analyzer_test.dart`
 **Analysis Runs:** 2
 
 ## 📊 Executive Summary
@@ -33,7 +33,7 @@
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total Files Loaded | 1 | - |
-| Average Load Time | 212.5ms | ✅ |
+| Average Load Time | 209.0ms | ✅ |
 | Slow Loading (>500ms) | 0 | ✅ |
 | Failed to Load | 0 | ✅ |
 
@@ -41,7 +41,7 @@
 
 | File | Avg Load Time | Max Load Time | Status |
 |------|---------------|---------------|--------|
-| `test_analyzer_test.dart` | 212.5ms | 220ms | 🟢 |
+| `test_analyzer_test.dart` | 209.0ms | 211ms | 🟢 |
 
 ## 💡 Actionable Insights & Recommendations
 
@@ -70,8 +70,8 @@ The following JSON contains all report data in machine-parseable format:
   "metadata": {
     "tool": "test_analyzer",
     "version": "2.0",
-    "generated": "2025-10-28T21:26:20.780754",
-    "test_path": "test/",
+    "generated": "2025-10-28T21:40:40.075811",
+    "test_path": "test/test_analyzer_test.dart",
     "analysis_runs": 2
   },
   "summary": {
@@ -98,14 +98,14 @@ The following JSON contains all report data in machine-parseable format:
   "flaky_tests": [],
   "loading_performance": {
     "total_files": 1,
-    "average_load_time_ms": 212.5,
+    "average_load_time_ms": 209.0,
     "slow_files_count": 0,
     "failed_files_count": 0,
     "files": [
       {
         "file": "test/test_analyzer_test.dart",
-        "average_load_time_ms": 212.5,
-        "max_load_time_ms": 220,
+        "average_load_time_ms": 209.0,
+        "max_load_time_ms": 211,
         "has_failures": false
       }
     ]

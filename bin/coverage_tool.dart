@@ -1220,6 +1220,7 @@ class CoverageAnalyzer {
       timestamp: simpleTimestamp,
       markdownContent: report.toString(),
       jsonData: jsonData,
+      suffix: 'cov',
       verbose: true,
     );
 
@@ -1607,7 +1608,7 @@ class CoverageAnalyzer {
     await ReportUtils.cleanOldReports(
       pathName: pathName,
       prefixPatterns: [
-        'test_report', // New unified format
+        'test_report_cov', // New unified format
         'tc', // Old coverage_tool format
         'coverage', // Even older format
       ],
@@ -1616,13 +1617,32 @@ class CoverageAnalyzer {
   }
 
   String _extractPathName() {
-    var pathName = testPath.replaceAll('/', '_').replaceAll(r'\', '_');
-    if (pathName.startsWith('test_')) {
-      pathName = pathName.substring(5);
+    // Extract just the module name (last part of the path)
+    final path = testPath
+        .replaceAll(r'\', '/')
+        .replaceAll(RegExp(r'/$'), ''); // Remove trailing slash
+    final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+
+    if (segments.isEmpty) {
+      return 'all_tests';
     }
-    if (pathName.endsWith('_')) {
-      pathName = pathName.substring(0, pathName.length - 1);
+
+    var pathName = segments.last;
+
+    // If it's a file (ends with .dart), extract the module name properly
+    if (pathName.endsWith('.dart')) {
+      // Remove .dart extension
+      pathName = pathName.substring(0, pathName.length - 5);
+      // Remove _test suffix if present
+      if (pathName.endsWith('_test')) {
+        pathName = pathName.substring(0, pathName.length - 5);
+      }
+    } else if (pathName == 'lib' || pathName == 'test') {
+      // Special case: if analyzing just 'lib' or 'test' folder, use 'all_tests'
+      return 'all_tests';
     }
+    // If it's a folder, just return the folder name as-is
+
     return pathName;
   }
 

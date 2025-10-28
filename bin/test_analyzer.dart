@@ -1349,6 +1349,7 @@ class TestAnalyzer {
         timestamp: timestamp,
         markdownContent: report.toString(),
         jsonData: jsonData,
+        suffix: 'alz',
         verbose: true,
       );
 
@@ -2159,7 +2160,7 @@ class TestAnalyzer {
     await ReportUtils.cleanOldReports(
       pathName: pathName,
       prefixPatterns: [
-        'test_report', // New unified format
+        'test_report_alz', // New unified format
         'ta', // Old test_analyzer format
         'test_analysis', // Even older format
       ],

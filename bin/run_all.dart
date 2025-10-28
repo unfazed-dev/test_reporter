@@ -21,7 +21,7 @@
 ///
 /// ## Report Output
 /// - Saves to `test_analyzer_reports/`
-/// - Format: `unified_test_report@HHMM_DDMMYY.md`
+/// - Format: `{module_name}_test_report@HHMM_DDMMYY.md`
 /// - Includes both markdown (human-readable) and JSON (machine-parseable)
 ///
 /// ## Exit Codes
@@ -93,13 +93,21 @@ void main(List<String> arguments) async {
 
   if (args['help'] as bool) {
     print('Unified Test Analysis Orchestrator');
-    print('\nUsage: dart run_all.dart [options]\n');
+    print('\nUsage: dart run_all.dart [test_path] [options]\n');
     print(parser.usage);
     exit(0);
   }
 
+  // Get test path from positional argument or --path option
+  String testPath;
+  if (args.rest.isNotEmpty) {
+    testPath = args.rest.first;
+  } else {
+    testPath = args['path'] as String;
+  }
+
   final orchestrator = TestOrchestrator(
-    testPath: args['path'] as String,
+    testPath: testPath,
     runs: int.parse(args['runs'] as String),
     performance: args['performance'] as bool,
     verbose: args['verbose'] as bool,
@@ -132,6 +140,28 @@ class TestOrchestrator {
 
   final Map<String, dynamic> results = {};
   final List<String> failures = [];
+
+  /// Extract module name from test path for report naming
+  String _extractModuleName() {
+    final path = testPath.replaceAll(r'\', '/').replaceAll(RegExp(r'/$'), '');
+    final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+
+    if (segments.isEmpty) return 'all_tests';
+
+    var moduleName = segments.last;
+
+    // If it's a file, extract the test name properly
+    if (moduleName.endsWith('.dart')) {
+      moduleName = moduleName.substring(0, moduleName.length - 5);
+      if (moduleName.endsWith('_test')) {
+        moduleName = moduleName.substring(0, moduleName.length - 5);
+      }
+    } else if (moduleName == 'test') {
+      return 'all_tests';
+    }
+
+    return moduleName;
+  }
 
   Future<void> runAll() async {
     _printHeader();
@@ -451,8 +481,9 @@ class TestOrchestrator {
           '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}_'
           '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
 
+      final moduleName = _extractModuleName();
       final reportPath = await ReportUtils.writeUnifiedReport(
-        moduleName: 'unified',
+        moduleName: moduleName,
         timestamp: timestamp,
         markdownContent: report.toString(),
         jsonData: {
@@ -461,6 +492,7 @@ class TestOrchestrator {
             'version': '1.0',
             'generated': now.toIso8601String(),
             'test_path': testPath,
+            'module_name': moduleName,
           },
           'coverage': coverage,
           'test_analysis': testAnalysis,
