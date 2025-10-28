@@ -143,8 +143,10 @@ class ReportUtils {
 
     final content = await file.readAsString();
 
-    // Find JSON code block
-    final jsonStart = content.indexOf('```json');
+    // Find the LAST occurrence of ```json (the actual embedded JSON section)
+    // This is important because the report content may contain code examples
+    // that also include the string '```json'
+    final jsonStart = content.lastIndexOf('```json');
     if (jsonStart == -1) return null;
 
     final jsonEnd = content.indexOf('```', jsonStart + 7);
@@ -156,6 +158,7 @@ class ReportUtils {
       final decoded = jsonDecode(jsonString);
       return decoded is Map<String, dynamic> ? decoded : null;
     } catch (e) {
+      // Ignore parsing errors and return null
       return null;
     }
   }

@@ -102,6 +102,9 @@ class CoverageAnalyzer {
   // Track if thresholds were violated
   bool thresholdViolation = false;
 
+  // Project type detection
+  bool? _isFlutterProject;
+
   // Track coverage data
   Map<String, FileAnalysis> sourceFiles = {};
   Map<String, FileAnalysis> testFiles = {};
@@ -117,6 +120,32 @@ class CoverageAnalyzer {
   Map<String, double> coverageDiff = {};
   List<String> changedFiles = [];
   Map<String, int> mutationScore = {};
+
+  /// Detect if this is a Flutter project by checking pubspec.yaml
+  bool get isFlutterProject {
+    if (_isFlutterProject != null) return _isFlutterProject!;
+
+    try {
+      final pubspecFile = File('pubspec.yaml');
+      if (!pubspecFile.existsSync()) {
+        _isFlutterProject = false;
+        return false;
+      }
+
+      final content = pubspecFile.readAsStringSync();
+
+      // Check for flutter dependency
+      _isFlutterProject =
+          content.contains(RegExp(r'^\s*flutter:\s*$', multiLine: true)) ||
+              content.contains(RegExp(r'flutter:\s*sdk:', multiLine: true));
+
+      return _isFlutterProject!;
+    } catch (e) {
+      _isFlutterProject = false;
+      return false;
+    }
+  }
+
   double overallCoverage = 0;
 
   Future<void> analyze() async {
@@ -420,7 +449,8 @@ class CoverageAnalyzer {
   }
 
   Future<void> runCoverage() async {
-    print('\n📊 Running Flutter tests with coverage...');
+    final projectType = isFlutterProject ? 'Flutter' : 'Dart';
+    print('\n📊 Running $projectType tests with coverage...');
 
     // Clean previous coverage
     final coverageDir = Directory('coverage');
@@ -429,33 +459,51 @@ class CoverageAnalyzer {
     }
     await coverageDir.create();
 
-    // Build command with options
-    final args = ['test', '--coverage', '--no-test-assets'];
-    if (branchCoverage) {
-      args.add('--branch-coverage');
+    // Build command with options based on project type
+    final String command;
+    final List<String> args;
+
+    if (isFlutterProject) {
+      // Flutter project
+      command = 'flutter';
+      args = ['test', '--coverage', '--no-test-assets'];
+      if (branchCoverage) {
+        args.add('--branch-coverage');
+      }
+    } else {
+      // Pure Dart project
+      command = 'dart';
+      args = ['test', '--coverage=coverage'];
     }
 
     // Add test path or specific changed files
     if (incremental && changedFiles.isNotEmpty) {
       // Only test files related to changed source files
-      final testFiles = await getTestFilesForChangedFiles();
-      args.addAll(testFiles);
+      final testFilesToRun = await getTestFilesForChangedFiles();
+      args.addAll(testFilesToRun);
     } else {
       args.add(testPath);
     }
 
     // Run tests with coverage
     final result = await Process.run(
-      'flutter',
+      command,
       args,
       runInShell: true,
     );
 
     if (result.exitCode != 0) {
       print('  ⚠️  Some tests failed:');
-      print(result.stderr);
+      if (result.stderr.toString().isNotEmpty) {
+        print(result.stderr);
+      }
     } else {
       print('  ✅ All tests passed');
+    }
+
+    // For Dart projects, convert coverage to lcov format
+    if (!isFlutterProject) {
+      await _convertDartCoverageToLcov();
     }
 
     // Check if lcov.info was generated
@@ -468,34 +516,11 @@ class CoverageAnalyzer {
     }
   }
 
-  Future<void> runAlternativeCoverage() async {
-    print('\n🔄 Trying alternative coverage collection...');
-
-    // Method 1: Run each test file individually
-    final testDir = Directory(testPath);
-    if (testDir.existsSync()) {
-      await for (final file in testDir.list()) {
-        if (file is File && file.path.endsWith('_test.dart')) {
-          print('  Testing: ${file.path}');
-          await Process.run(
-            'flutter',
-            ['test', '--coverage', file.path],
-            runInShell: true,
-          );
-        }
-      }
-    }
-
-    // Method 2: Use dart test for pure Dart files
-    final result = await Process.run(
-      'dart',
-      ['test', '--coverage=coverage', testPath],
-      runInShell: true,
-    );
-
-    if (result.exitCode == 0) {
-      // Convert dart coverage to lcov format
-      await Process.run(
+  /// Convert Dart coverage format to lcov format
+  Future<void> _convertDartCoverageToLcov() async {
+    try {
+      // Check if coverage package is available
+      final formatResult = await Process.run(
         'dart',
         [
           'pub',
@@ -506,9 +531,68 @@ class CoverageAnalyzer {
           '--in=coverage',
           '--out=coverage/lcov.info',
           '--report-on=lib',
+          '--check-ignore'
         ],
         runInShell: true,
       );
+
+      if (formatResult.exitCode != 0) {
+        // Try to activate coverage package if not available
+        print('  Installing coverage package...');
+        await Process.run(
+          'dart',
+          ['pub', 'global', 'activate', 'coverage'],
+          runInShell: true,
+        );
+
+        // Try again
+        await Process.run(
+          'dart',
+          [
+            'pub',
+            'global',
+            'run',
+            'coverage:format_coverage',
+            '--lcov',
+            '--in=coverage',
+            '--out=coverage/lcov.info',
+            '--report-on=lib',
+            '--check-ignore'
+          ],
+          runInShell: true,
+        );
+      }
+    } catch (e) {
+      print('  ⚠️  Failed to convert coverage format: $e');
+    }
+  }
+
+  Future<void> runAlternativeCoverage() async {
+    print('\n🔄 Trying alternative coverage collection...');
+
+    final command = isFlutterProject ? 'flutter' : 'dart';
+    final testArgs = isFlutterProject
+        ? ['test', '--coverage']
+        : ['test', '--coverage=coverage'];
+
+    // Method 1: Run each test file individually
+    final testDir = Directory(testPath);
+    if (testDir.existsSync()) {
+      await for (final file in testDir.list(recursive: true)) {
+        if (file is File && file.path.endsWith('_test.dart')) {
+          print('  Testing: ${file.path}');
+          await Process.run(
+            command,
+            [...testArgs, file.path],
+            runInShell: true,
+          );
+        }
+      }
+    }
+
+    // For Dart projects, convert coverage to lcov format
+    if (!isFlutterProject) {
+      await _convertDartCoverageToLcov();
     }
   }
 
@@ -1617,8 +1701,9 @@ class CoverageAnalyzer {
   }
 
   String _extractPathName() {
-    // Extract just the module name (last part of the path)
-    final path = testPath
+    // Extract module name from the SOURCE path (libPath), not test path
+    // This is what's actually being analyzed
+    final path = libPath
         .replaceAll(r'\', '/')
         .replaceAll(RegExp(r'/$'), ''); // Remove trailing slash
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
@@ -1633,17 +1718,29 @@ class CoverageAnalyzer {
     if (pathName.endsWith('.dart')) {
       // Remove .dart extension
       pathName = pathName.substring(0, pathName.length - 5);
-      // Remove _test suffix if present
-      if (pathName.endsWith('_test')) {
-        pathName = pathName.substring(0, pathName.length - 5);
-      }
-    } else if (pathName == 'lib' || pathName == 'test') {
-      // Special case: if analyzing just 'lib' or 'test' folder, use 'all_tests'
-      return 'all_tests';
+    } else if (pathName == 'lib') {
+      // Special case: if analyzing entire 'lib' folder, use package name from pubspec
+      return _getPackageName();
     }
-    // If it's a folder, just return the folder name as-is
+    // If it's a folder like 'src', 'models', 'ui', return the folder name
 
     return pathName;
+  }
+
+  /// Get package name from pubspec.yaml
+  String _getPackageName() {
+    try {
+      final pubspecFile = File('pubspec.yaml');
+      if (pubspecFile.existsSync()) {
+        final content = pubspecFile.readAsStringSync();
+        final nameMatch =
+            RegExp(r'^name:\s*(\S+)', multiLine: true).firstMatch(content);
+        return nameMatch?.group(1) ?? 'package';
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+    return 'package';
   }
 
   /// Export coverage data as JSON
@@ -1914,13 +2011,24 @@ void main(List<String> args) async {
         testPath = nonFlagArgs[1];
       } else {
         // Auto-derive test path - handle lib/src/ pattern specially
+        String derivedTestPath;
         if (firstArg.startsWith('lib/src/')) {
           // For lib/src/X, map to test/X (remove the src/ part)
           final moduleName = firstArg.substring('lib/src/'.length);
-          testPath = 'test/$moduleName';
+          derivedTestPath = 'test/$moduleName';
         } else {
           // For other lib/ paths, just replace lib/ with test/
-          testPath = firstArg.replaceFirst('lib/', 'test/');
+          derivedTestPath = firstArg.replaceFirst('lib/', 'test/');
+        }
+
+        // Check if derived path exists, otherwise use 'test/'
+        final derivedFile = File(derivedTestPath);
+        final derivedDir = Directory(derivedTestPath);
+        if (derivedFile.existsSync() || derivedDir.existsSync()) {
+          testPath = derivedTestPath;
+        } else {
+          // Derived path doesn't exist, use root test directory
+          testPath = 'test/';
         }
       }
     } else if (firstArg.startsWith('test/')) {

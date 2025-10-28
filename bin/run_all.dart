@@ -207,7 +207,6 @@ class TestOrchestrator {
         'run',
         'test_analyzer:coverage_tool',
         sourcePath,
-        '--no-report', // Don't generate individual report
       ];
 
       if (verbose) args.add('--verbose');
@@ -238,14 +237,37 @@ class TestOrchestrator {
         print('  ✅ Coverage analysis complete');
 
         // Extract coverage data from most recent report
-        final coverageReport = await _findLatestReport('test_report');
+        final coverageReport = await _findLatestReport('test_report_cov');
+        if (verbose) print('  📊 Coverage report found: $coverageReport');
+
         if (coverageReport != null) {
           final jsonData = await ReportUtils.extractJsonFromReport(
             coverageReport,
           );
+
+          if (verbose) {
+            print('  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
+            if (jsonData != null) {
+              print('  📋 JSON keys: ${jsonData.keys.toList()}');
+              print('  📊 Coverage summary: ${jsonData['summary']}');
+            }
+          }
+
           if (jsonData != null) {
             results['coverage'] = jsonData;
+
+            // Delete individual coverage report after extracting data
+            try {
+              await File(coverageReport).delete();
+              if (verbose) print('  🗑️  Deleted individual coverage report');
+            } catch (e) {
+              if (verbose) print('  ⚠️  Could not delete coverage report: $e');
+            }
+          } else {
+            if (verbose) print('  ⚠️  Failed to extract JSON from coverage report');
           }
+        } else {
+          if (verbose) print('  ⚠️  No coverage report found');
         }
 
         return true;
@@ -278,7 +300,6 @@ class TestOrchestrator {
         'test_analyzer:test_analyzer',
         actualTestPath,
         '--runs=$runs',
-        '--no-report', // Don't generate individual report
       ];
 
       if (performance) args.add('--performance');
@@ -311,14 +332,37 @@ class TestOrchestrator {
         print('  ✅ Test analysis complete');
 
         // Extract analyzer data from most recent report
-        final analyzerReport = await _findLatestReport('test_report');
+        final analyzerReport = await _findLatestReport('test_report_alz');
+        if (verbose) print('  📊 Analyzer report found: $analyzerReport');
+
         if (analyzerReport != null) {
           final jsonData = await ReportUtils.extractJsonFromReport(
             analyzerReport,
           );
+
+          if (verbose) {
+            print('  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
+            if (jsonData != null) {
+              print('  📋 JSON keys: ${jsonData.keys.toList()}');
+              print('  📊 Test analysis summary: ${jsonData['summary']}');
+            }
+          }
+
           if (jsonData != null) {
             results['test_analysis'] = jsonData;
+
+            // Delete individual analyzer report after extracting data
+            try {
+              await File(analyzerReport).delete();
+              if (verbose) print('  🗑️  Deleted individual analyzer report');
+            } catch (e) {
+              if (verbose) print('  ⚠️  Could not delete analyzer report: $e');
+            }
+          } else {
+            if (verbose) print('  ⚠️  Failed to extract JSON from analyzer report');
           }
+        } else {
+          if (verbose) print('  ⚠️  No analyzer report found');
         }
 
         return true;
@@ -326,14 +370,36 @@ class TestOrchestrator {
         print('  ⚠️  Test analysis complete with test failures');
 
         // Still extract data even if tests failed
-        final analyzerReport = await _findLatestReport('test_report');
+        final analyzerReport = await _findLatestReport('test_report_alz');
+        if (verbose) print('  📊 Analyzer report found: $analyzerReport');
+
         if (analyzerReport != null) {
           final jsonData = await ReportUtils.extractJsonFromReport(
             analyzerReport,
           );
+
+          if (verbose) {
+            print('  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
+            if (jsonData != null) {
+              print('  📋 JSON keys: ${jsonData.keys.toList()}');
+            }
+          }
+
           if (jsonData != null) {
             results['test_analysis'] = jsonData;
+
+            // Delete individual analyzer report after extracting data
+            try {
+              await File(analyzerReport).delete();
+              if (verbose) print('  🗑️  Deleted individual analyzer report');
+            } catch (e) {
+              if (verbose) print('  ⚠️  Could not delete analyzer report: $e');
+            }
+          } else {
+            if (verbose) print('  ⚠️  Failed to extract JSON from analyzer report');
           }
+        } else {
+          if (verbose) print('  ⚠️  No analyzer report found');
         }
 
         return true; // Don't consider test failures as tool failures
@@ -354,16 +420,26 @@ class TestOrchestrator {
       final reportDir = await ReportUtils.getReportDirectory();
       final dir = Directory(reportDir);
 
-      if (!await dir.exists()) return null;
+      if (verbose) print('  🔍 Looking for reports with prefix: $prefix in $reportDir');
+
+      if (!await dir.exists()) {
+        if (verbose) print('  ⚠️  Report directory does not exist');
+        return null;
+      }
 
       final files = <FileSystemEntity>[];
       await for (final file in dir.list()) {
+        if (verbose) print('  📄 Found file: ${file.path}');
         if (file is File && file.path.contains(prefix)) {
+          if (verbose) print('  ✅ File matches prefix: ${file.path}');
           files.add(file);
         }
       }
 
-      if (files.isEmpty) return null;
+      if (files.isEmpty) {
+        if (verbose) print('  ⚠️  No files found matching prefix: $prefix');
+        return null;
+      }
 
       // Sort by modification time, most recent first
       files.sort((a, b) {
@@ -372,6 +448,7 @@ class TestOrchestrator {
         return bStat.modified.compareTo(aStat.modified);
       });
 
+      if (verbose) print('  📋 Selected latest report: ${files.first.path}');
       return files.first.path;
     } catch (e) {
       if (verbose) print('  ⚠️  Could not find latest report: $e');
