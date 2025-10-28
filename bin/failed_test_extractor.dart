@@ -56,7 +56,6 @@ import 'dart:io';
 
 // CLI argument parsing
 import 'package:args/args.dart';
-import 'package:path/path.dart' as p;
 import 'package:test_analyzer/src/utils/report_utils.dart';
 
 /// Main entry point for the failed test extractor
@@ -283,7 +282,7 @@ class FailedTestExtractor {
 
     // Save results if requested
     if (_args['save-results'] as bool) {
-      await _saveResults(results);
+      await _saveResults(results, testPath);
     }
 
     // Auto-rerun failed tests if requested and there are failures
@@ -660,18 +659,17 @@ class FailedTestExtractor {
   }
 
   /// Save detailed results to file
-  Future<void> _saveResults(TestResults results) async {
-    // Use organized directory structure
-    final reportDir = await ReportUtils.getReportDirectory();
-    final outputDir = p.join(reportDir, 'failed');
-    await Directory(outputDir).create(recursive: true);
-
+  Future<void> _saveResults(TestResults results, String testPath) async {
     final timestamp = results.timestamp;
-    final fileName = 'failed_tests_${_formatTimestamp(timestamp)}.json';
-    final filePath = p.join(outputDir, fileName);
 
-    final report = {
-      'timestamp': timestamp.toIso8601String(),
+    // Build JSON data
+    final jsonData = {
+      'metadata': {
+        'tool': 'failed_test_extractor',
+        'version': '2.0',
+        'generated': timestamp.toIso8601String(),
+        'test_path': testPath,
+      },
       'summary': {
         'totalTests': results.totalTests,
         'passedTests': results.passedTests,
@@ -694,10 +692,85 @@ class FailedTestExtractor {
           .toList(),
     };
 
-    await File(filePath)
-        .writeAsString(const JsonEncoder.withIndent('  ').convert(report));
+    // Build markdown report
+    final markdown = StringBuffer();
+    markdown.writeln('# 🔴 Failed Test Report');
+    markdown.writeln();
+    markdown.writeln('**Generated:** ${timestamp.toLocal()}');
+    markdown.writeln('**Test Path:** `$testPath`');
+    markdown.writeln();
 
-    print('💾 Results saved to: $filePath');
+    markdown.writeln('## 📊 Summary');
+    markdown.writeln();
+    markdown.writeln('| Metric | Value |');
+    markdown.writeln('|--------|-------|');
+    markdown.writeln('| Total Tests | ${results.totalTests} |');
+    markdown.writeln('| Passed | ✅ ${results.passedTests} |');
+    markdown.writeln('| Failed | ❌ ${results.failedCount} |');
+    markdown.writeln('| Success Rate | ${results.successRate.toStringAsFixed(1)}% |');
+    markdown.writeln('| Execution Time | ${_formatDuration(results.totalTime)} |');
+    markdown.writeln();
+
+    if (results.failedTests.isNotEmpty) {
+      markdown.writeln('## ❌ Failed Tests');
+      markdown.writeln();
+
+      // Group by file
+      final groupedTests = <String, List<FailedTest>>{};
+      for (final test in results.failedTests) {
+        groupedTests.putIfAbsent(test.filePath, () => []).add(test);
+      }
+
+      for (final entry in groupedTests.entries) {
+        markdown.writeln('### ${entry.key}');
+        markdown.writeln();
+        for (final test in entry.value) {
+          markdown.writeln('#### ${test.name}');
+          if (test.group != null) {
+            markdown.writeln('**Group:** ${test.group}');
+          }
+          if (test.runtime != null) {
+            markdown.writeln('**Runtime:** ${_formatDuration(test.runtime!)}');
+          }
+          if (test.error != null) {
+            markdown.writeln();
+            markdown.writeln('**Error:**');
+            markdown.writeln('```');
+            markdown.writeln(test.error);
+            markdown.writeln('```');
+          }
+          if (test.stackTrace != null && _args['verbose'] as bool) {
+            markdown.writeln();
+            markdown.writeln('**Stack Trace:**');
+            markdown.writeln('```');
+            markdown.writeln(test.stackTrace);
+            markdown.writeln('```');
+          }
+          markdown.writeln();
+        }
+      }
+    }
+
+    // Extract module name from test path
+    final pathParts = testPath.split('/');
+    final moduleName = pathParts.length > 1 ? pathParts.last : 'tests';
+
+    // Format timestamp as HHMM_DDMMYY
+    final simpleTimestamp =
+        '${timestamp.hour.toString().padLeft(2, '0')}${timestamp.minute.toString().padLeft(2, '0')}_'
+        '${timestamp.day.toString().padLeft(2, '0')}${timestamp.month.toString().padLeft(2, '0')}${timestamp.year.toString().substring(2)}';
+
+    // Write unified report
+    final reportPath = await ReportUtils.writeUnifiedReport(
+      moduleName: '$moduleName-fo',
+      timestamp: simpleTimestamp,
+      markdownContent: markdown.toString(),
+      jsonData: jsonData,
+      suffix: 'failed',
+      verbose: _args['verbose'] as bool,
+    );
+
+    print('💾 Results saved to: $reportPath');
   }
 
   /// Watch directory for file changes
@@ -723,15 +796,6 @@ class FailedTestExtractor {
     } else {
       return '${duration.inSeconds}.${(duration.inMilliseconds % 1000).toString().padLeft(3, '0')}s';
     }
-  }
-
-  /// Format timestamp for filenames
-  String _formatTimestamp(DateTime timestamp) {
-    return '${timestamp.hour.toString().padLeft(2, '0')}'
-        '${timestamp.minute.toString().padLeft(2, '0')}_'
-        '${timestamp.day.toString().padLeft(2, '0')}'
-        '${timestamp.month.toString().padLeft(2, '0')}'
-        '${timestamp.year.toString().substring(2)}';
   }
 
   /// Show usage information

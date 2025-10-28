@@ -1271,7 +1271,9 @@ class TestAnalyzer {
                 'file': parts[0],
                 'test_name': parts.length > 1 ? parts[1] : 'unknown',
                 'success_rate': successRate,
-                'runs': run.results,
+                'runs': Map<String, bool>.fromEntries(
+                  run.results.entries.map((e) => MapEntry('run_${e.key}', e.value)),
+                ),
               };
             })
             .toList()
@@ -1342,8 +1344,10 @@ class TestAnalyzer {
               (patternsByType[pattern.type] ?? 0) + 1;
         }
 
-        jsonData['failure_patterns'] = patternsByType.map(
-          (type, count) => MapEntry(type.toString().split('.').last, count),
+        jsonData['failure_patterns'] = Map<String, int>.fromEntries(
+          patternsByType.entries.map(
+            (entry) => MapEntry(entry.key.toString().split('.').last, entry.value),
+          ),
         );
       }
 
@@ -1358,8 +1362,142 @@ class TestAnalyzer {
       );
 
       print('$green✅ Report saved to: $reportPath$reset');
-    } catch (e) {
+
+      // Generate failed report if there are failures or flaky tests
+      if (consistentFailures.isNotEmpty || flakyTests.isNotEmpty) {
+        await _saveFailedReport(timestamp, pathName, jsonData);
+      }
+    } catch (e, stackTrace) {
       print('\n$yellow⚠️ Could not save report to file: $e$reset');
+      if (verbose) {
+        print('  Error details: $stackTrace');
+      }
+    }
+  }
+
+  Future<void> _saveFailedReport(
+    String timestamp,
+    String pathName,
+    Map<String, dynamic> analyzerData,
+  ) async {
+    print('$cyan📝 Generating failed test report...$reset');
+
+    final markdown = StringBuffer();
+    markdown.writeln('# 🔴 Failed Test Report');
+    markdown.writeln();
+    markdown.writeln('**Generated:** ${DateTime.now().toLocal()}');
+    markdown.writeln('**Test Path:** `${targetFiles.isNotEmpty ? targetFiles.first : 'all tests'}`');
+    markdown.writeln('**Source:** Test Analyzer');
+    markdown.writeln('**Analysis Runs:** $runCount');
+    markdown.writeln();
+
+    markdown.writeln('## 📊 Summary');
+    markdown.writeln();
+    markdown.writeln('| Metric | Value |');
+    markdown.writeln('|--------|-------|');
+    markdown.writeln('| Total Tests | ${testRuns.length} |');
+    markdown.writeln('| Passed Consistently | ${testRuns.length - consistentFailures.length - flakyTests.length} |');
+    markdown.writeln('| Consistent Failures | ❌ ${consistentFailures.length} |');
+    markdown.writeln('| Flaky Tests | ⚠️ ${flakyTests.length} |');
+    markdown.writeln('| Pass Rate | ${(testRuns.isNotEmpty ? ((testRuns.length - consistentFailures.length - flakyTests.length) / testRuns.length * 100) : 0).toStringAsFixed(1)}% |');
+    markdown.writeln();
+
+    // Add consistent failures section
+    if (consistentFailures.isNotEmpty) {
+      markdown.writeln('## ❌ Consistent Failures');
+      markdown.writeln('*Tests that failed all $runCount runs*');
+      markdown.writeln();
+
+      for (final testId in consistentFailures) {
+        final parts = testId.split('::');
+        final fileName = parts.isNotEmpty ? parts[0] : 'Unknown';
+        final testName = parts.length > 1 ? parts[1] : 'Unknown';
+        final pattern = patterns[testId];
+
+        markdown.writeln('### $testName');
+        markdown.writeln('**File:** `$fileName`');
+
+        if (pattern != null) {
+          markdown.writeln('**Type:** ${pattern.type.toString().split('.').last}');
+          markdown.writeln('**Category:** ${pattern.category}');
+          if (pattern.suggestion != null && pattern.suggestion!.isNotEmpty) {
+            markdown.writeln();
+            markdown.writeln('**Suggested Fix:**');
+            markdown.writeln('```');
+            markdown.writeln(pattern.suggestion);
+            markdown.writeln('```');
+          }
+        }
+        markdown.writeln();
+      }
+    }
+
+    // Add flaky tests section
+    if (flakyTests.isNotEmpty) {
+      markdown.writeln('## ⚡ Flaky Tests');
+      markdown.writeln('*Tests with intermittent failures*');
+      markdown.writeln();
+
+      for (final testId in flakyTests) {
+        final parts = testId.split('::');
+        final fileName = parts.isNotEmpty ? parts[0] : 'Unknown';
+        final testName = parts.length > 1 ? parts[1] : 'Unknown';
+        final run = testRuns[testId]!;
+        final successCount = run.results.values.where((r) => r).length;
+        final successRate = successCount / runCount * 100;
+
+        markdown.writeln('### $testName');
+        markdown.writeln('**File:** `$fileName`');
+        markdown.writeln('**Success Rate:** ${successRate.toStringAsFixed(1)}%');
+        markdown.writeln('**Run Results:**');
+
+        for (final entry in run.results.entries) {
+          final status = entry.value ? '✅' : '❌';
+          markdown.writeln('- Run ${entry.key}: $status');
+        }
+        markdown.writeln();
+      }
+    }
+
+    // Add recommendations
+    markdown.writeln('## 💡 Recommendations');
+    markdown.writeln();
+    if (consistentFailures.isNotEmpty) {
+      markdown.writeln('1. **🔴 Critical:** Fix ${consistentFailures.length} consistently failing tests immediately');
+    }
+    if (flakyTests.isNotEmpty) {
+      markdown.writeln('${consistentFailures.isNotEmpty ? '2' : '1'}. **⚠️ Important:** Investigate and stabilize ${flakyTests.length} flaky tests');
+    }
+    markdown.writeln();
+    markdown.writeln('For detailed analysis and stack traces, see the full analyzer report.');
+
+    // Build JSON data
+    final jsonData = {
+      'metadata': {
+        'tool': 'test_analyzer',
+        'version': '2.0',
+        'generated': DateTime.now().toIso8601String(),
+        'test_path': targetFiles.isNotEmpty ? targetFiles.first : 'all tests',
+        'analysis_runs': runCount,
+      },
+      'summary': analyzerData['summary'],
+      'consistent_failures': analyzerData['consistent_failures'],
+      'flaky_tests': analyzerData['flaky_tests'],
+    };
+
+    try {
+      final failedReportPath = await ReportUtils.writeUnifiedReport(
+        moduleName: pathName,
+        timestamp: timestamp,
+        markdownContent: markdown.toString(),
+        jsonData: jsonData,
+        suffix: 'failed',
+        verbose: verbose,
+      );
+
+      print('$green✅ Failed test report saved to: $failedReportPath$reset');
+    } catch (e) {
+      print('$yellow⚠️ Could not save failed report: $e$reset');
     }
   }
 

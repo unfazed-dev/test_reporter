@@ -19,32 +19,43 @@ class ReportUtils {
   }
 
   /// Clean old reports for a specific path pattern
+  ///
+  /// If [subdirectory] is provided, only cleans reports in that subdirectory.
+  /// Otherwise, cleans reports in all subdirectories (analyzer/, coverage/, failed/, unified/).
   static Future<void> cleanOldReports({
     required String pathName,
     required List<String> prefixPatterns,
+    String? subdirectory,
     bool verbose = false,
   }) async {
     final reportDir = await getReportDirectory();
-    final dir = Directory(reportDir);
 
-    if (!await dir.exists()) return;
+    // List of subdirectories to clean
+    final subdirs = subdirectory != null
+        ? [subdirectory]
+        : ['analyzer', 'coverage', 'failed', 'unified'];
 
-    await for (final file in dir.list()) {
-      if (file is! File) continue;
+    for (final subdir in subdirs) {
+      final dir = Directory(p.join(reportDir, subdir));
+      if (!await dir.exists()) continue;
 
-      final fileName = file.path.split('/').last;
-      final shouldDelete = prefixPatterns.any(
-        (pattern) =>
-            fileName.startsWith('${pathName}_$pattern@') ||
-            fileName.startsWith('${pathName.replaceAll('_', '')}_${pattern}__'),
-      );
+      await for (final file in dir.list()) {
+        if (file is! File) continue;
 
-      if (shouldDelete) {
-        try {
-          await file.delete();
-          if (verbose) print('  🗑️  Removed old report: $fileName');
-        } catch (e) {
-          if (verbose) print('  ⚠️  Failed to delete $fileName: $e');
+        final fileName = file.path.split('/').last;
+        final shouldDelete = prefixPatterns.any(
+          (pattern) =>
+              fileName.startsWith('${pathName}_$pattern@') ||
+              fileName.startsWith('${pathName.replaceAll('_', '')}_${pattern}__'),
+        );
+
+        if (shouldDelete) {
+          try {
+            await file.delete();
+            if (verbose) print('  🗑️  Removed old report: $fileName');
+          } catch (e) {
+            if (verbose) print('  ⚠️  Failed to delete $fileName: $e');
+          }
         }
       }
     }
@@ -103,6 +114,8 @@ class ReportUtils {
   /// - Human-readable markdown at the top
   /// - Machine-parseable JSON embedded at the bottom
   ///
+  /// Automatically cleans up old reports for the same module/suffix before writing.
+  ///
   /// Example:
   /// ```dart
   /// await ReportUtils.writeUnifiedReport(
@@ -121,6 +134,23 @@ class ReportUtils {
     String suffix = '',
     bool verbose = false,
   }) async {
+    // Determine subdirectory based on suffix
+    final subdir = switch (suffix) {
+      'coverage' => 'coverage',
+      'analyzer' => 'analyzer',
+      'failed' => 'failed',
+      _ => 'unified',
+    };
+
+    // Clean old reports for this module/suffix in the appropriate subdirectory
+    final suffixPattern = suffix.isNotEmpty ? 'test_report_$suffix' : 'test_report';
+    await cleanOldReports(
+      pathName: moduleName,
+      prefixPatterns: [suffixPattern],
+      subdirectory: subdir,
+      verbose: verbose,
+    );
+
     final reportPath =
         await getReportPath(moduleName, timestamp, suffix: suffix);
     final file = File(reportPath);

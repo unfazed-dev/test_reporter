@@ -615,8 +615,174 @@ class TestOrchestrator {
       );
 
       print('  ✅ Unified report saved to: $reportPath');
+
+      // Generate failed report if there are failures or flaky tests
+      await _generateFailedReport(results, moduleName, timestamp);
     } catch (e) {
       print('  ⚠️  Could not save unified report: $e');
+    }
+  }
+
+  Future<void> _generateFailedReport(
+    Map<String, dynamic> results,
+    String moduleName,
+    String timestamp,
+  ) async {
+    final testAnalysis = results['test_analysis'] as Map<String, dynamic>?;
+    if (testAnalysis == null) return;
+
+    final summary = testAnalysis['summary'] as Map<String, dynamic>?;
+    if (summary == null) return;
+
+    final consistentFailures = summary['consistent_failures'] as int? ?? 0;
+    final flakyTests = summary['flaky_tests'] as int? ?? 0;
+
+    // Only generate failed report if there are issues
+    if (consistentFailures == 0 && flakyTests == 0) return;
+
+    print('\n📝 Generating failed test report...');
+
+    final markdown = StringBuffer();
+    markdown.writeln('# 🔴 Failed Test Report');
+    markdown.writeln();
+    markdown.writeln('**Generated:** ${DateTime.now().toLocal()}');
+    markdown.writeln('**Test Path:** `$testPath`');
+    markdown.writeln('**Source:** Unified Test Analysis Orchestrator');
+    markdown.writeln();
+
+    markdown.writeln('## 📊 Summary');
+    markdown.writeln();
+    markdown.writeln('| Metric | Value |');
+    markdown.writeln('|--------|-------|');
+    markdown.writeln(
+        '| Total Tests | ${summary['total_tests'] ?? 'N/A'} |');
+    markdown.writeln(
+        '| Passed Consistently | ${summary['passed_consistently'] ?? 'N/A'} |');
+    markdown
+        .writeln('| Consistent Failures | ❌ $consistentFailures |');
+    markdown.writeln('| Flaky Tests | ⚠️ $flakyTests |');
+    final passRate = summary['pass_rate'] as num?;
+    markdown.writeln(
+        '| Pass Rate | ${passRate?.toStringAsFixed(1) ?? 'N/A'}% |');
+    markdown.writeln();
+
+    // Add consistent failures section
+    if (consistentFailures > 0) {
+      markdown.writeln('## ❌ Consistent Failures');
+      markdown.writeln('*Tests that failed all runs*');
+      markdown.writeln();
+
+      final failures =
+          testAnalysis['consistent_failures'] as List<dynamic>?;
+      if (failures != null && failures.isNotEmpty) {
+        for (final failure in failures) {
+          final failureMap = failure as Map<String, dynamic>;
+          final testName = failureMap['test_name'] ?? 'Unknown';
+          final file = failureMap['file'] ?? 'Unknown';
+          final failureType = failureMap['failure_type'] ?? 'Unknown';
+          final category = failureMap['category'] ?? '';
+          final suggestion = failureMap['suggestion'] ?? '';
+
+          markdown.writeln('### $testName');
+          markdown.writeln('**File:** `$file`');
+          markdown.writeln('**Type:** $failureType');
+          if (category is String && category.isNotEmpty) {
+            markdown.writeln('**Category:** $category');
+          }
+          if (suggestion is String && suggestion.isNotEmpty) {
+            markdown.writeln();
+            markdown.writeln('**Suggested Fix:**');
+            markdown.writeln('```');
+            markdown.writeln(suggestion);
+            markdown.writeln('```');
+          }
+          markdown.writeln();
+        }
+      }
+    }
+
+    // Add flaky tests section
+    if (flakyTests > 0) {
+      markdown.writeln('## ⚡ Flaky Tests');
+      markdown.writeln('*Tests with intermittent failures*');
+      markdown.writeln();
+
+      final flaky = testAnalysis['flaky_tests'] as List<dynamic>?;
+      if (flaky != null && flaky.isNotEmpty) {
+        for (final test in flaky) {
+          final testMap = test as Map<String, dynamic>;
+          final testName = testMap['test_name'] ?? 'Unknown';
+          final file = testMap['file'] ?? 'Unknown';
+          final successRate = testMap['success_rate'] as num?;
+          final runs = testMap['runs'] as Map<String, dynamic>?;
+
+          markdown.writeln('### $testName');
+          markdown.writeln('**File:** `$file`');
+          if (successRate != null) {
+            markdown.writeln(
+                '**Success Rate:** ${successRate.toStringAsFixed(1)}%');
+          }
+
+          if (runs != null && runs.isNotEmpty) {
+            markdown.writeln('**Run Results:**');
+            for (final entry in runs.entries) {
+              final status = entry.value == true ? '✅' : '❌';
+              markdown.writeln('- ${entry.key}: $status');
+            }
+          }
+          markdown.writeln();
+        }
+      }
+    }
+
+    // Add recommendations
+    markdown.writeln('## 💡 Recommendations');
+    markdown.writeln();
+    if (consistentFailures > 0) {
+      markdown.writeln(
+          '1. **🔴 Critical:** Fix $consistentFailures consistently failing tests immediately');
+    }
+    if (flakyTests > 0) {
+      markdown.writeln(
+          '${consistentFailures > 0 ? '2' : '1'}. **⚠️ Important:** Investigate and stabilize $flakyTests flaky tests');
+    }
+    markdown.writeln();
+    markdown.writeln(
+        'For detailed analysis and stack traces, see the analyzer report.');
+
+    // Build JSON data
+    final jsonData = {
+      'metadata': {
+        'tool': 'run_all',
+        'version': '1.0',
+        'generated': DateTime.now().toIso8601String(),
+        'test_path': testPath,
+        'source': 'unified_orchestrator',
+      },
+      'summary': {
+        'totalTests': summary['total_tests'] ?? 0,
+        'passedConsistently': summary['passed_consistently'] ?? 0,
+        'consistentFailures': consistentFailures,
+        'flakyTests': flakyTests,
+        'passRate': summary['pass_rate'] ?? 0.0,
+      },
+      'consistent_failures': testAnalysis['consistent_failures'] ?? <dynamic>[],
+      'flaky_tests': testAnalysis['flaky_tests'] ?? <dynamic>[],
+    };
+
+    try {
+      final failedReportPath = await ReportUtils.writeUnifiedReport(
+        moduleName: moduleName,
+        timestamp: timestamp,
+        markdownContent: markdown.toString(),
+        jsonData: jsonData,
+        suffix: 'failed',
+        verbose: verbose,
+      );
+
+      print('  ✅ Failed test report saved to: $failedReportPath');
+    } catch (e) {
+      print('  ⚠️  Could not save failed report: $e');
     }
   }
 
