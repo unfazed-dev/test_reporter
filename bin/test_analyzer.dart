@@ -63,6 +63,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:test_analyzer/src/utils/report_utils.dart';
+
 class TestAnalyzer {
   TestAnalyzer({
     this.runCount = 3,
@@ -1203,13 +1205,8 @@ class TestAnalyzer {
       '*Run with `--verbose` for detailed output, `--performance` for timing metrics*',
     );
 
-    // Save to file
+    // Save to file using unified report format
     try {
-      final reportsDir = Directory('analyzer/reports/test_analysis');
-      if (!await reportsDir.exists()) {
-        await reportsDir.create(recursive: true);
-      }
-
       // Create filename with tested path and timestamp (HHMM_DDMMYY format)
       final now = DateTime.now();
       final timestamp =
@@ -1217,33 +1214,143 @@ class TestAnalyzer {
           '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
 
       // Extract meaningful name from tested paths
-      var pathName = '';
-      if (targetFiles.isNotEmpty) {
-        // Extract just the module name (last part of the path)
-        final path = targetFiles.first.replaceAll(r'\', '/');
-        final segments = path.split('/');
-        pathName = segments.last.replaceAll('.dart', '');
+      final pathName = _extractPathName();
 
-        // Handle special cases
-        if (pathName.startsWith('test_')) {
-          pathName = pathName.substring(5);
-        }
-        if (pathName.isEmpty && segments.length > 1) {
-          // If last segment is empty (trailing slash), use previous segment
-          pathName = segments[segments.length - 2];
-        }
-      } else {
-        // Analyzing all tests
-        pathName = 'all_tests';
+      // Build JSON export with all key metrics
+      final jsonData = <String, dynamic>{
+        'metadata': {
+          'tool': 'test_analyzer',
+          'version': '2.0',
+          'generated': now.toIso8601String(),
+          'test_path': targetFiles.isNotEmpty ? targetFiles.first : 'all tests',
+          'analysis_runs': runCount,
+        },
+        'summary': {
+          'total_tests': total,
+          'passed_consistently': passed,
+          'consistent_failures': consistentFailures.length,
+          'flaky_tests': flakyTests.length,
+          'pass_rate': passRate,
+          'stability_score': stabilityScore,
+          'health_status': healthStatus,
+        },
+        'reliability_matrix': {
+          'tests_with_results': testsWithResults,
+          'tests_without_results': testsWithoutResults,
+          'setup_teardown_hooks': setupTeardownHooks,
+          'buckets': buckets,
+        },
+        'consistent_failures': consistentFailures
+            .map((testId) {
+              final parts = testId.split('::');
+              final pattern = patterns[testId];
+              return {
+                'test_id': testId,
+                'file': parts[0],
+                'test_name': parts.length > 1 ? parts[1] : 'unknown',
+                'failure_type': pattern?.type.toString().split('.').last,
+                'category': pattern?.category,
+                'suggestion': pattern?.suggestion,
+              };
+            })
+            .toList()
+            .take(50)
+            .toList(),
+        'flaky_tests': flakyTests
+            .map((testId) {
+              final parts = testId.split('::');
+              final run = testRuns[testId]!;
+              final successCount = run.results.values.where((r) => r).length;
+              final successRate = successCount / runCount * 100;
+              return {
+                'test_id': testId,
+                'file': parts[0],
+                'test_name': parts.length > 1 ? parts[1] : 'unknown',
+                'success_rate': successRate,
+                'runs': run.results,
+              };
+            })
+            .toList()
+            .take(50)
+            .toList(),
+      };
+
+      // Add performance data if available
+      if (performanceMode && performance.isNotEmpty) {
+        final sorted = performance.entries.toList()
+          ..sort(
+            (a, b) => b.value.averageDuration.compareTo(a.value.averageDuration),
+          );
+        final totalTime =
+            performance.values.fold(0.0, (sum, p) => sum + p.totalDuration);
+
+        jsonData['performance'] = {
+          'total_execution_time_ms': totalTime,
+          'average_test_time_ms':
+              performance.isNotEmpty ? totalTime / performance.length : 0.0,
+          'slow_test_threshold_ms': slowTestThreshold * 1000,
+          'slow_tests_count': performance.values
+              .where((p) => p.averageDuration > slowTestThreshold * 1000)
+              .length,
+          'top_10_slowest': sorted.take(10).map((entry) {
+            final parts = entry.key.split('::');
+            return {
+              'test_id': entry.key,
+              'test_name': parts.length > 1 ? parts[1] : 'unknown',
+              'average_duration_ms': entry.value.averageDuration,
+              'max_duration_ms': entry.value.maxDuration,
+              'min_duration_ms': entry.value.minDuration,
+            };
+          }).toList(),
+        };
       }
 
-      final reportFile =
-          File('analyzer/reports/test_analysis/${pathName}_ta@$timestamp.md');
-      await reportFile.writeAsString(report.toString());
+      // Add loading performance if available
+      if (fileLoadTimes.isNotEmpty) {
+        final totalLoadTime = fileLoadTimes.values
+            .map((p) => p.averageLoadTime)
+            .reduce((a, b) => a + b);
 
-      print(
-        '\n$green✅ Report saved to: analyzer/reports/test_analysis/${pathName}_ta@$timestamp.md$reset',
+        jsonData['loading_performance'] = {
+          'total_files': fileLoadTimes.length,
+          'average_load_time_ms': totalLoadTime / fileLoadTimes.length,
+          'slow_files_count':
+              fileLoadTimes.values.where((p) => p.averageLoadTime > 500).length,
+          'failed_files_count':
+              fileLoadTimes.values.where((p) => p.hasFailures).length,
+          'files': fileLoadTimes.entries.map((entry) {
+            return {
+              'file': entry.key,
+              'average_load_time_ms': entry.value.averageLoadTime,
+              'max_load_time_ms': entry.value.maxLoadTime,
+              'has_failures': entry.value.hasFailures,
+            };
+          }).toList(),
+        };
+      }
+
+      // Add failure pattern distribution if available
+      if (patterns.isNotEmpty) {
+        final patternsByType = <FailureType, int>{};
+        for (final pattern in patterns.values) {
+          patternsByType[pattern.type] = (patternsByType[pattern.type] ?? 0) + 1;
+        }
+
+        jsonData['failure_patterns'] = patternsByType.map(
+          (type, count) => MapEntry(type.toString().split('.').last, count),
+        );
+      }
+
+      // Write unified report
+      final reportPath = await ReportUtils.writeUnifiedReport(
+        moduleName: pathName,
+        timestamp: timestamp,
+        markdownContent: report.toString(),
+        jsonData: jsonData,
+        verbose: true,
       );
+
+      print('$green✅ Report saved to: $reportPath$reset');
     } catch (e) {
       print('\n$yellow⚠️ Could not save report to file: $e$reset');
     }
@@ -2043,46 +2150,39 @@ class TestAnalyzer {
 
   /// Clean up old reports in the test_analysis directory
   Future<void> _cleanupOldReports() async {
-    final reportsDir = Directory('analyzer/reports/test_analysis');
-    if (await reportsDir.exists()) {
-      // Extract meaningful name from tested paths (same logic as in _saveReportToFile)
-      var pathName = '';
-      if (targetFiles.isNotEmpty) {
-        // Extract just the module name (last part of the path)
-        final path = targetFiles.first.replaceAll(r'\', '/');
-        final segments = path.split('/');
-        pathName = segments.last.replaceAll('.dart', '');
+    // Extract meaningful name from tested paths
+    var pathName = _extractPathName();
 
-        // Handle special cases
-        if (pathName.startsWith('test_')) {
-          pathName = pathName.substring(5);
-        }
-        if (pathName.isEmpty && segments.length > 1) {
-          // If last segment is empty (trailing slash), use previous segment
-          pathName = segments[segments.length - 2];
-        }
-      } else {
-        pathName = 'all_tests';
-      }
+    // Clean old reports using unified naming
+    await ReportUtils.cleanOldReports(
+      pathName: pathName,
+      prefixPatterns: [
+        'test_report', // New unified format
+        'ta', // Old test_analyzer format
+        'test_analysis', // Even older format
+      ],
+      verbose: true,
+    );
+  }
 
-      // Delete all existing reports for this path
-      await for (final file in reportsDir.list()) {
-        if (file is File) {
-          final fileName = file.path.split('/').last;
-          // Check if file matches our report pattern for this path
-          if (fileName.startsWith('${pathName}_ta@') ||
-              fileName.startsWith('test_analysis_${pathName}__')) {
-            // Also clean old format
-            try {
-              await file.delete();
-              print('  🗑️  Removed old report: $fileName');
-            } catch (e) {
-              // Ignore deletion errors
-            }
-          }
-        }
+  String _extractPathName() {
+    if (targetFiles.isNotEmpty) {
+      // Extract just the module name (last part of the path)
+      final path = targetFiles.first.replaceAll(r'\', '/');
+      final segments = path.split('/');
+      var pathName = segments.last.replaceAll('.dart', '');
+
+      // Handle special cases
+      if (pathName.startsWith('test_')) {
+        pathName = pathName.substring(5);
       }
+      if (pathName.isEmpty && segments.length > 1) {
+        // If last segment is empty (trailing slash), use previous segment
+        pathName = segments[segments.length - 2];
+      }
+      return pathName;
     }
+    return 'all_tests';
   }
 
   /// Watch mode for continuous testing

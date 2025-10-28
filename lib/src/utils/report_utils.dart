@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
@@ -64,5 +65,93 @@ class ReportUtils {
   ) async {
     final reportDir = await getReportDirectory();
     return p.join(reportDir, '${moduleName}_test_report@$timestamp.md');
+  }
+
+  /// Write a unified report with markdown content and embedded JSON data
+  ///
+  /// This creates a single file with:
+  /// - Human-readable markdown at the top
+  /// - Machine-parseable JSON embedded at the bottom
+  ///
+  /// Example:
+  /// ```dart
+  /// await ReportUtils.writeUnifiedReport(
+  ///   moduleName: 'my_module',
+  ///   timestamp: '2025-01-21_14-30-00',
+  ///   markdownContent: '# My Report\n\nContent here...',
+  ///   jsonData: {'metric': 'value'},
+  ///   verbose: true,
+  /// );
+  /// ```
+  static Future<String> writeUnifiedReport({
+    required String moduleName,
+    required String timestamp,
+    required String markdownContent,
+    required Map<String, dynamic> jsonData,
+    bool verbose = false,
+  }) async {
+    final reportPath = await getReportPath(moduleName, timestamp);
+    final file = File(reportPath);
+
+    // Build unified report content
+    final content = StringBuffer();
+
+    // Add markdown content
+    content.write(markdownContent);
+
+    // Add separator
+    content.writeln();
+    content.writeln('---');
+    content.writeln();
+
+    // Add JSON data section
+    content.writeln('## 📊 Machine-Readable Data');
+    content.writeln();
+    content.writeln(
+      'The following JSON contains all report data in machine-parseable format:',
+    );
+    content.writeln();
+    content.writeln('```json');
+    content.writeln(
+      const JsonEncoder.withIndent('  ').convert(jsonData),
+    );
+    content.writeln('```');
+
+    // Write to file
+    await file.writeAsString(content.toString());
+
+    if (verbose) {
+      print('  ✅ Report saved to: $reportPath');
+    }
+
+    return reportPath;
+  }
+
+  /// Extract JSON data from a unified report file
+  ///
+  /// Returns null if no JSON section is found.
+  static Future<Map<String, dynamic>?> extractJsonFromReport(
+    String reportPath,
+  ) async {
+    final file = File(reportPath);
+    if (!await file.exists()) return null;
+
+    final content = await file.readAsString();
+
+    // Find JSON code block
+    final jsonStart = content.indexOf('```json');
+    if (jsonStart == -1) return null;
+
+    final jsonEnd = content.indexOf('```', jsonStart + 7);
+    if (jsonEnd == -1) return null;
+
+    // Extract and parse JSON
+    final jsonString = content.substring(jsonStart + 7, jsonEnd).trim();
+    try {
+      final decoded = jsonDecode(jsonString);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (e) {
+      return null;
+    }
   }
 }
