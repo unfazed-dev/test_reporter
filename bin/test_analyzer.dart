@@ -2170,18 +2170,31 @@ class TestAnalyzer {
   String _extractPathName() {
     if (targetFiles.isNotEmpty) {
       // Extract just the module name (last part of the path)
-      final path = targetFiles.first.replaceAll(r'\', '/');
-      final segments = path.split('/');
-      var pathName = segments.last.replaceAll('.dart', '');
+      final path = targetFiles.first
+          .replaceAll(r'\', '/')
+          .replaceAll(RegExp(r'/$'), ''); // Remove trailing slash
+      final segments = path.split('/').where((s) => s.isNotEmpty).toList();
 
-      // Handle special cases
-      if (pathName.startsWith('test_')) {
-        pathName = pathName.substring(5);
+      if (segments.isEmpty) {
+        return 'all_tests';
       }
-      if (pathName.isEmpty && segments.length > 1) {
-        // If last segment is empty (trailing slash), use previous segment
-        pathName = segments[segments.length - 2];
+
+      var pathName = segments.last;
+
+      // If it's a file (ends with .dart), extract the test name properly
+      if (pathName.endsWith('.dart')) {
+        // Remove .dart extension
+        pathName = pathName.substring(0, pathName.length - 5);
+        // Remove _test suffix if present
+        if (pathName.endsWith('_test')) {
+          pathName = pathName.substring(0, pathName.length - 5);
+        }
+      } else if (pathName == 'test') {
+        // Special case: if analyzing just the 'test' folder, use 'all_tests'
+        return 'all_tests';
       }
+      // If it's a folder, just return the folder name as-is
+
       return pathName;
     }
     return 'all_tests';

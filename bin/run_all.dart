@@ -36,6 +36,15 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:test_analyzer/src/utils/report_utils.dart';
 
+/// Helper to safely convert numeric values to double
+double? _toDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
 void main(List<String> arguments) async {
   final parser = ArgParser()
     ..addOption(
@@ -145,10 +154,20 @@ class TestOrchestrator {
 
   Future<bool> _runCoverageTool() async {
     try {
+      // Determine source path for coverage
+      String sourcePath = testPath;
+      if (testPath.startsWith('test')) {
+        // If given test path, derive source path
+        sourcePath = testPath.replaceFirst('test', 'lib');
+      } else if (testPath == 'lib') {
+        // If given just 'lib', use 'lib/src'
+        sourcePath = 'lib/src';
+      }
+
       final args = <String>[
         'run',
         'test_analyzer:coverage_tool',
-        testPath,
+        sourcePath,
       ];
 
       if (verbose) args.add('--verbose');
@@ -204,9 +223,20 @@ class TestOrchestrator {
 
   Future<bool> _runTestAnalyzer() async {
     try {
+      // Determine test path for analyzer
+      String actualTestPath = testPath;
+      if (testPath.startsWith('lib')) {
+        // If given lib path, derive test path
+        actualTestPath = testPath.replaceFirst('lib', 'test');
+      } else if (!testPath.startsWith('test')) {
+        // Default to 'test/' if ambiguous
+        actualTestPath = 'test/';
+      }
+
       final args = <String>[
         'run',
         'test_analyzer:test_analyzer',
+        actualTestPath,
         '--runs=$runs',
       ];
 
@@ -329,7 +359,7 @@ class TestOrchestrator {
     if (coverage != null) {
       final summary = coverage['summary'] as Map<String, dynamic>?;
       if (summary != null) {
-        final overallCoverage = summary['overall_coverage'] as double?;
+        final overallCoverage = _toDouble(summary['overall_coverage']);
         report.writeln('### Coverage');
         report.writeln(
             '- **Overall Coverage:** ${overallCoverage?.toStringAsFixed(1) ?? "N/A"}%');
@@ -343,8 +373,8 @@ class TestOrchestrator {
     if (testAnalysis != null) {
       final summary = testAnalysis['summary'] as Map<String, dynamic>?;
       if (summary != null) {
-        final passRate = summary['pass_rate'] as double?;
-        final stabilityScore = summary['stability_score'] as double?;
+        final passRate = _toDouble(summary['pass_rate']);
+        final stabilityScore = _toDouble(summary['stability_score']);
         report.writeln('### Test Reliability');
         report.writeln(
             '- **Pass Rate:** ${passRate?.toStringAsFixed(1) ?? "N/A"}%');
@@ -458,7 +488,7 @@ class TestOrchestrator {
     if (coverage != null) {
       final summary = coverage['summary'] as Map<String, dynamic>?;
       if (summary != null) {
-        final overallCoverage = summary['overall_coverage'] as double?;
+        final overallCoverage = _toDouble(summary['overall_coverage']);
         if (overallCoverage != null && overallCoverage < 80) {
           insights.add({
             'severity': '🔴 Critical',
@@ -498,7 +528,7 @@ class TestOrchestrator {
           });
         }
 
-        final passRate = summary['pass_rate'] as double?;
+        final passRate = _toDouble(summary['pass_rate']);
         if (passRate != null && passRate < 95) {
           insights.add({
             'severity': '🟡 Notice',
@@ -520,7 +550,7 @@ class TestOrchestrator {
     if (coverage != null) {
       final summary = coverage['summary'] as Map<String, dynamic>?;
       if (summary != null) {
-        final overallCoverage = summary['overall_coverage'] as double?;
+        final overallCoverage = _toDouble(summary['overall_coverage']);
         if (overallCoverage != null && overallCoverage < 80) {
           recommendations.add(
             'Increase test coverage - run `dart run test_analyzer:coverage_tool --fix` to generate missing tests',
