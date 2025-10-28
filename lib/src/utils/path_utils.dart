@@ -22,7 +22,7 @@ class PathUtils {
   static String getRelativePath(String fullPath) {
     final cwd = Directory.current.path;
     if (fullPath.startsWith(cwd)) {
-      return fullPath.substring(cwd.length + 1);
+      return p.relative(fullPath, from: cwd);
     }
     return fullPath;
   }

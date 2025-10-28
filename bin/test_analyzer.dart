@@ -726,8 +726,9 @@ class TestAnalyzer {
   }
 
   Future<void> _saveReportToFile() async {
-    // Clean up old reports before generating new one
-    await _cleanupOldReports();
+    // NOTE: Cleanup disabled to retain reports for unified report linking
+    // Reports are managed by run_all.dart orchestrator
+    // await _cleanupOldReports();
 
     final report = StringBuffer();
 
@@ -2294,21 +2295,28 @@ class TestAnalyzer {
   }
 
   /// Clean up old reports in the test_analysis directory
-  Future<void> _cleanupOldReports() async {
-    // Extract meaningful name from tested paths
-    var pathName = _extractPathName();
-
-    // Clean old reports using unified naming
-    await ReportUtils.cleanOldReports(
-      pathName: pathName,
-      prefixPatterns: [
-        'test_report_alz', // New unified format
-        'ta', // Old test_analyzer format
-        'test_analysis', // Even older format
-      ],
-      verbose: true,
-    );
-  }
+  /// NOTE: Disabled to retain reports for unified report linking
+  /// Reports are now managed by run_all.dart orchestrator
+  // Future<void> _cleanupOldReports() async {
+  //   // Extract meaningful name from tested paths
+  //   var pathName = _extractPathName();
+  //
+  //   // Clean old reports using unified naming - only in analyzer subdirectory
+  //   if (verbose) {
+  //     print('  [DEBUG] Cleaning old reports for pathName=$pathName in subdirectory=analyzer');
+  //   }
+  //   await ReportUtils.cleanOldReports(
+  //     pathName: pathName,
+  //     prefixPatterns: [
+  //       'test_report_analyzer', // Unified format
+  //       'test_report_alz', // Old unified format
+  //       'ta', // Old test_analyzer format
+  //       'test_analysis', // Even older format
+  //     ],
+  //     subdirectory: 'analyzer',
+  //     verbose: verbose,
+  //   );
+  // }
 
   String _extractPathName() {
     if (targetFiles.isNotEmpty) {

@@ -27,6 +27,7 @@ class ReportUtils {
     required List<String> prefixPatterns,
     String? subdirectory,
     bool verbose = false,
+    bool keepLatest = true,
   }) async {
     final reportDir = await getReportDirectory();
 
@@ -39,22 +40,42 @@ class ReportUtils {
       final dir = Directory(p.join(reportDir, subdir));
       if (!await dir.exists()) continue;
 
+      // Group files by pattern
+      final filesByPattern = <String, List<File>>{};
+
       await for (final file in dir.list()) {
         if (file is! File) continue;
 
         final fileName = file.path.split('/').last;
-        final shouldDelete = prefixPatterns.any(
-          (pattern) =>
-              fileName.startsWith('${pathName}_$pattern@') ||
-              fileName.startsWith('${pathName.replaceAll('_', '')}_${pattern}__'),
-        );
+        for (final pattern in prefixPatterns) {
+          if (fileName.startsWith('${pathName}_$pattern@') ||
+              fileName.startsWith('${pathName.replaceAll('_', '')}_${pattern}__')) {
+            filesByPattern.putIfAbsent(pattern, () => []).add(file);
+            break;
+          }
+        }
+      }
 
-        if (shouldDelete) {
+      // For each pattern, keep the latest and delete the rest
+      for (final entry in filesByPattern.entries) {
+        final files = entry.value;
+        if (files.isEmpty) continue;
+
+        // Sort by filename (timestamp is in the filename)
+        files.sort((a, b) => b.path.compareTo(a.path)); // Descending order
+
+        // Keep the latest (first after sort), delete the rest
+        final filesToDelete = keepLatest ? files.skip(1) : files;
+
+        for (final file in filesToDelete) {
           try {
+            final fileName = file.path.split('/').last;
             await file.delete();
             if (verbose) print('  🗑️  Removed old report: $fileName');
           } catch (e) {
-            if (verbose) print('  ⚠️  Failed to delete $fileName: $e');
+            if (verbose) {
+              print('  ⚠️  Failed to delete ${file.path.split('/').last}: $e');
+            }
           }
         }
       }
@@ -134,22 +155,8 @@ class ReportUtils {
     String suffix = '',
     bool verbose = false,
   }) async {
-    // Determine subdirectory based on suffix
-    final subdir = switch (suffix) {
-      'coverage' => 'coverage',
-      'analyzer' => 'analyzer',
-      'failed' => 'failed',
-      _ => 'unified',
-    };
-
-    // Clean old reports for this module/suffix in the appropriate subdirectory
-    final suffixPattern = suffix.isNotEmpty ? 'test_report_$suffix' : 'test_report';
-    await cleanOldReports(
-      pathName: moduleName,
-      prefixPatterns: [suffixPattern],
-      subdirectory: subdir,
-      verbose: verbose,
-    );
+    // NOTE: Cleanup is now handled by the calling code (coverage_tool, test_analyzer, run_all)
+    // This prevents accidentally deleting reports that need to be retained for the unified report
 
     final reportPath =
         await getReportPath(moduleName, timestamp, suffix: suffix);

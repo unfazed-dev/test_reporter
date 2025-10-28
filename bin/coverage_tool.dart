@@ -845,8 +845,9 @@ class CoverageAnalyzer {
     // Extract meaningful name from tested path early for use throughout
     final pathName = _extractPathName();
 
-    // Clean up old reports before generating new ones
-    await _cleanupOldReports();
+    // NOTE: Cleanup disabled to retain reports for unified report linking
+    // Reports are managed by run_all.dart orchestrator
+    // await _cleanupOldReports();
 
     final report = StringBuffer();
     report.writeln('# 📊 Coverage Report');
@@ -1684,21 +1685,23 @@ class CoverageAnalyzer {
   }
 
   /// Clean up old reports in the coverage directory
-  Future<void> _cleanupOldReports() async {
-    // Extract meaningful name from tested path
-    final pathName = _extractPathName();
-
-    // Clean old reports using unified naming
-    await ReportUtils.cleanOldReports(
-      pathName: pathName,
-      prefixPatterns: [
-        'test_report_cov', // New unified format
-        'tc', // Old coverage_tool format
-        'coverage', // Even older format
-      ],
-      verbose: true,
-    );
-  }
+  /// NOTE: Disabled to retain reports for unified report linking
+  /// Reports are now managed by run_all.dart orchestrator
+  // Future<void> _cleanupOldReports() async {
+  //   // Extract meaningful name from tested path
+  //   final pathName = _extractPathName();
+  //
+  //   // Clean old reports using unified naming
+  //   await ReportUtils.cleanOldReports(
+  //     pathName: pathName,
+  //     prefixPatterns: [
+  //       'test_report_cov', // New unified format
+  //       'tc', // Old coverage_tool format
+  //       'coverage', // Even older format
+  //     ],
+  //     verbose: true,
+  //   );
+  // }
 
   String _extractPathName() {
     // Extract module name from the SOURCE path (libPath), not test path

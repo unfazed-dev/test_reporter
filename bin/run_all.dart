@@ -141,6 +141,7 @@ class TestOrchestrator {
 
   final Map<String, dynamic> results = {};
   final List<String> failures = [];
+  final Map<String, String> reportPaths = {};
 
   /// Extract module name from test path for report naming
   String _extractModuleName() {
@@ -261,13 +262,10 @@ class TestOrchestrator {
 
           if (jsonData != null) {
             results['coverage'] = jsonData;
+            reportPaths['coverage'] = coverageReport;
 
-            // Delete individual coverage report after extracting data
-            try {
-              await File(coverageReport).delete();
-              if (verbose) print('  🗑️  Deleted individual coverage report');
-            } catch (e) {
-              if (verbose) print('  ⚠️  Could not delete coverage report: $e');
+            if (verbose) {
+              print('  📄 Coverage report retained: $coverageReport');
             }
           } else {
             if (verbose) print('  ⚠️  Failed to extract JSON from coverage report');
@@ -296,6 +294,11 @@ class TestOrchestrator {
       if (testPath.startsWith('lib')) {
         // If given lib path, derive test path
         actualTestPath = testPath.replaceFirst('lib', 'test');
+
+        // If it's a specific file (ends with .dart but not _test.dart), add _test suffix
+        if (actualTestPath.endsWith('.dart') && !actualTestPath.endsWith('_test.dart')) {
+          actualTestPath = actualTestPath.replaceFirst('.dart', '_test.dart');
+        }
       } else if (!testPath.startsWith('test')) {
         // Default to 'test/' if ambiguous
         actualTestPath = 'test/';
@@ -356,13 +359,10 @@ class TestOrchestrator {
 
           if (jsonData != null) {
             results['test_analysis'] = jsonData;
+            reportPaths['analyzer'] = analyzerReport;
 
-            // Delete individual analyzer report after extracting data
-            try {
-              await File(analyzerReport).delete();
-              if (verbose) print('  🗑️  Deleted individual analyzer report');
-            } catch (e) {
-              if (verbose) print('  ⚠️  Could not delete analyzer report: $e');
+            if (verbose) {
+              print('  📄 Analyzer report retained: $analyzerReport');
             }
           } else {
             if (verbose) print('  ⚠️  Failed to extract JSON from analyzer report');
@@ -393,14 +393,8 @@ class TestOrchestrator {
 
           if (jsonData != null) {
             results['test_analysis'] = jsonData;
-
-            // Delete individual analyzer report after extracting data
-            try {
-              await File(analyzerReport).delete();
-              if (verbose) print('  🗑️  Deleted individual analyzer report');
-            } catch (e) {
-              if (verbose) print('  ⚠️  Could not delete analyzer report: $e');
-            }
+            reportPaths['analyzer'] = analyzerReport;
+            if (verbose) print('  📄 Analyzer report retained: $analyzerReport');
           } else {
             if (verbose) print('  ⚠️  Failed to extract JSON from analyzer report');
           }
@@ -477,103 +471,183 @@ class TestOrchestrator {
 
   Future<void> _generateUnifiedReport() async {
     final report = StringBuffer();
-
-    // Header
-    report.writeln('# 🎯 Unified Test Analysis Report');
-    report.writeln();
-    report.writeln('**Generated:** ${DateTime.now().toIso8601String()}');
-    report.writeln('**Test Path:** `$testPath`');
-    report.writeln('**Analysis Runs:** $runs');
-    report.writeln();
-
-    // Executive Summary
-    report.writeln('## 📊 Executive Summary');
-    report.writeln();
-
     final coverage = results['coverage'] as Map<String, dynamic>?;
     final testAnalysis = results['test_analysis'] as Map<String, dynamic>?;
 
-    if (coverage != null) {
-      final summary = coverage['summary'] as Map<String, dynamic>?;
-      if (summary != null) {
-        final overallCoverage = _toDouble(summary['overall_coverage']);
-        report.writeln('### Coverage');
-        report.writeln(
-            '- **Overall Coverage:** ${overallCoverage?.toStringAsFixed(1) ?? "N/A"}%');
-        report.writeln('- **Total Lines:** ${summary['total_lines']}');
-        report.writeln('- **Covered Lines:** ${summary['covered_lines']}');
-        report.writeln('- **Files Analyzed:** ${summary['files_analyzed']}');
-        report.writeln();
-      }
-    }
+    // Get summary data
+    final coverageSummary = coverage?['summary'] as Map<String, dynamic>?;
+    final testSummary = testAnalysis?['summary'] as Map<String, dynamic>?;
+    final overallCoverage = _toDouble(coverageSummary?['overall_coverage']);
+    final passRate = _toDouble(testSummary?['pass_rate']);
+    final stabilityScore = _toDouble(testSummary?['stability_score']);
+    final totalTests = testSummary?['total_tests'] as int? ?? 0;
+    final consistentFailures = testSummary?['consistent_failures'] as int? ?? 0;
+    final flakyTests = testSummary?['flaky_tests'] as int? ?? 0;
 
-    if (testAnalysis != null) {
-      final summary = testAnalysis['summary'] as Map<String, dynamic>?;
-      if (summary != null) {
-        final passRate = _toDouble(summary['pass_rate']);
-        final stabilityScore = _toDouble(summary['stability_score']);
-        report.writeln('### Test Reliability');
-        report.writeln(
-            '- **Pass Rate:** ${passRate?.toStringAsFixed(1) ?? "N/A"}%');
-        report.writeln(
-            '- **Stability Score:** ${stabilityScore?.toStringAsFixed(1) ?? "N/A"}%');
-        report.writeln('- **Total Tests:** ${summary['total_tests']}');
-        report.writeln(
-            '- **Consistent Failures:** ${summary['consistent_failures']}');
-        report.writeln('- **Flaky Tests:** ${summary['flaky_tests']}');
-        report.writeln();
-      }
-    }
+    // Calculate overall health score
+    final healthScore = _calculateHealthScore(
+      overallCoverage,
+      passRate,
+      stabilityScore,
+    );
+    final healthStatus = _getHealthStatus(healthScore);
 
-    // Unified Insights
-    report.writeln('## 💡 Unified Insights');
+    // Header with health badge
+    report.writeln('# 📊 Test Suite Health Dashboard');
+    report.writeln();
+    report.writeln('> **Overall Health:** $healthStatus **${healthScore.toStringAsFixed(1)}%**');
+    report.writeln();
+    report.writeln('**Generated:** ${DateTime.now().toLocal()}');
+    report.writeln('**Module:** `$testPath`');
+    report.writeln('**Analysis Runs:** $runs');
+    report.writeln();
+    report.writeln('---');
     report.writeln();
 
+    // At-a-Glance Summary
+    report.writeln('## 🎯 At-a-Glance Summary');
+    report.writeln();
+    report.writeln('| Metric | Value | Status |');
+    report.writeln('|--------|-------|--------|');
+    report.writeln(
+        '| **Test Coverage** | ${overallCoverage?.toStringAsFixed(1) ?? "N/A"}% | ${_getCoverageStatus(overallCoverage)} |');
+    report.writeln(
+        '| **Pass Rate** | ${passRate?.toStringAsFixed(1) ?? "N/A"}% | ${_getPassRateStatus(passRate)} |');
+    report.writeln(
+        '| **Stability** | ${stabilityScore?.toStringAsFixed(1) ?? "N/A"}% | ${_getStabilityStatus(stabilityScore)} |');
+    report.writeln(
+        '| **Total Tests** | $totalTests | ${totalTests > 0 ? "✅" : "⚠️"} |');
+    report.writeln(
+        '| **Failures** | $consistentFailures | ${consistentFailures == 0 ? "✅" : "❌"} |');
+    report.writeln(
+        '| **Flaky Tests** | $flakyTests | ${flakyTests == 0 ? "✅" : "⚠️"} |');
+    report.writeln();
+
+    // Critical Issues First
     final insights = _generateInsights();
-    if (insights.isNotEmpty) {
-      var priority = 1;
-      for (final insight in insights) {
-        report.writeln(
-            '$priority. **${insight['severity']}**: ${insight['message']}');
-        priority++;
-      }
+    final criticalIssues = insights
+        .where((i) => i['severity'] == '🔴 Critical')
+        .toList();
+    final warnings =
+        insights.where((i) => i['severity'] == '🟠 Warning').toList();
+
+    if (criticalIssues.isNotEmpty || warnings.isNotEmpty) {
+      report.writeln('## 🚨 Issues Requiring Attention');
       report.writeln();
+
+      if (criticalIssues.isNotEmpty) {
+        report.writeln('### 🔴 Critical');
+        report.writeln();
+        for (var i = 0; i < criticalIssues.length; i++) {
+          report.writeln('${i + 1}. ${criticalIssues[i]['message']}');
+        }
+        report.writeln();
+      }
+
+      if (warnings.isNotEmpty) {
+        report.writeln('### 🟠 Warnings');
+        report.writeln();
+        for (var i = 0; i < warnings.length; i++) {
+          report.writeln('${i + 1}. ${warnings[i]['message']}');
+        }
+        report.writeln();
+      }
     } else {
-      report.writeln('✅ All metrics look healthy!');
+      report.writeln('## ✅ All Systems Green');
+      report.writeln();
+      report.writeln('No issues detected. Test suite is healthy!');
       report.writeln();
     }
 
-    // Recommendations
-    report.writeln('## 🎯 Recommendations');
+    // Quick Actions
+    report.writeln('## ⚡ Quick Actions');
     report.writeln();
-
     final recommendations = _generateRecommendations();
     if (recommendations.isNotEmpty) {
-      for (final rec in recommendations) {
-        report.writeln('- $rec');
+      for (var i = 0; i < recommendations.length; i++) {
+        report.writeln('${i + 1}. ${recommendations[i]}');
       }
       report.writeln();
     } else {
-      report.writeln('✅ No critical actions required at this time.');
+      report.writeln('✅ No actions required. Continue maintaining current quality standards.');
       report.writeln();
     }
 
-    // Tool Status
-    report.writeln('## 🔧 Tool Status');
+    // Detailed Metrics Breakdown
+    report.writeln('## 📈 Detailed Metrics');
+    report.writeln();
+
+    // Coverage breakdown
+    if (coverageSummary != null) {
+      report.writeln('### Code Coverage');
+      report.writeln();
+      report.writeln('```');
+      report.writeln(
+          '├─ Overall:  ${overallCoverage?.toStringAsFixed(1) ?? "N/A"}%');
+      report.writeln('├─ Lines:    ${coverageSummary['covered_lines']}/${coverageSummary['total_lines']}');
+      report.writeln('├─ Uncovered: ${coverageSummary['uncovered_lines']} lines');
+      report.writeln('└─ Files:    ${coverageSummary['files_analyzed']} analyzed');
+      report.writeln('```');
+      report.writeln();
+    }
+
+    // Test reliability breakdown
+    if (testSummary != null) {
+      report.writeln('### Test Reliability');
+      report.writeln();
+      report.writeln('```');
+      report.writeln('├─ Total Tests:      $totalTests');
+      report.writeln('├─ Pass Rate:        ${passRate?.toStringAsFixed(1) ?? "N/A"}%');
+      report.writeln('├─ Stability Score:  ${stabilityScore?.toStringAsFixed(1) ?? "N/A"}%');
+      report.writeln('├─ Passed:           ${testSummary['passed_consistently']}');
+      report.writeln('├─ Failed:           $consistentFailures');
+      report.writeln('└─ Flaky:            $flakyTests');
+      report.writeln('```');
+      report.writeln();
+    }
+
+    // Related Reports with actual file links
+    report.writeln('## 📑 Detailed Reports');
+    report.writeln();
+    report.writeln('For in-depth analysis, see specialized reports:');
+    report.writeln();
+
+    // Add links to actual report files
+    if (reportPaths.containsKey('analyzer')) {
+      final analyzerFile = p.basename(reportPaths['analyzer']!);
+      report.writeln('- 📊 **[Test Reliability Analysis](../analyzer/$analyzerFile)** - Flaky tests, performance metrics, test behavior');
+    } else {
+      report.writeln('- 📊 **Test Reliability Analysis** - ⚠️ Not available');
+    }
+
+    if (reportPaths.containsKey('failed')) {
+      final failedFile = p.basename(reportPaths['failed']!);
+      report.writeln('- 🔴 **[Failed Tests Report](../failed/$failedFile)** - Failure triage, root causes, suggested fixes');
+    } else if (flakyTests > 0 || consistentFailures > 0) {
+      report.writeln('- 🔴 **Failed Tests Report** - ⚠️ Not generated (check logs)');
+    }
+
+    if (reportPaths.containsKey('coverage')) {
+      final coverageFile = p.basename(reportPaths['coverage']!);
+      report.writeln('- 📈 **[Coverage Analysis](../coverage/$coverageFile)** - Code coverage breakdown, untested code, testability');
+    } else {
+      report.writeln('- 📈 **Coverage Analysis** - ⚠️ Not available');
+    }
+    report.writeln();
+
+    // Execution Info
+    report.writeln('---');
+    report.writeln();
+    report.writeln('### 🔧 Execution Details');
     report.writeln();
     report.writeln('| Tool | Status |');
     report.writeln('|------|--------|');
     report.writeln(
-        '| Coverage Tool | ${failures.contains("coverage_tool") ? "❌ Failed" : "✅ Success"} |');
+        '| Coverage Analysis | ${failures.contains("coverage_tool") ? "❌ Failed" : "✅ Success"} |');
     report.writeln(
-        '| Test Analyzer | ${failures.contains("test_analyzer") ? "❌ Failed" : "✅ Success"} |');
+        '| Test Reliability Analysis | ${failures.contains("test_analyzer") ? "❌ Failed" : "✅ Success"} |');
     report.writeln();
-
-    // Links to detailed reports
-    report.writeln('## 📄 Detailed Reports');
-    report.writeln();
-    report.writeln(
-        'For detailed analysis, see individual tool reports in `test_analyzer_reports/`');
+    report.writeln('*Generated by Unified Test Analysis Orchestrator*');
     report.writeln();
 
     // Footer
@@ -616,8 +690,46 @@ class TestOrchestrator {
 
       print('  ✅ Unified report saved to: $reportPath');
 
-      // Generate failed report if there are failures or flaky tests
-      await _generateFailedReport(results, moduleName, timestamp);
+      // Check if there are failures to determine if we need a failed report
+      final analysisData = results['test_analysis'] as Map<String, dynamic>?;
+      final analysisSummary = analysisData?['summary'] as Map<String, dynamic>?;
+      final numConsistentFailures = analysisSummary?['consistent_failures'] as int? ?? 0;
+      final numFlakyTests = analysisSummary?['flaky_tests'] as int? ?? 0;
+      final hasFailures = numConsistentFailures > 0 || numFlakyTests > 0;
+
+      if (hasFailures) {
+        // Generate failed report if there are failures or flaky tests
+        await _generateFailedReport(results, moduleName, timestamp);
+      } else {
+        // Delete any existing failed reports if no failures exist
+        if (verbose) print('\n🧹 No failures - cleaning up old failed reports...');
+        await ReportUtils.cleanOldReports(
+          pathName: moduleName,
+          prefixPatterns: ['test_report_failed'],
+          verbose: verbose,
+          keepLatest: false, // Delete all failed reports when there are no failures
+        );
+
+        // Delete the failed subdirectory if it's empty
+        final reportDir = await ReportUtils.getReportDirectory();
+        final failedDir = Directory(p.join(reportDir, 'failed'));
+        if (await failedDir.exists()) {
+          final isEmpty = await failedDir.list().isEmpty;
+          if (isEmpty) {
+            await failedDir.delete();
+            if (verbose) print('  🗑️  Removed empty failed directory');
+          }
+        }
+      }
+
+      // Clean up old reports, keeping only the latest for each type
+      if (verbose) print('\n🧹 Cleaning up old reports...');
+      await ReportUtils.cleanOldReports(
+        pathName: moduleName,
+        prefixPatterns: ['test_report_coverage', 'test_report_analyzer', 'test_report_unified', 'test_report_failed'],
+        verbose: verbose,
+      );
+      if (verbose) print('  ✅ Cleanup complete');
     } catch (e) {
       print('  ⚠️  Could not save unified report: $e');
     }
@@ -780,6 +892,7 @@ class TestOrchestrator {
         verbose: verbose,
       );
 
+      reportPaths['failed'] = failedReportPath;
       print('  ✅ Failed test report saved to: $failedReportPath');
     } catch (e) {
       print('  ⚠️  Could not save failed report: $e');
@@ -927,5 +1040,55 @@ class TestOrchestrator {
 
     print('\n📁 Reports saved to: test_analyzer_reports/');
     print('');
+  }
+
+  /// Calculate overall health score (0-100)
+  double _calculateHealthScore(
+    double? coverage,
+    double? passRate,
+    double? stability,
+  ) {
+    final scores = <double>[];
+    if (coverage != null) scores.add(coverage);
+    if (passRate != null) scores.add(passRate);
+    if (stability != null) scores.add(stability);
+
+    if (scores.isEmpty) return 0.0;
+    return scores.reduce((a, b) => a + b) / scores.length;
+  }
+
+  /// Get health status badge
+  String _getHealthStatus(double healthScore) {
+    if (healthScore >= 90) return '🟢 Excellent';
+    if (healthScore >= 75) return '🟡 Good';
+    if (healthScore >= 60) return '🟠 Fair';
+    return '🔴 Poor';
+  }
+
+  /// Get coverage status indicator
+  String _getCoverageStatus(double? coverage) {
+    if (coverage == null) return '❓';
+    if (coverage >= 80) return '✅ Excellent';
+    if (coverage >= 60) return '🟡 Adequate';
+    if (coverage >= 40) return '🟠 Low';
+    return '🔴 Critical';
+  }
+
+  /// Get pass rate status indicator
+  String _getPassRateStatus(double? passRate) {
+    if (passRate == null) return '❓';
+    if (passRate >= 95) return '✅ Excellent';
+    if (passRate >= 85) return '🟡 Good';
+    if (passRate >= 70) return '🟠 Fair';
+    return '🔴 Poor';
+  }
+
+  /// Get stability status indicator
+  String _getStabilityStatus(double? stability) {
+    if (stability == null) return '❓';
+    if (stability >= 95) return '✅ Stable';
+    if (stability >= 85) return '🟡 Mostly Stable';
+    if (stability >= 70) return '🟠 Unstable';
+    return '🔴 Very Unstable';
   }
 }
