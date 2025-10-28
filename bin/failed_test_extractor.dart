@@ -56,6 +56,8 @@ import 'dart:io';
 
 // CLI argument parsing
 import 'package:args/args.dart';
+import 'package:path/path.dart' as p;
+import 'package:test_analyzer/src/utils/report_utils.dart';
 
 /// Main entry point for the failed test extractor
 void main(List<String> arguments) async {
@@ -159,8 +161,8 @@ class FailedTestExtractor {
       ..addOption(
         'output',
         abbr: 'o',
-        help: 'Output directory for reports',
-        defaultsTo: 'analyzer/reports/failed_tests',
+        help: 'Output directory for reports (deprecated - now uses test_analyzer_reports/failed/)',
+        defaultsTo: '',
       )
       ..addFlag(
         'verbose',
@@ -659,12 +661,14 @@ class FailedTestExtractor {
 
   /// Save detailed results to file
   Future<void> _saveResults(TestResults results) async {
-    final outputDir = _args['output'] as String;
+    // Use organized directory structure
+    final reportDir = await ReportUtils.getReportDirectory();
+    final outputDir = p.join(reportDir, 'failed');
     await Directory(outputDir).create(recursive: true);
 
     final timestamp = results.timestamp;
     final fileName = 'failed_tests_${_formatTimestamp(timestamp)}.json';
-    final filePath = '$outputDir/$fileName';
+    final filePath = p.join(outputDir, fileName);
 
     final report = {
       'timestamp': timestamp.toIso8601String(),
