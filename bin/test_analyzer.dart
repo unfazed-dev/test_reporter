@@ -1279,7 +1279,8 @@ class TestAnalyzer {
       if (performanceMode && performance.isNotEmpty) {
         final sorted = performance.entries.toList()
           ..sort(
-            (a, b) => b.value.averageDuration.compareTo(a.value.averageDuration),
+            (a, b) =>
+                b.value.averageDuration.compareTo(a.value.averageDuration),
           );
         final totalTime =
             performance.values.fold(0.0, (sum, p) => sum + p.totalDuration);
@@ -1333,7 +1334,8 @@ class TestAnalyzer {
       if (patterns.isNotEmpty) {
         final patternsByType = <FailureType, int>{};
         for (final pattern in patterns.values) {
-          patternsByType[pattern.type] = (patternsByType[pattern.type] ?? 0) + 1;
+          patternsByType[pattern.type] =
+              (patternsByType[pattern.type] ?? 0) + 1;
         }
 
         jsonData['failure_patterns'] = patternsByType.map(
