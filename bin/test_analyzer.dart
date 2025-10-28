@@ -73,6 +73,7 @@ class TestAnalyzer {
     this.performanceMode = false,
     this.watch = false,
     this.generateFixes = true,
+    this.generateReport = true,
     this.slowTestThreshold = 1.0, // seconds
     this.targetFiles = const [],
     this.parallel = false,
@@ -114,6 +115,7 @@ class TestAnalyzer {
   final bool performanceMode;
   final bool watch;
   final bool generateFixes;
+  final bool generateReport;
   final double slowTestThreshold;
   final List<String> targetFiles;
   final bool parallel;
@@ -718,7 +720,9 @@ class TestAnalyzer {
     _printActionableInsights();
 
     // Save report to file
-    await _saveReportToFile();
+    if (generateReport) {
+      await _saveReportToFile();
+    }
   }
 
   Future<void> _saveReportToFile() async {
@@ -2381,6 +2385,7 @@ void main(List<String> args) async {
   final performance = args.contains('--performance') || args.contains('-p');
   final watch = args.contains('--watch') || args.contains('-w');
   final noFixes = args.contains('--no-fixes');
+  final noReport = args.contains('--no-report');
   final help = args.contains('--help') || args.contains('-h');
   final parallel = args.contains('--parallel');
   final dependencyAnalysis =
@@ -2427,6 +2432,7 @@ void main(List<String> args) async {
     performanceMode: performance,
     watch: watch,
     generateFixes: !noFixes,
+    generateReport: !noReport,
     slowTestThreshold: slowThreshold,
     targetFiles: targetFiles,
     parallel: parallel,

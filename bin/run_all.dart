@@ -189,6 +189,15 @@ class TestOrchestrator {
       if (testPath.startsWith('test')) {
         // If given test path, derive source path
         sourcePath = testPath.replaceFirst('test', 'lib');
+
+        // Check if derived path exists, otherwise default to lib/src
+        final derivedFile = File(sourcePath);
+        final derivedDir = Directory(sourcePath);
+
+        if (!derivedFile.existsSync() && !derivedDir.existsSync()) {
+          // Path doesn't exist, use lib/src as default
+          sourcePath = 'lib/src';
+        }
       } else if (testPath == 'lib') {
         // If given just 'lib', use 'lib/src'
         sourcePath = 'lib/src';
@@ -198,6 +207,7 @@ class TestOrchestrator {
         'run',
         'test_analyzer:coverage_tool',
         sourcePath,
+        '--no-report', // Don't generate individual report
       ];
 
       if (verbose) args.add('--verbose');
@@ -268,6 +278,7 @@ class TestOrchestrator {
         'test_analyzer:test_analyzer',
         actualTestPath,
         '--runs=$runs',
+        '--no-report', // Don't generate individual report
       ];
 
       if (performance) args.add('--performance');
