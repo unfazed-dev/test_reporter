@@ -147,9 +147,10 @@ class TestOrchestrator {
     final path = testPath.replaceAll(r'\', '/').replaceAll(RegExp(r'/$'), '');
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
 
-    if (segments.isEmpty) return 'all_tests';
+    if (segments.isEmpty) return 'all_tests-fo';
 
     var moduleName = segments.last;
+    String suffix;
 
     // If it's a file, extract the test name properly
     if (moduleName.endsWith('.dart')) {
@@ -157,11 +158,15 @@ class TestOrchestrator {
       if (moduleName.endsWith('_test')) {
         moduleName = moduleName.substring(0, moduleName.length - 5);
       }
+      suffix = '-fi';
     } else if (moduleName == 'test') {
-      return 'all_tests';
+      return 'test-fo';
+    } else {
+      // It's a folder
+      suffix = '-fo';
     }
 
-    return moduleName;
+    return '$moduleName$suffix';
   }
 
   Future<void> runAll() async {
@@ -238,7 +243,7 @@ class TestOrchestrator {
         print('  ✅ Coverage analysis complete');
 
         // Extract coverage data from most recent report
-        final coverageReport = await _findLatestReport('test_report_cov');
+        final coverageReport = await _findLatestReport('test_report_coverage');
         if (verbose) print('  📊 Coverage report found: $coverageReport');
 
         if (coverageReport != null) {
@@ -333,7 +338,7 @@ class TestOrchestrator {
         print('  ✅ Test analysis complete');
 
         // Extract analyzer data from most recent report
-        final analyzerReport = await _findLatestReport('test_report_alz');
+        final analyzerReport = await _findLatestReport('test_report_analyzer');
         if (verbose) print('  📊 Analyzer report found: $analyzerReport');
 
         if (analyzerReport != null) {
@@ -371,7 +376,7 @@ class TestOrchestrator {
         print('  ⚠️  Test analysis complete with test failures');
 
         // Still extract data even if tests failed
-        final analyzerReport = await _findLatestReport('test_report_alz');
+        final analyzerReport = await _findLatestReport('test_report_analyzer');
         if (verbose) print('  📊 Analyzer report found: $analyzerReport');
 
         if (analyzerReport != null) {
@@ -421,11 +426,11 @@ class TestOrchestrator {
       final reportDir = await ReportUtils.getReportDirectory();
 
       // Determine subdirectory based on prefix
-      // prefix will be like 'test_report_cov' or 'test_report_alz'
+      // prefix will be like 'test_report_coverage' or 'test_report_analyzer'
       final subdir = switch (prefix) {
-        String s when s.contains('_cov') => 'coverage',
-        String s when s.contains('_alz') => 'analyzer',
-        String s when s.contains('_fail') => 'failed',
+        String s when s.contains('_coverage') => 'coverage',
+        String s when s.contains('_analyzer') => 'analyzer',
+        String s when s.contains('_failed') => 'failed',
         _ => 'unified',
       };
 

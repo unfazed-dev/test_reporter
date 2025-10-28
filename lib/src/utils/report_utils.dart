@@ -60,11 +60,15 @@ class ReportUtils {
 
   /// Get full report path for a module
   ///
-  /// Organizes reports into subdirectories based on suffix:
-  /// - 'cov' -> coverage/
-  /// - 'alz' -> analyzer/
-  /// - 'fail' -> failed/
+  /// Organizes reports into subdirectories based on tool suffix:
+  /// - 'coverage' -> coverage/
+  /// - 'analyzer' -> analyzer/
+  /// - 'failed' -> failed/
   /// - '' (empty) -> unified/
+  ///
+  /// Naming convention: {name}-{fo|fi}_test_report_{tool}@timestamp.md
+  /// - fo = folder
+  /// - fi = file
   static Future<String> getReportPath(
     String moduleName,
     String timestamp, {
@@ -73,10 +77,11 @@ class ReportUtils {
     final reportDir = await getReportDirectory();
 
     // Determine subdirectory based on suffix
+    // Suffix should be full tool name: coverage, analyzer, failed, or empty for unified
     final subdir = switch (suffix) {
-      'cov' => 'coverage',
-      'alz' => 'analyzer',
-      'fail' => 'failed',
+      'coverage' => 'coverage',
+      'analyzer' => 'analyzer',
+      'failed' => 'failed',
       _ => 'unified',
     };
 

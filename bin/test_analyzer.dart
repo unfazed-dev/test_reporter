@@ -1353,7 +1353,7 @@ class TestAnalyzer {
         timestamp: timestamp,
         markdownContent: report.toString(),
         jsonData: jsonData,
-        suffix: 'alz',
+        suffix: 'analyzer',
         verbose: true,
       );
 
@@ -2181,10 +2181,11 @@ class TestAnalyzer {
       final segments = path.split('/').where((s) => s.isNotEmpty).toList();
 
       if (segments.isEmpty) {
-        return 'all_tests';
+        return 'all_tests-fo';
       }
 
       var pathName = segments.last;
+      String suffix;
 
       // If it's a file (ends with .dart), extract the test name properly
       if (pathName.endsWith('.dart')) {
@@ -2194,15 +2195,18 @@ class TestAnalyzer {
         if (pathName.endsWith('_test')) {
           pathName = pathName.substring(0, pathName.length - 5);
         }
+        suffix = '-fi';
       } else if (pathName == 'test') {
         // Special case: if analyzing just the 'test' folder, use 'all_tests'
-        return 'all_tests';
+        return 'test-fo';
+      } else {
+        // It's a folder
+        suffix = '-fo';
       }
-      // If it's a folder, just return the folder name as-is
 
-      return pathName;
+      return '$pathName$suffix';
     }
-    return 'all_tests';
+    return 'all_tests-fo';
   }
 
   /// Watch mode for continuous testing

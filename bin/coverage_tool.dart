@@ -1304,7 +1304,7 @@ class CoverageAnalyzer {
       timestamp: simpleTimestamp,
       markdownContent: report.toString(),
       jsonData: jsonData,
-      suffix: 'cov',
+      suffix: 'coverage',
       verbose: true,
     );
 
@@ -1709,22 +1709,27 @@ class CoverageAnalyzer {
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
 
     if (segments.isEmpty) {
-      return 'all_tests';
+      return 'all_tests-fo';
     }
 
     var pathName = segments.last;
+    String suffix;
 
-    // If it's a file (ends with .dart), extract the module name properly
+    // Determine if it's a file or folder
     if (pathName.endsWith('.dart')) {
-      // Remove .dart extension
+      // It's a file - remove .dart extension and add -fi suffix
       pathName = pathName.substring(0, pathName.length - 5);
+      suffix = '-fi';
     } else if (pathName == 'lib') {
       // Special case: if analyzing entire 'lib' folder, use package name from pubspec
-      return _getPackageName();
+      pathName = _getPackageName();
+      suffix = '-fo';
+    } else {
+      // It's a folder like 'src', 'models', 'ui'
+      suffix = '-fo';
     }
-    // If it's a folder like 'src', 'models', 'ui', return the folder name
 
-    return pathName;
+    return '$pathName$suffix';
   }
 
   /// Get package name from pubspec.yaml
