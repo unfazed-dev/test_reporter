@@ -30,7 +30,7 @@ dev_dependencies:
   coverage: ^1.9.0
 
 executables:
-  coverage-tool: coverage_tool
-  test-analyzer: test_analyzer
-  failed-test-extractor: failed_test_extractor
-  run-all: run_all
+  coverage_tool:
+  test_analyzer:
+  failed_test_extractor:
+  run_all:
