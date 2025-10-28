@@ -323,8 +323,8 @@ class TestOrchestrator {
     report.writeln('## 📊 Executive Summary');
     report.writeln();
 
-    final coverage = results['coverage'];
-    final testAnalysis = results['test_analysis'];
+    final coverage = results['coverage'] as Map<String, dynamic>?;
+    final testAnalysis = results['test_analysis'] as Map<String, dynamic>?;
 
     if (coverage != null) {
       final summary = coverage['summary'] as Map<String, dynamic>?;
@@ -454,7 +454,7 @@ class TestOrchestrator {
     final insights = <Map<String, String>>[];
 
     // Coverage insights
-    final coverage = results['coverage'];
+    final coverage = results['coverage'] as Map<String, dynamic>?;
     if (coverage != null) {
       final summary = coverage['summary'] as Map<String, dynamic>?;
       if (summary != null) {
@@ -476,7 +476,7 @@ class TestOrchestrator {
     }
 
     // Test reliability insights
-    final testAnalysis = results['test_analysis'];
+    final testAnalysis = results['test_analysis'] as Map<String, dynamic>?;
     if (testAnalysis != null) {
       final summary = testAnalysis['summary'] as Map<String, dynamic>?;
       if (summary != null) {
@@ -516,7 +516,7 @@ class TestOrchestrator {
     final recommendations = <String>[];
 
     // Coverage recommendations
-    final coverage = results['coverage'];
+    final coverage = results['coverage'] as Map<String, dynamic>?;
     if (coverage != null) {
       final summary = coverage['summary'] as Map<String, dynamic>?;
       if (summary != null) {
@@ -530,7 +530,7 @@ class TestOrchestrator {
     }
 
     // Test reliability recommendations
-    final testAnalysis = results['test_analysis'];
+    final testAnalysis = results['test_analysis'] as Map<String, dynamic>?;
     if (testAnalysis != null) {
       final summary = testAnalysis['summary'] as Map<String, dynamic>?;
       if (summary != null) {

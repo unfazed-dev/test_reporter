@@ -8,16 +8,15 @@
 /// - Unified reporting
 library test_analyzer;
 
+// Export modern models with sealed classes and records
+export 'src/models/failure_types.dart';
+export 'src/models/result_types.dart';
 export 'src/utils/constants.dart';
 export 'src/utils/extensions.dart';
 // Export utilities
 export 'src/utils/formatting_utils.dart';
 export 'src/utils/path_utils.dart';
 export 'src/utils/report_utils.dart';
-
-// Export modern models with sealed classes and records
-export 'src/models/failure_types.dart';
-export 'src/models/result_types.dart';
 
 // Export services (when created)
 // export 'src/services/coverage_service.dart';
