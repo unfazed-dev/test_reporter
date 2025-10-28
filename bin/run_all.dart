@@ -610,6 +610,7 @@ class TestOrchestrator {
             'test_analyzer': !failures.contains('test_analyzer'),
           },
         },
+        suffix: 'unified',
         verbose: true,
       );
 
