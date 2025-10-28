@@ -1,0 +1,36 @@
+name: test_analyzer
+description: Comprehensive Flutter/Dart test analysis toolkit with coverage, flaky test detection, and unified reporting
+version: 2.0.0
+repository: https://github.com/unfazed-dev/test_analyzer
+issue_tracker: https://github.com/unfazed-dev/test_analyzer/issues
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  # CLI tools
+  args: ^2.5.0
+  mason_logger: ^0.3.0           # Beautiful CLI output
+  io: ^1.0.4                     # Terminal utilities
+  cli_util: ^0.4.0               # CLI helpers
+
+  # Utilities
+  path: ^1.9.0
+  glob: ^2.1.0
+
+  # Data structures
+  collection: ^1.18.0
+
+  # Markdown
+  markdown: ^7.2.0
+
+dev_dependencies:
+  test: ^1.25.0
+  very_good_analysis: ^6.0.0
+  coverage: ^1.9.0
+
+executables:
+  coverage-tool: coverage_tool
+  test-analyzer: test_analyzer
+  failed-test-extractor: failed_test_extractor
+  run-all: run_all
