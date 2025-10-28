@@ -15,9 +15,9 @@ export 'src/utils/formatting_utils.dart';
 export 'src/utils/path_utils.dart';
 export 'src/utils/report_utils.dart';
 
-// Export models (when created)
-// export 'src/models/coverage_data.dart';
-// export 'src/models/test_result.dart';
+// Export modern models with sealed classes and records
+export 'src/models/failure_types.dart';
+export 'src/models/result_types.dart';
 
 // Export services (when created)
 // export 'src/services/coverage_service.dart';
