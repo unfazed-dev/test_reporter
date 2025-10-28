@@ -34,6 +34,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
+import 'package:path/path.dart' as p;
 import 'package:test_analyzer/src/utils/report_utils.dart';
 
 /// Helper to safely convert numeric values to double
@@ -418,12 +419,25 @@ class TestOrchestrator {
   Future<String?> _findLatestReport(String prefix) async {
     try {
       final reportDir = await ReportUtils.getReportDirectory();
-      final dir = Directory(reportDir);
 
-      if (verbose) print('  🔍 Looking for reports with prefix: $prefix in $reportDir');
+      // Determine subdirectory based on prefix
+      // prefix will be like 'test_report_cov' or 'test_report_alz'
+      final subdir = switch (prefix) {
+        String s when s.contains('_cov') => 'coverage',
+        String s when s.contains('_alz') => 'analyzer',
+        String s when s.contains('_fail') => 'failed',
+        _ => 'unified',
+      };
+
+      final searchDir = p.join(reportDir, subdir);
+      final dir = Directory(searchDir);
+
+      if (verbose) {
+        print('  🔍 Looking for reports with prefix: $prefix in $searchDir');
+      }
 
       if (!await dir.exists()) {
-        if (verbose) print('  ⚠️  Report directory does not exist');
+        if (verbose) print('  ⚠️  Report directory does not exist: $searchDir');
         return null;
       }
 

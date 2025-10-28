@@ -59,15 +59,37 @@ class ReportUtils {
   }
 
   /// Get full report path for a module
+  ///
+  /// Organizes reports into subdirectories based on suffix:
+  /// - 'cov' -> coverage/
+  /// - 'alz' -> analyzer/
+  /// - 'fail' -> failed/
+  /// - '' (empty) -> unified/
   static Future<String> getReportPath(
     String moduleName,
     String timestamp, {
     String suffix = '',
   }) async {
     final reportDir = await getReportDirectory();
+
+    // Determine subdirectory based on suffix
+    final subdir = switch (suffix) {
+      'cov' => 'coverage',
+      'alz' => 'analyzer',
+      'fail' => 'failed',
+      _ => 'unified',
+    };
+
+    // Create subdirectory if it doesn't exist
+    final subdirPath = p.join(reportDir, subdir);
+    final subdirDir = Directory(subdirPath);
+    if (!await subdirDir.exists()) {
+      await subdirDir.create(recursive: true);
+    }
+
     final suffixPart = suffix.isNotEmpty ? '_$suffix' : '';
     return p.join(
-        reportDir, '${moduleName}_test_report$suffixPart@$timestamp.md');
+        subdirPath, '${moduleName}_test_report$suffixPart@$timestamp.md');
   }
 
   /// Write a unified report with markdown content and embedded JSON data
