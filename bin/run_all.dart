@@ -214,9 +214,13 @@ class TestOrchestrator {
         'run',
         'test_analyzer:coverage_tool',
         sourcePath,
+        testPath, // Pass testPath for consistent naming
       ];
 
-      if (verbose) args.add('--verbose');
+      if (verbose) {
+        args.add('--verbose');
+        print('  [DEBUG] Running coverage_tool with args: $sourcePath $testPath');
+      }
 
       final process = await Process.start('dart', args);
       final output = <String>[];
@@ -241,6 +245,8 @@ class TestOrchestrator {
       final exitCode = await process.exitCode;
 
       if (exitCode == 0) {
+        // Add small delay to ensure file is fully written
+        await Future<void>.delayed(const Duration(milliseconds: 100));
         print('  ✅ Coverage analysis complete');
 
         // Extract coverage data from most recent report

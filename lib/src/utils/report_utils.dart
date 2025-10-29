@@ -47,9 +47,14 @@ class ReportUtils {
         if (file is! File) continue;
 
         final fileName = file.path.split('/').last;
+        if (verbose) print('  🔎 Checking file: $fileName in $subdir');
         for (final pattern in prefixPatterns) {
-          if (fileName.startsWith('${pathName}_$pattern@') ||
-              fileName.startsWith('${pathName.replaceAll('_', '')}_${pattern}__')) {
+          final match1 = '${pathName}_$pattern@';
+          final match2 = '${pathName.replaceAll('_', '')}_${pattern}__';
+          if (verbose) print('    Looking for: $match1 OR $match2');
+          if (fileName.startsWith(match1) ||
+              fileName.startsWith(match2)) {
+            if (verbose) print('    ✅ MATCHED pattern: $pattern');
             filesByPattern.putIfAbsent(pattern, () => []).add(file);
             break;
           }

@@ -1704,9 +1704,9 @@ class CoverageAnalyzer {
   // }
 
   String _extractPathName() {
-    // Extract module name from the SOURCE path (libPath), not test path
-    // This is what's actually being analyzed
-    final path = libPath
+    // Extract module name from the TEST path for consistency with run_all.dart naming
+    // This ensures cleanup works properly across all report types
+    final path = testPath
         .replaceAll(r'\', '/')
         .replaceAll(RegExp(r'/$'), ''); // Remove trailing slash
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
@@ -1722,11 +1722,14 @@ class CoverageAnalyzer {
     if (pathName.endsWith('.dart')) {
       // It's a file - remove .dart extension and add -fi suffix
       pathName = pathName.substring(0, pathName.length - 5);
+      // Remove _test suffix if present
+      if (pathName.endsWith('_test')) {
+        pathName = pathName.substring(0, pathName.length - 5);
+      }
       suffix = '-fi';
-    } else if (pathName == 'lib') {
-      // Special case: if analyzing entire 'lib' folder, use package name from pubspec
-      pathName = _getPackageName();
-      suffix = '-fo';
+    } else if (pathName == 'test') {
+      // Special case: if analyzing entire 'test' folder
+      return 'test-fo';
     } else {
       // It's a folder like 'src', 'models', 'ui'
       suffix = '-fo';
@@ -1735,21 +1738,6 @@ class CoverageAnalyzer {
     return '$pathName$suffix';
   }
 
-  /// Get package name from pubspec.yaml
-  String _getPackageName() {
-    try {
-      final pubspecFile = File('pubspec.yaml');
-      if (pubspecFile.existsSync()) {
-        final content = pubspecFile.readAsStringSync();
-        final nameMatch =
-            RegExp(r'^name:\s*(\S+)', multiLine: true).firstMatch(content);
-        return nameMatch?.group(1) ?? 'package';
-      }
-    } catch (e) {
-      // Ignore errors
-    }
-    return 'package';
-  }
 
   /// Export coverage data as JSON
   Future<void> exportJsonReport() async {
