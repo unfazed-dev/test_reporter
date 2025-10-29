@@ -117,7 +117,7 @@ void main() {
   });
 
   group('getReportPath', () {
-    test('should generate path in coverage subdirectory for coverage suffix', () async {
+    test('should generate path in code_coverage subdirectory for coverage suffix', () async {
       final path = await ReportUtils.getReportPath(
         'module-fo',
         '1234_010125',
@@ -125,7 +125,7 @@ void main() {
       );
 
       expect(path, contains('test_analyzer_reports'));
-      expect(path, contains('coverage'));
+      expect(path, contains('code_coverage'));
       expect(path, endsWith('module-fo_test_report_coverage@1234_010125.md'));
 
       // Verify subdirectory was created
@@ -354,15 +354,15 @@ Here's an example:
       final reportDir = await ReportUtils.getReportDirectory();
 
       // Create subdirectories
-      await Directory(p.join(reportDir, 'coverage')).create(recursive: true);
+      await Directory(p.join(reportDir, 'code_coverage')).create(recursive: true);
       await Directory(p.join(reportDir, 'analyzer')).create(recursive: true);
 
       // Create multiple test report files (older and newer)
       await File(
-              p.join(reportDir, 'coverage', 'module-fo_test_report_coverage@1234_010125.md'))
+              p.join(reportDir, 'code_coverage', 'module-fo_test_report_coverage@1234_010125.md'))
           .create();
       await File(
-              p.join(reportDir, 'coverage', 'module-fo_test_report_coverage@5678_010125.md'))
+              p.join(reportDir, 'code_coverage', 'module-fo_test_report_coverage@5678_010125.md'))
           .create();
       await File(
               p.join(reportDir, 'analyzer', 'module-fo_test_report_analyzer@1234_010125.md'))
@@ -371,7 +371,7 @@ Here's an example:
               p.join(reportDir, 'analyzer', 'module-fo_test_report_analyzer@5678_010125.md'))
           .create();
       await File(
-              p.join(reportDir, 'coverage', 'other-fo_test_report_coverage@1234_010125.md'))
+              p.join(reportDir, 'code_coverage', 'other-fo_test_report_coverage@1234_010125.md'))
           .create();
 
       await ReportUtils.cleanOldReports(
@@ -382,7 +382,7 @@ Here's an example:
       // Check that old module-fo reports were deleted
       expect(
         await File(
-                p.join(reportDir, 'coverage', 'module-fo_test_report_coverage@1234_010125.md'))
+                p.join(reportDir, 'code_coverage', 'module-fo_test_report_coverage@1234_010125.md'))
             .exists(),
         isFalse,
       );
@@ -396,7 +396,7 @@ Here's an example:
       // Check that latest module-fo reports still exist
       expect(
         await File(
-                p.join(reportDir, 'coverage', 'module-fo_test_report_coverage@5678_010125.md'))
+                p.join(reportDir, 'code_coverage', 'module-fo_test_report_coverage@5678_010125.md'))
             .exists(),
         isTrue,
       );
@@ -410,7 +410,7 @@ Here's an example:
       // Check that other reports still exist
       expect(
         await File(
-                p.join(reportDir, 'coverage', 'other-fo_test_report_coverage@1234_010125.md'))
+                p.join(reportDir, 'code_coverage', 'other-fo_test_report_coverage@1234_010125.md'))
             .exists(),
         isTrue,
       );
@@ -424,18 +424,18 @@ Here's an example:
     test('should handle verbose output', () async {
       final reportDir = await ReportUtils.getReportDirectory();
 
-      // Create coverage subdirectory
-      await Directory(p.join(reportDir, 'coverage')).create(recursive: true);
+      // Create code_coverage subdirectory
+      await Directory(p.join(reportDir, 'code_coverage')).create(recursive: true);
 
       await File(
-              p.join(reportDir, 'coverage', 'test-fo_test_report_coverage@1234.md'))
+              p.join(reportDir, 'code_coverage', 'test-fo_test_report_coverage@1234.md'))
           .create();
 
       // Should not throw with verbose=true
       await ReportUtils.cleanOldReports(
         pathName: 'test-fo',
         prefixPatterns: ['test_report_coverage'],
-        subdirectory: 'coverage',
+        subdirectory: 'code_coverage',
         verbose: true,
       );
     });
@@ -456,17 +456,17 @@ Here's an example:
     test('should handle file deletion errors with verbose output', () async {
       final reportDir = await ReportUtils.getReportDirectory();
 
-      // Create coverage subdirectory
-      await Directory(p.join(reportDir, 'coverage')).create(recursive: true);
+      // Create code_coverage subdirectory
+      await Directory(p.join(reportDir, 'code_coverage')).create(recursive: true);
 
-      // Create a test report file in coverage subdirectory
+      // Create a test report file in code_coverage subdirectory
       final testFile = File(
-          p.join(reportDir, 'coverage', 'test-fo_test_report_coverage@1234.md'));
+          p.join(reportDir, 'code_coverage', 'test-fo_test_report_coverage@1234.md'));
       await testFile.create();
 
       // Create an immutable file to trigger deletion error
       final immutableFile = File(
-          p.join(reportDir, 'coverage', 'test-fo_test_report_coverage@5678.md'));
+          p.join(reportDir, 'code_coverage', 'test-fo_test_report_coverage@5678.md'));
       await immutableFile.create();
 
       // Try to make file immutable (Unix/Mac only with chflags)
@@ -484,7 +484,7 @@ Here's an example:
       await ReportUtils.cleanOldReports(
         pathName: 'test-fo',
         prefixPatterns: ['test_report_coverage'],
-        subdirectory: 'coverage',
+        subdirectory: 'code_coverage',
         verbose: true,
       );
 

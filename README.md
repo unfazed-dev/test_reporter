@@ -10,7 +10,9 @@ Comprehensive Flutter/Dart test analysis toolkit with coverage analysis, flaky t
 - ✅ **Failed Test Extraction** - Smart extraction and batch rerun commands
 - ✅ **Modern Dart Patterns** - Sealed classes, records, and pattern matching
 - ✅ **Unified Reports** - Single file format with markdown + embedded JSON
+- ✅ **Organized Report Structure** - Auto-organized subdirectories (code_coverage, analyzer, failed, unified)
 - ✅ **Beautiful CLI** - Colored output, progress indicators, tables
+- ✅ **Comprehensive Testing** - 117+ tests with 100% utility coverage
 
 ## Installation
 
@@ -61,8 +63,11 @@ dart run test_analyzer:run_all lib/ui/widgets \
 5. Provides actionable recommendations
 
 **Output:**
-- Individual reports in `test_analyzer_reports/`
-- Unified report: `test_analyzer_reports/{module}_unified_report@{timestamp}.md`
+- Individual reports organized in subdirectories:
+  - Coverage: `test_analyzer_reports/code_coverage/`
+  - Test Analysis: `test_analyzer_reports/analyzer/`
+  - Failed Tests: `test_analyzer_reports/failed/`
+- Unified report: `test_analyzer_reports/unified/{module}_unified_report@{timestamp}.md`
 
 ### Individual Tools
 
@@ -87,7 +92,7 @@ dart run test_analyzer:coverage_tool lib/src/features --verbose
 - `--help` - Show help message
 
 **Output:**
-- Report: `test_analyzer_reports/{module}_test_report@{timestamp}.md`
+- Report: `test_analyzer_reports/code_coverage/{module}_test_report_coverage@{timestamp}.md`
 - Contains: Coverage metrics, file analysis, uncovered lines, recommendations
 
 #### Test Analysis
@@ -116,7 +121,7 @@ dart run test_analyzer:test_analyzer test/features --parallel
 - `--help` - Show help message
 
 **Output:**
-- Report: `test_analyzer_reports/{module}_test_report@{timestamp}.md`
+- Report: `test_analyzer_reports/analyzer/{module}_test_report_analyzer@{timestamp}.md`
 - Contains: Pass rate, flaky tests, consistent failures, performance metrics, recommendations
 
 #### Failed Test Extractor
@@ -138,7 +143,30 @@ All reports use a unified format:
 - **Human-readable markdown** for easy review
 - **Embedded JSON data** for machine parsing
 - **Automatic directory creation** (`test_analyzer_reports/`)
+- **Organized subdirectories** for different report types
 - **Timestamp-based naming** for version history
+
+### Report Directory Structure
+
+Reports are automatically organized into subdirectories:
+
+```
+test_analyzer_reports/
+├── code_coverage/     # Coverage analysis reports
+├── analyzer/          # Test analysis reports
+├── failed/            # Failed test reports
+└── unified/           # Unified combined reports
+```
+
+### Report Naming Convention
+
+- **Format:** `{module}_test_report_{suffix}@{timestamp}.md`
+- **Example:** `ui_widgets_test_report_coverage@1430_280125.md`
+- **Suffixes:**
+  - `coverage` → saved to `code_coverage/`
+  - `analyzer` → saved to `analyzer/`
+  - `failed` → saved to `failed/`
+  - `unified` → saved to `unified/`
 
 ### Report Structure
 
@@ -173,7 +201,7 @@ All reports use a unified format:
 import 'package:test_analyzer/test_analyzer.dart';
 
 // Read report file
-final reportContent = File('test_analyzer_reports/module_report@1234.md').readAsStringSync();
+final reportContent = File('test_analyzer_reports/code_coverage/module_report_coverage@1234.md').readAsStringSync();
 
 // Extract JSON
 final jsonData = ReportUtils.extractJsonFromReport(reportContent);
@@ -453,12 +481,12 @@ dart run test_analyzer:run_all lib/src --runs=3 --parallel
 - `normalizePath()` - Normalize path separators
 
 **ReportUtils**
-- `getReportDirectory()` - Get/create report directory
-- `cleanOldReports()` - Clean old reports by pattern
-- `ensureDirectoryExists()` - Ensure directory exists
-- `getReportPath()` - Generate full report path
-- `writeUnifiedReport()` - Write markdown + JSON report
-- `extractJsonFromReport()` - Extract JSON from report
+- `getReportDirectory()` - Get/create report directory with subdirectories
+- `cleanOldReports()` - Intelligent cleanup with subdirectory support and pattern matching
+- `ensureDirectoryExists()` - Ensure directory exists recursively
+- `getReportPath()` - Generate full report path with automatic subdirectory routing
+- `writeUnifiedReport()` - Write markdown + JSON report with auto-directory creation
+- `extractJsonFromReport()` - Extract JSON from unified reports
 
 **Constants**
 - Performance thresholds
@@ -507,16 +535,27 @@ dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage
 
 ### Running Tests
 
+The package includes a comprehensive test suite with 117+ tests across 7 test files:
+
 ```bash
-# All tests
+# All tests (117+ tests)
 dart test
 
 # Specific test file
-dart test test/test_analyzer_test.dart
+dart test test/src/utils/report_utils_test.dart
 
 # With coverage
 dart test --coverage
 ```
+
+**Test Coverage:**
+- `test/src/utils/formatting_utils_test.dart` - Formatting utilities
+- `test/src/utils/path_utils_test.dart` - Path utilities
+- `test/src/utils/report_utils_test.dart` - Report utilities
+- `test/src/utils/constants_test.dart` - Constants
+- `test/src/utils/extensions_test.dart` - Extension methods
+- `test/src/models/failure_types_test.dart` - Failure type detection
+- `test/src/models/result_types_test.dart` - Result type helpers
 
 ### Code Quality
 

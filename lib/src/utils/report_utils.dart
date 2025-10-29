@@ -34,7 +34,7 @@ class ReportUtils {
     // List of subdirectories to clean
     final subdirs = subdirectory != null
         ? [subdirectory]
-        : ['analyzer', 'coverage', 'failed', 'unified'];
+        : ['analyzer', 'code_coverage', 'failed', 'unified'];
 
     for (final subdir in subdirs) {
       final dir = Directory(p.join(reportDir, subdir));
@@ -93,7 +93,7 @@ class ReportUtils {
   /// Get full report path for a module
   ///
   /// Organizes reports into subdirectories based on tool suffix:
-  /// - 'coverage' -> coverage/
+  /// - 'coverage' -> code_coverage/
   /// - 'analyzer' -> analyzer/
   /// - 'failed' -> failed/
   /// - '' (empty) -> unified/
@@ -111,7 +111,7 @@ class ReportUtils {
     // Determine subdirectory based on suffix
     // Suffix should be full tool name: coverage, analyzer, failed, or empty for unified
     final subdir = switch (suffix) {
-      'coverage' => 'coverage',
+      'coverage' => 'code_coverage',
       'analyzer' => 'analyzer',
       'failed' => 'failed',
       _ => 'unified',

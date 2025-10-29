@@ -422,7 +422,7 @@ class TestOrchestrator {
       // Determine subdirectory based on prefix
       // prefix will be like 'test_report_coverage' or 'test_report_analyzer'
       final subdir = switch (prefix) {
-        String s when s.contains('_coverage') => 'coverage',
+        String s when s.contains('_coverage') => 'code_coverage',
         String s when s.contains('_analyzer') => 'analyzer',
         String s when s.contains('_failed') => 'failed',
         _ => 'unified',
@@ -629,7 +629,7 @@ class TestOrchestrator {
 
     if (reportPaths.containsKey('coverage')) {
       final coverageFile = p.basename(reportPaths['coverage']!);
-      report.writeln('- 📈 **[Coverage Analysis](../coverage/$coverageFile)** - Code coverage breakdown, untested code, testability');
+      report.writeln('- 📈 **[Coverage Analysis](../code_coverage/$coverageFile)** - Code coverage breakdown, untested code, testability');
     } else {
       report.writeln('- 📈 **Coverage Analysis** - ⚠️ Not available');
     }
