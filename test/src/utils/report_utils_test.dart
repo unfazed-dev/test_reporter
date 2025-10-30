@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/utils/report_utils.dart';
+import 'package:test_reporter/src/utils/report_utils.dart';
 
 /// Clean up test-created files and directories
 Future<void> _cleanupTestArtifacts(String reportDir) async {
@@ -117,7 +117,9 @@ void main() {
   });
 
   group('getReportPath', () {
-    test('should generate path in code_coverage subdirectory for coverage suffix', () async {
+    test(
+        'should generate path in code_coverage subdirectory for coverage suffix',
+        () async {
       final path = await ReportUtils.getReportPath(
         'module-fo',
         '1234_010125',
@@ -133,7 +135,8 @@ void main() {
       expect(await Directory(subdirPath).exists(), isTrue);
     });
 
-    test('should generate path in analyzer subdirectory for analyzer suffix', () async {
+    test('should generate path in analyzer subdirectory for analyzer suffix',
+        () async {
       final path = await ReportUtils.getReportPath(
         'test-fo',
         '1234_010125',
@@ -144,7 +147,8 @@ void main() {
       expect(path, endsWith('test-fo_test_report_analyzer@1234_010125.md'));
     });
 
-    test('should generate path in failed subdirectory for failed suffix', () async {
+    test('should generate path in failed subdirectory for failed suffix',
+        () async {
       final path = await ReportUtils.getReportPath(
         'module-fi',
         '1234_010125',
@@ -155,7 +159,8 @@ void main() {
       expect(path, endsWith('module-fi_test_report_failed@1234_010125.md'));
     });
 
-    test('should generate path in unified subdirectory for empty suffix', () async {
+    test('should generate path in unified subdirectory for empty suffix',
+        () async {
       final path = await ReportUtils.getReportPath(
         'src-fo',
         '1234_010125',
@@ -165,7 +170,8 @@ void main() {
       expect(path, endsWith('src-fo_test_report@1234_010125.md'));
     });
 
-    test('should generate path in unified subdirectory for unknown suffix', () async {
+    test('should generate path in unified subdirectory for unknown suffix',
+        () async {
       final path = await ReportUtils.getReportPath(
         'module-fo',
         '1234_010125',
@@ -354,24 +360,25 @@ Here's an example:
       final reportDir = await ReportUtils.getReportDirectory();
 
       // Create subdirectories
-      await Directory(p.join(reportDir, 'code_coverage')).create(recursive: true);
+      await Directory(p.join(reportDir, 'code_coverage'))
+          .create(recursive: true);
       await Directory(p.join(reportDir, 'analyzer')).create(recursive: true);
 
       // Create multiple test report files (older and newer)
-      await File(
-              p.join(reportDir, 'code_coverage', 'module-fo_test_report_coverage@1234_010125.md'))
+      await File(p.join(reportDir, 'code_coverage',
+              'module-fo_test_report_coverage@1234_010125.md'))
           .create();
-      await File(
-              p.join(reportDir, 'code_coverage', 'module-fo_test_report_coverage@5678_010125.md'))
+      await File(p.join(reportDir, 'code_coverage',
+              'module-fo_test_report_coverage@5678_010125.md'))
           .create();
-      await File(
-              p.join(reportDir, 'analyzer', 'module-fo_test_report_analyzer@1234_010125.md'))
+      await File(p.join(reportDir, 'analyzer',
+              'module-fo_test_report_analyzer@1234_010125.md'))
           .create();
-      await File(
-              p.join(reportDir, 'analyzer', 'module-fo_test_report_analyzer@5678_010125.md'))
+      await File(p.join(reportDir, 'analyzer',
+              'module-fo_test_report_analyzer@5678_010125.md'))
           .create();
-      await File(
-              p.join(reportDir, 'code_coverage', 'other-fo_test_report_coverage@1234_010125.md'))
+      await File(p.join(reportDir, 'code_coverage',
+              'other-fo_test_report_coverage@1234_010125.md'))
           .create();
 
       await ReportUtils.cleanOldReports(
@@ -381,36 +388,36 @@ Here's an example:
 
       // Check that old module-fo reports were deleted
       expect(
-        await File(
-                p.join(reportDir, 'code_coverage', 'module-fo_test_report_coverage@1234_010125.md'))
+        await File(p.join(reportDir, 'code_coverage',
+                'module-fo_test_report_coverage@1234_010125.md'))
             .exists(),
         isFalse,
       );
       expect(
-        await File(
-                p.join(reportDir, 'analyzer', 'module-fo_test_report_analyzer@1234_010125.md'))
+        await File(p.join(reportDir, 'analyzer',
+                'module-fo_test_report_analyzer@1234_010125.md'))
             .exists(),
         isFalse,
       );
 
       // Check that latest module-fo reports still exist
       expect(
-        await File(
-                p.join(reportDir, 'code_coverage', 'module-fo_test_report_coverage@5678_010125.md'))
+        await File(p.join(reportDir, 'code_coverage',
+                'module-fo_test_report_coverage@5678_010125.md'))
             .exists(),
         isTrue,
       );
       expect(
-        await File(
-                p.join(reportDir, 'analyzer', 'module-fo_test_report_analyzer@5678_010125.md'))
+        await File(p.join(reportDir, 'analyzer',
+                'module-fo_test_report_analyzer@5678_010125.md'))
             .exists(),
         isTrue,
       );
 
       // Check that other reports still exist
       expect(
-        await File(
-                p.join(reportDir, 'code_coverage', 'other-fo_test_report_coverage@1234_010125.md'))
+        await File(p.join(reportDir, 'code_coverage',
+                'other-fo_test_report_coverage@1234_010125.md'))
             .exists(),
         isTrue,
       );
@@ -419,16 +426,19 @@ Here's an example:
     test('should handle non-existent report directory', () async {
       // NOTE: This test is skipped to prevent deleting real reports during test_analyzer runs
       // It can be run in isolation if needed for testing cleanup functionality
-    }, skip: 'Disabled to prevent deleting reports during test_analyzer workflow');
+    },
+        skip:
+            'Disabled to prevent deleting reports during test_analyzer workflow');
 
     test('should handle verbose output', () async {
       final reportDir = await ReportUtils.getReportDirectory();
 
       // Create code_coverage subdirectory
-      await Directory(p.join(reportDir, 'code_coverage')).create(recursive: true);
+      await Directory(p.join(reportDir, 'code_coverage'))
+          .create(recursive: true);
 
-      await File(
-              p.join(reportDir, 'code_coverage', 'test-fo_test_report_coverage@1234.md'))
+      await File(p.join(reportDir, 'code_coverage',
+              'test-fo_test_report_coverage@1234.md'))
           .create();
 
       // Should not throw with verbose=true
@@ -457,16 +467,17 @@ Here's an example:
       final reportDir = await ReportUtils.getReportDirectory();
 
       // Create code_coverage subdirectory
-      await Directory(p.join(reportDir, 'code_coverage')).create(recursive: true);
+      await Directory(p.join(reportDir, 'code_coverage'))
+          .create(recursive: true);
 
       // Create a test report file in code_coverage subdirectory
-      final testFile = File(
-          p.join(reportDir, 'code_coverage', 'test-fo_test_report_coverage@1234.md'));
+      final testFile = File(p.join(
+          reportDir, 'code_coverage', 'test-fo_test_report_coverage@1234.md'));
       await testFile.create();
 
       // Create an immutable file to trigger deletion error
-      final immutableFile = File(
-          p.join(reportDir, 'code_coverage', 'test-fo_test_report_coverage@5678.md'));
+      final immutableFile = File(p.join(
+          reportDir, 'code_coverage', 'test-fo_test_report_coverage@5678.md'));
       await immutableFile.create();
 
       // Try to make file immutable (Unix/Mac only with chflags)

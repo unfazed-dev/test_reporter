@@ -3,12 +3,12 @@
 /// # Run All - Entry Point
 ///
 /// Command-line entry point for the Unified Test Analysis Orchestrator.
-/// All business logic is in lib/src/bin/run_all_lib.dart
+/// All business logic is in lib/src/bin/analyze_suite_lib.dart
 
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:test_analyzer/src/bin/run_all_lib.dart';
+import 'package:test_reporter/src/bin/analyze_suite_lib.dart';
 
 void main(List<String> arguments) async {
   final parser = ArgParser()

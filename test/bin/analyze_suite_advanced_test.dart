@@ -4,7 +4,7 @@
 /// and advanced configuration for the unified test analysis orchestrator.
 
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/bin/run_all_lib.dart';
+import 'package:test_reporter/src/bin/analyze_suite_lib.dart';
 
 void main() {
   group('Advanced Orchestrator Configurations', () {

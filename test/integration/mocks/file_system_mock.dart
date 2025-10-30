@@ -48,9 +48,7 @@ class MockFileSystem {
 
   /// List files in directory
   static List<String> listFiles(String directory) {
-    return _files.keys
-        .where((path) => path.startsWith(directory))
-        .toList();
+    return _files.keys.where((path) => path.startsWith(directory)).toList();
   }
 
   /// Clear all files and directories

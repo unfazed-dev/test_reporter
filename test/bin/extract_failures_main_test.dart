@@ -4,7 +4,7 @@
 /// failed_test_extractor tool, including CLI flags, options, and argument validation.
 
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/bin/failed_test_extractor_lib.dart';
+import 'package:test_reporter/src/bin/extract_failures_lib.dart';
 
 void main() {
   group('FailedTestExtractor Configuration', () {

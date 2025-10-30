@@ -4,7 +4,7 @@
 /// and sophisticated use cases for the coverage analysis tool.
 
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/bin/coverage_tool_lib.dart';
+import 'package:test_reporter/src/bin/analyze_coverage_lib.dart';
 
 void main() {
   group('Advanced Feature Combinations', () {
@@ -336,8 +336,10 @@ void main() {
         testPath: 'test/features/auth/domain/repositories',
       );
 
-      expect(analyzer.libPath, equals('lib/src/features/auth/domain/repositories'));
-      expect(analyzer.testPath, equals('test/features/auth/domain/repositories'));
+      expect(analyzer.libPath,
+          equals('lib/src/features/auth/domain/repositories'));
+      expect(
+          analyzer.testPath, equals('test/features/auth/domain/repositories'));
     });
 
     test('should handle Windows-style paths', () {

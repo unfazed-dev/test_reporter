@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/models/result_types.dart';
+import 'package:test_reporter/src/models/result_types.dart';
 
 void main() {
   group('successfulAnalysis', () {

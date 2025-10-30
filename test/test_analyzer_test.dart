@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:test_analyzer/test_analyzer.dart';
+import 'package:test_reporter/test_analyzer.dart';
 
 void main() {
   group('FormattingUtils', () {

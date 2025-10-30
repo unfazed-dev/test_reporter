@@ -10,9 +10,8 @@ class AnalyzerConstants {
   static const int defaultChunkSize = 10;
 
   // Report settings
-  static const String reportDirectory =
-      'test_analyzer_reports'; // In project root
-  static const String reportSuffix = 'test_report';
+  static const String reportDirectory = 'tests_reports'; // In project root
+  static const String reportSuffix = 'report';
 
   // Coverage thresholds
   static const double defaultMinimumCoverage = 80;

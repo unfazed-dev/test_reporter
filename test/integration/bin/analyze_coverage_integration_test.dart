@@ -2,7 +2,7 @@
 ///
 /// Integration tests for coverage_tool analyze() execution
 ///
-/// Target: lib/src/bin/coverage_tool_lib.dart
+/// Target: lib/src/bin/analyze_coverage_lib.dart
 /// Expected tests: ~120
 
 import 'package:test/test.dart';

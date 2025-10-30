@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/bin/coverage_tool_lib.dart';
+import 'package:test_reporter/src/bin/analyze_coverage_lib.dart';
 
 import 'helpers/report_helpers.dart';
 import 'helpers/test_fixtures.dart';

@@ -5,11 +5,10 @@ import 'package:path/path.dart' as p;
 /// Report file management utilities
 class ReportUtils {
   /// Get the report directory path for the current project
-  /// Creates 'test_analyzer_reports/' in project root if it doesn't exist
+  /// Creates 'tests_reports/' in project root if it doesn't exist
   static Future<String> getReportDirectory() async {
     final currentDir = Directory.current;
-    final reportDir =
-        Directory(p.join(currentDir.path, 'test_analyzer_reports'));
+    final reportDir = Directory(p.join(currentDir.path, 'tests_reports'));
 
     if (!await reportDir.exists()) {
       await reportDir.create(recursive: true);
@@ -21,7 +20,7 @@ class ReportUtils {
   /// Clean old reports for a specific path pattern
   ///
   /// If [subdirectory] is provided, only cleans reports in that subdirectory.
-  /// Otherwise, cleans reports in all subdirectories (analyzer/, coverage/, failed/, unified/).
+  /// Otherwise, cleans reports in all subdirectories (tests/, coverage/, failures/, suite/).
   static Future<void> cleanOldReports({
     required String pathName,
     required List<String> prefixPatterns,
@@ -34,7 +33,7 @@ class ReportUtils {
     // List of subdirectories to clean
     final subdirs = subdirectory != null
         ? [subdirectory]
-        : ['analyzer', 'code_coverage', 'failed', 'unified'];
+        : ['tests', 'coverage', 'failures', 'suite'];
 
     for (final subdir in subdirs) {
       final dir = Directory(p.join(reportDir, subdir));
@@ -52,8 +51,7 @@ class ReportUtils {
           final match1 = '${pathName}_$pattern@';
           final match2 = '${pathName.replaceAll('_', '')}_${pattern}__';
           if (verbose) print('    Looking for: $match1 OR $match2');
-          if (fileName.startsWith(match1) ||
-              fileName.startsWith(match2)) {
+          if (fileName.startsWith(match1) || fileName.startsWith(match2)) {
             if (verbose) print('    ✅ MATCHED pattern: $pattern');
             filesByPattern.putIfAbsent(pattern, () => []).add(file);
             break;
@@ -98,12 +96,12 @@ class ReportUtils {
   /// Get full report path for a module
   ///
   /// Organizes reports into subdirectories based on tool suffix:
-  /// - 'coverage' -> code_coverage/
-  /// - 'analyzer' -> analyzer/
-  /// - 'failed' -> failed/
-  /// - '' (empty) -> unified/
+  /// - 'coverage' -> coverage/
+  /// - 'tests' -> tests/
+  /// - 'failures' -> failures/
+  /// - '' (empty) -> suite/
   ///
-  /// Naming convention: {name}-{fo|fi}_test_report_{tool}@timestamp.md
+  /// Naming convention: {name}-{fo|fi}_report_{tool}@timestamp.md
   /// - fo = folder
   /// - fi = file
   static Future<String> getReportPath(
@@ -114,12 +112,12 @@ class ReportUtils {
     final reportDir = await getReportDirectory();
 
     // Determine subdirectory based on suffix
-    // Suffix should be full tool name: coverage, analyzer, failed, or empty for unified
+    // Suffix should be full tool name: coverage, tests, failures, or empty for suite
     final subdir = switch (suffix) {
-      'coverage' => 'code_coverage',
-      'analyzer' => 'analyzer',
-      'failed' => 'failed',
-      _ => 'unified',
+      'coverage' => 'coverage',
+      'tests' => 'tests',
+      'failures' => 'failures',
+      _ => 'suite',
     };
 
     // Create subdirectory if it doesn't exist
@@ -130,8 +128,7 @@ class ReportUtils {
     }
 
     final suffixPart = suffix.isNotEmpty ? '_$suffix' : '';
-    return p.join(
-        subdirPath, '${moduleName}_test_report$suffixPart@$timestamp.md');
+    return p.join(subdirPath, '${moduleName}_report$suffixPart@$timestamp.md');
   }
 
   /// Write a unified report with markdown content and embedded JSON data

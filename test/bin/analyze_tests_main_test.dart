@@ -4,7 +4,7 @@
 /// for the advanced test debugging and analysis tool.
 
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/bin/test_analyzer_lib.dart';
+import 'package:test_reporter/src/bin/analyze_tests_lib.dart';
 
 void main() {
   group('TestAnalyzer Configuration', () {

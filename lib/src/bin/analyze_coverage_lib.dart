@@ -1,4 +1,3 @@
-
 /// Enhanced Coverage Analysis Tool for Flutter/Dart projects
 /// Version 2.0 - 2025 Enhanced Edition
 ///
@@ -32,7 +31,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:test_analyzer/src/utils/report_utils.dart';
+import 'package:test_reporter/src/utils/report_utils.dart';
 
 class CoverageThresholds {
   CoverageThresholds({

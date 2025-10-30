@@ -1,9 +1,9 @@
-/// Integration tests for run_all_integration
+/// Integration tests for failed_test_extractor_integration
 ///
-/// Integration tests for run_all orchestrator workflows
+/// Integration tests for failed_test_extractor run() execution
 ///
-/// Target: lib/src/bin/run_all_lib.dart
-/// Expected tests: ~60
+/// Target: lib/src/bin/extract_failures_lib.dart
+/// Expected tests: ~80
 
 import 'package:test/test.dart';
 import '../mocks/process_mock.dart';
@@ -23,7 +23,7 @@ void main() {
     MockFileSystem.clear();
   });
 
-  group('run_all_integration - Process Execution Tests', () {
+  group('failed_test_extractor_integration - Process Execution Tests', () {
     test('should execute main workflow successfully', () async {
       // TODO: Implement main workflow test
       // 1. Register process mocks
@@ -37,10 +37,10 @@ void main() {
       // TODO: Implement failure handling test
     });
 
-    // TODO: Add ~15 more process execution tests
+    // TODO: Add ~20 more process execution tests
   });
 
-  group('run_all_integration - File I/O Tests', () {
+  group('failed_test_extractor_integration - File I/O Tests', () {
     test('should read and write files correctly', () async {
       // TODO: Implement file I/O test
     });
@@ -49,10 +49,10 @@ void main() {
       // TODO: Implement missing file test
     });
 
-    // TODO: Add ~15 more file I/O tests
+    // TODO: Add ~20 more file I/O tests
   });
 
-  group('run_all_integration - CLI Argument Tests', () {
+  group('failed_test_extractor_integration - CLI Argument Tests', () {
     test('should parse CLI arguments correctly', () async {
       // TODO: Implement CLI parsing test
     });
@@ -61,10 +61,10 @@ void main() {
       // TODO: Implement invalid argument test
     });
 
-    // TODO: Add ~15 more CLI tests
+    // TODO: Add ~20 more CLI tests
   });
 
-  group('run_all_integration - Integration Workflow Tests', () {
+  group('failed_test_extractor_integration - Integration Workflow Tests', () {
     test('should complete full workflow end-to-end', () async {
       // TODO: Implement end-to-end workflow test
     });
@@ -73,6 +73,6 @@ void main() {
       // TODO: Implement interruption test
     });
 
-    // TODO: Add ~15 more workflow tests
+    // TODO: Add ~20 more workflow tests
   });
 }

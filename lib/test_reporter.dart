@@ -1,4 +1,4 @@
-/// Comprehensive Flutter/Dart test analysis toolkit
+/// Comprehensive Flutter/Dart test reporting toolkit
 ///
 /// Provides utilities for:
 /// - Coverage analysis with branch coverage support
@@ -6,7 +6,7 @@
 /// - Performance profiling
 /// - Failed test extraction
 /// - Unified reporting
-library test_analyzer;
+library test_reporter;
 
 // Export modern models with sealed classes and records
 export 'src/models/failure_types.dart';

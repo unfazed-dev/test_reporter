@@ -1,8 +1,8 @@
-name: test_analyzer
-description: Comprehensive Flutter/Dart test analysis toolkit with coverage, flaky test detection, and unified reporting
+name: test_reporter
+description: Comprehensive Flutter/Dart test reporting toolkit with coverage analysis, flaky test detection, failure extraction, and unified reporting
 version: 2.0.0
-repository: https://github.com/unfazed-dev/test_analyzer
-issue_tracker: https://github.com/unfazed-dev/test_analyzer/issues
+repository: https://github.com/unfazed-dev/test_reporter
+issue_tracker: https://github.com/unfazed-dev/test_reporter/issues
 
 environment:
   sdk: '>=3.6.0 <4.0.0'
@@ -23,7 +23,7 @@ dev_dependencies:
   very_good_analysis: ^6.0.0
 
 executables:
-  coverage_tool:
-  failed_test_extractor:
-  run_all:
-  test_analyzer:
+  analyze_coverage:
+  analyze_tests:
+  extract_failures:
+  analyze_suite:

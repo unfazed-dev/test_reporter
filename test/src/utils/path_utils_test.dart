@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/utils/path_utils.dart';
+import 'package:test_reporter/src/utils/path_utils.dart';
 
 void main() {
   group('PathUtils', () {

@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/utils/formatting_utils.dart';
+import 'package:test_reporter/src/utils/formatting_utils.dart';
 
 void main() {
   group('FormattingUtils', () {
@@ -85,7 +85,8 @@ void main() {
       });
 
       test('should format with 2 decimals', () {
-        final percentage = FormattingUtils.formatPercentage(85.678, decimals: 2);
+        final percentage =
+            FormattingUtils.formatPercentage(85.678, decimals: 2);
         expect(percentage, '85.68%');
       });
 

@@ -4,7 +4,7 @@
 /// and advanced configuration scenarios for the failed test extractor.
 
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/bin/failed_test_extractor_lib.dart';
+import 'package:test_reporter/src/bin/extract_failures_lib.dart';
 
 void main() {
   group('Complex FailedTest Scenarios', () {
@@ -518,7 +518,7 @@ at main.dart:10:5
     });
 
     test('should handle stack trace with package references', () {
-      final stackTrace = 'at package:test_analyzer/src/helper.dart:42:3';
+      final stackTrace = 'at package:test_reporter/src/helper.dart:42:3';
       final failedTest = FailedTest(
         name: 'test',
         filePath: 'test.dart',
@@ -564,7 +564,8 @@ at main.dart:10:5
       final results = TestResults(
         failedTests: List.generate(
           99,
-          (i) => FailedTest(name: 'test$i', filePath: 'test.dart', testId: '$i'),
+          (i) =>
+              FailedTest(name: 'test$i', filePath: 'test.dart', testId: '$i'),
         ),
         totalTests: 100,
         passedTests: 1,

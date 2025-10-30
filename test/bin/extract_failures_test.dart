@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/bin/failed_test_extractor_lib.dart';
+import 'package:test_reporter/src/bin/extract_failures_lib.dart';
 
 import 'helpers/report_helpers.dart';
 import 'helpers/test_fixtures.dart';

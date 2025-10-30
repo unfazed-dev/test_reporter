@@ -32,7 +32,7 @@ import 'dart:io';
 
 // CLI argument parsing
 import 'package:args/args.dart';
-import 'package:test_analyzer/src/utils/report_utils.dart';
+import 'package:test_reporter/src/utils/report_utils.dart';
 
 /// Represents a failed test with detailed information
 class FailedTest {
@@ -130,7 +130,8 @@ class FailedTestExtractor {
       ..addOption(
         'output',
         abbr: 'o',
-        help: 'Output directory for reports (deprecated - now uses test_analyzer_reports/failed/)',
+        help:
+            'Output directory for reports (deprecated - now uses test_analyzer_reports/failed/)',
         defaultsTo: '',
       )
       ..addFlag(
@@ -677,8 +678,10 @@ class FailedTestExtractor {
     markdown.writeln('| Total Tests | ${results.totalTests} |');
     markdown.writeln('| Passed | ✅ ${results.passedTests} |');
     markdown.writeln('| Failed | ❌ ${results.failedCount} |');
-    markdown.writeln('| Success Rate | ${results.successRate.toStringAsFixed(1)}% |');
-    markdown.writeln('| Execution Time | ${_formatDuration(results.totalTime)} |');
+    markdown.writeln(
+        '| Success Rate | ${results.successRate.toStringAsFixed(1)}% |');
+    markdown
+        .writeln('| Execution Time | ${_formatDuration(results.totalTime)} |');
     markdown.writeln();
 
     if (results.failedTests.isNotEmpty) {

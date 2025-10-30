@@ -1,25 +1,25 @@
-/// # Run All - Unified Test Analysis Orchestrator
+/// # Analyze Suite - Unified Test Analysis Orchestrator
 ///
-/// Runs all test analyzer tools and generates a single comprehensive report.
+/// Runs all test reporter tools and generates a single comprehensive report.
 ///
 /// ## Quick Start
 /// ```bash
-/// dart run_all.dart                          # Run all tools with defaults
-/// dart run_all.dart --runs=5                 # Configure test runs
-/// dart run_all.dart --performance            # Enable performance analysis
-/// dart run_all.dart --path=test/mymodule     # Specific test path
-/// dart run_all.dart --verbose                # Detailed output
+/// dart analyze_suite.dart                          # Run all tools with defaults
+/// dart analyze_suite.dart --runs=5                 # Configure test runs
+/// dart analyze_suite.dart --performance            # Enable performance analysis
+/// dart analyze_suite.dart --path=test/mymodule     # Specific test path
+/// dart analyze_suite.dart --verbose                # Detailed output
 /// ```
 ///
 /// ## What It Does
-/// 1. Runs coverage_tool to analyze test coverage
-/// 2. Runs test_analyzer to detect flaky tests and patterns
+/// 1. Runs analyze_coverage to analyze test coverage
+/// 2. Runs analyze_tests to detect flaky tests and patterns
 /// 3. Combines results into a single comprehensive report
 /// 4. Provides unified insights and recommendations
 ///
 /// ## Report Output
-/// - Saves to `test_analyzer_reports/`
-/// - Format: `{module_name}_test_report@HHMM_DDMMYY.md`
+/// - Saves to `tests_reports/`
+/// - Format: `{module_name}_report@HHMM_DDMMYY.md`
 /// - Includes both markdown (human-readable) and JSON (machine-parseable)
 ///
 /// ## Exit Codes
@@ -32,7 +32,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:test_analyzer/src/utils/report_utils.dart';
+import 'package:test_reporter/src/utils/report_utils.dart';
 
 /// Helper to safely convert numeric values to double
 double? toDouble(dynamic value) {
@@ -105,7 +105,8 @@ class TestOrchestrator {
     await generateUnifiedReport();
 
     // Summary
-    printSummary(coverageSuccess: coverageSuccess, analyzerSuccess: analyzerSuccess);
+    printSummary(
+        coverageSuccess: coverageSuccess, analyzerSuccess: analyzerSuccess);
   }
 
   Future<bool> runCoverageTool() async {
@@ -131,14 +132,15 @@ class TestOrchestrator {
 
       final args = <String>[
         'run',
-        'test_analyzer:coverage_tool',
+        'test_reporter:analyze_coverage',
         sourcePath,
         testPath, // Pass testPath for consistent naming
       ];
 
       if (verbose) {
         args.add('--verbose');
-        print('  [DEBUG] Running coverage_tool with args: $sourcePath $testPath');
+        print(
+            '  [DEBUG] Running analyze_coverage with args: $sourcePath $testPath');
       }
 
       final process = await Process.start('dart', args);
@@ -169,7 +171,7 @@ class TestOrchestrator {
         print('  ✅ Coverage analysis complete');
 
         // Extract coverage data from most recent report
-        final coverageReport = await findLatestReport('test_report_coverage');
+        final coverageReport = await findLatestReport('report_coverage');
         if (verbose) print('  📊 Coverage report found: $coverageReport');
 
         if (coverageReport != null) {
@@ -178,7 +180,8 @@ class TestOrchestrator {
           );
 
           if (verbose) {
-            print('  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
+            print(
+                '  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
             if (jsonData != null) {
               print('  📋 JSON keys: ${jsonData.keys.toList()}');
               print('  📊 Coverage summary: ${jsonData['summary']}');
@@ -193,7 +196,8 @@ class TestOrchestrator {
               print('  📄 Coverage report retained: $coverageReport');
             }
           } else {
-            if (verbose) print('  ⚠️  Failed to extract JSON from coverage report');
+            if (verbose)
+              print('  ⚠️  Failed to extract JSON from coverage report');
           }
         } else {
           if (verbose) print('  ⚠️  No coverage report found');
@@ -202,12 +206,12 @@ class TestOrchestrator {
         return true;
       } else {
         print('  ❌ Coverage analysis failed with exit code $exitCode');
-        failures.add('coverage_tool');
+        failures.add('analyze_coverage');
         return false;
       }
     } catch (e) {
       print('  ❌ Coverage tool error: $e');
-      failures.add('coverage_tool');
+      failures.add('analyze_coverage');
       return false;
     }
   }
@@ -221,7 +225,8 @@ class TestOrchestrator {
         actualTestPath = testPath.replaceFirst('lib', 'test');
 
         // If it's a specific file (ends with .dart but not _test.dart), add _test suffix
-        if (actualTestPath.endsWith('.dart') && !actualTestPath.endsWith('_test.dart')) {
+        if (actualTestPath.endsWith('.dart') &&
+            !actualTestPath.endsWith('_test.dart')) {
           actualTestPath = actualTestPath.replaceFirst('.dart', '_test.dart');
         }
       } else if (!testPath.startsWith('test')) {
@@ -231,7 +236,7 @@ class TestOrchestrator {
 
       final args = <String>[
         'run',
-        'test_analyzer:test_analyzer',
+        'test_reporter:analyze_tests',
         actualTestPath,
         '--runs=$runs',
       ];
@@ -266,7 +271,7 @@ class TestOrchestrator {
         print('  ✅ Test analysis complete');
 
         // Extract analyzer data from most recent report
-        final analyzerReport = await findLatestReport('test_report_analyzer');
+        final analyzerReport = await findLatestReport('report_tests');
         if (verbose) print('  📊 Analyzer report found: $analyzerReport');
 
         if (analyzerReport != null) {
@@ -275,7 +280,8 @@ class TestOrchestrator {
           );
 
           if (verbose) {
-            print('  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
+            print(
+                '  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
             if (jsonData != null) {
               print('  📋 JSON keys: ${jsonData.keys.toList()}');
               print('  📊 Test analysis summary: ${jsonData['summary']}');
@@ -290,7 +296,8 @@ class TestOrchestrator {
               print('  📄 Analyzer report retained: $analyzerReport');
             }
           } else {
-            if (verbose) print('  ⚠️  Failed to extract JSON from analyzer report');
+            if (verbose)
+              print('  ⚠️  Failed to extract JSON from analyzer report');
           }
         } else {
           if (verbose) print('  ⚠️  No analyzer report found');
@@ -301,7 +308,7 @@ class TestOrchestrator {
         print('  ⚠️  Test analysis complete with test failures');
 
         // Still extract data even if tests failed
-        final analyzerReport = await findLatestReport('test_report_analyzer');
+        final analyzerReport = await findLatestReport('report_tests');
         if (verbose) print('  📊 Analyzer report found: $analyzerReport');
 
         if (analyzerReport != null) {
@@ -310,7 +317,8 @@ class TestOrchestrator {
           );
 
           if (verbose) {
-            print('  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
+            print(
+                '  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
             if (jsonData != null) {
               print('  📋 JSON keys: ${jsonData.keys.toList()}');
             }
@@ -319,9 +327,11 @@ class TestOrchestrator {
           if (jsonData != null) {
             results['test_analysis'] = jsonData;
             reportPaths['analyzer'] = analyzerReport;
-            if (verbose) print('  📄 Analyzer report retained: $analyzerReport');
+            if (verbose)
+              print('  📄 Analyzer report retained: $analyzerReport');
           } else {
-            if (verbose) print('  ⚠️  Failed to extract JSON from analyzer report');
+            if (verbose)
+              print('  ⚠️  Failed to extract JSON from analyzer report');
           }
         } else {
           if (verbose) print('  ⚠️  No analyzer report found');
@@ -330,12 +340,12 @@ class TestOrchestrator {
         return true; // Don't consider test failures as tool failures
       } else {
         print('  ❌ Test analysis failed with exit code $exitCode');
-        failures.add('test_analyzer');
+        failures.add('analyze_tests');
         return false;
       }
     } catch (e) {
       print('  ❌ Test analyzer error: $e');
-      failures.add('test_analyzer');
+      failures.add('analyze_tests');
       return false;
     }
   }
@@ -345,12 +355,12 @@ class TestOrchestrator {
       final reportDir = await ReportUtils.getReportDirectory();
 
       // Determine subdirectory based on prefix
-      // prefix will be like 'test_report_coverage' or 'test_report_analyzer'
+      // prefix will be like 'report_coverage' or 'report_tests'
       final subdir = switch (prefix) {
-        String s when s.contains('_coverage') => 'code_coverage',
-        String s when s.contains('_analyzer') => 'analyzer',
-        String s when s.contains('_failed') => 'failed',
-        _ => 'unified',
+        String s when s.contains('_coverage') => 'coverage',
+        String s when s.contains('_tests') => 'tests',
+        String s when s.contains('_failures') => 'failures',
+        _ => 'suite',
       };
 
       final searchDir = p.join(reportDir, subdir);
@@ -420,7 +430,8 @@ class TestOrchestrator {
     // Header with health badge
     report.writeln('# 📊 Test Suite Health Dashboard');
     report.writeln();
-    report.writeln('> **Overall Health:** $healthStatus **${healthScore.toStringAsFixed(1)}%**');
+    report.writeln(
+        '> **Overall Health:** $healthStatus **${healthScore.toStringAsFixed(1)}%**');
     report.writeln();
     report.writeln('**Generated:** ${DateTime.now().toLocal()}');
     report.writeln('**Module:** `$testPath`');
@@ -450,9 +461,8 @@ class TestOrchestrator {
 
     // Critical Issues First
     final insights = generateInsights();
-    final criticalIssues = insights
-        .where((i) => i['severity'] == '🔴 Critical')
-        .toList();
+    final criticalIssues =
+        insights.where((i) => i['severity'] == '🔴 Critical').toList();
     final warnings =
         insights.where((i) => i['severity'] == '🟠 Warning').toList();
 
@@ -494,7 +504,8 @@ class TestOrchestrator {
       }
       report.writeln();
     } else {
-      report.writeln('✅ No actions required. Continue maintaining current quality standards.');
+      report.writeln(
+          '✅ No actions required. Continue maintaining current quality standards.');
       report.writeln();
     }
 
@@ -509,9 +520,12 @@ class TestOrchestrator {
       report.writeln('```');
       report.writeln(
           '├─ Overall:  ${overallCoverage?.toStringAsFixed(1) ?? "N/A"}%');
-      report.writeln('├─ Lines:    ${coverageSummary['covered_lines']}/${coverageSummary['total_lines']}');
-      report.writeln('├─ Uncovered: ${coverageSummary['uncovered_lines']} lines');
-      report.writeln('└─ Files:    ${coverageSummary['files_analyzed']} analyzed');
+      report.writeln(
+          '├─ Lines:    ${coverageSummary['covered_lines']}/${coverageSummary['total_lines']}');
+      report
+          .writeln('├─ Uncovered: ${coverageSummary['uncovered_lines']} lines');
+      report.writeln(
+          '└─ Files:    ${coverageSummary['files_analyzed']} analyzed');
       report.writeln('```');
       report.writeln();
     }
@@ -522,9 +536,12 @@ class TestOrchestrator {
       report.writeln();
       report.writeln('```');
       report.writeln('├─ Total Tests:      $totalTests');
-      report.writeln('├─ Pass Rate:        ${passRate?.toStringAsFixed(1) ?? "N/A"}%');
-      report.writeln('├─ Stability Score:  ${stabilityScore?.toStringAsFixed(1) ?? "N/A"}%');
-      report.writeln('├─ Passed:           ${testSummary['passed_consistently']}');
+      report.writeln(
+          '├─ Pass Rate:        ${passRate?.toStringAsFixed(1) ?? "N/A"}%');
+      report.writeln(
+          '├─ Stability Score:  ${stabilityScore?.toStringAsFixed(1) ?? "N/A"}%');
+      report.writeln(
+          '├─ Passed:           ${testSummary['passed_consistently']}');
       report.writeln('├─ Failed:           $consistentFailures');
       report.writeln('└─ Flaky:            $flakyTests');
       report.writeln('```');
@@ -540,21 +557,25 @@ class TestOrchestrator {
     // Add links to actual report files
     if (reportPaths.containsKey('analyzer')) {
       final analyzerFile = p.basename(reportPaths['analyzer']!);
-      report.writeln('- 📊 **[Test Reliability Analysis](../analyzer/$analyzerFile)** - Flaky tests, performance metrics, test behavior');
+      report.writeln(
+          '- 📊 **[Test Reliability Analysis](../analyzer/$analyzerFile)** - Flaky tests, performance metrics, test behavior');
     } else {
       report.writeln('- 📊 **Test Reliability Analysis** - ⚠️ Not available');
     }
 
     if (reportPaths.containsKey('failed')) {
       final failedFile = p.basename(reportPaths['failed']!);
-      report.writeln('- 🔴 **[Failed Tests Report](../failed/$failedFile)** - Failure triage, root causes, suggested fixes');
+      report.writeln(
+          '- 🔴 **[Failed Tests Report](../failed/$failedFile)** - Failure triage, root causes, suggested fixes');
     } else if (flakyTests > 0 || consistentFailures > 0) {
-      report.writeln('- 🔴 **Failed Tests Report** - ⚠️ Not generated (check logs)');
+      report.writeln(
+          '- 🔴 **Failed Tests Report** - ⚠️ Not generated (check logs)');
     }
 
     if (reportPaths.containsKey('coverage')) {
       final coverageFile = p.basename(reportPaths['coverage']!);
-      report.writeln('- 📈 **[Coverage Analysis](../code_coverage/$coverageFile)** - Code coverage breakdown, untested code, testability');
+      report.writeln(
+          '- 📈 **[Coverage Analysis](../coverage/$coverageFile)** - Code coverage breakdown, untested code, testability');
     } else {
       report.writeln('- 📈 **Coverage Analysis** - ⚠️ Not available');
     }
@@ -568,9 +589,9 @@ class TestOrchestrator {
     report.writeln('| Tool | Status |');
     report.writeln('|------|--------|');
     report.writeln(
-        '| Coverage Analysis | ${failures.contains("coverage_tool") ? "❌ Failed" : "✅ Success"} |');
+        '| Coverage Analysis | ${failures.contains("analyze_coverage") ? "❌ Failed" : "✅ Success"} |');
     report.writeln(
-        '| Test Reliability Analysis | ${failures.contains("test_analyzer") ? "❌ Failed" : "✅ Success"} |');
+        '| Test Reliability Analysis | ${failures.contains("analyze_tests") ? "❌ Failed" : "✅ Success"} |');
     report.writeln();
     report.writeln('*Generated by Unified Test Analysis Orchestrator*');
     report.writeln();
@@ -605,11 +626,11 @@ class TestOrchestrator {
           'insights': insights,
           'recommendations': recommendations,
           'tool_status': {
-            'coverage_tool': !failures.contains('coverage_tool'),
-            'test_analyzer': !failures.contains('test_analyzer'),
+            'analyze_coverage': !failures.contains('analyze_coverage'),
+            'analyze_tests': !failures.contains('analyze_tests'),
           },
         },
-        suffix: 'unified',
+        suffix: 'suite',
         verbose: true,
       );
 
@@ -618,7 +639,8 @@ class TestOrchestrator {
       // Check if there are failures to determine if we need a failed report
       final analysisData = results['test_analysis'] as Map<String, dynamic>?;
       final analysisSummary = analysisData?['summary'] as Map<String, dynamic>?;
-      final numConsistentFailures = analysisSummary?['consistent_failures'] as int? ?? 0;
+      final numConsistentFailures =
+          analysisSummary?['consistent_failures'] as int? ?? 0;
       final numFlakyTests = analysisSummary?['flaky_tests'] as int? ?? 0;
       final hasFailures = numConsistentFailures > 0 || numFlakyTests > 0;
 
@@ -627,17 +649,19 @@ class TestOrchestrator {
         await generateFailedReport(results, moduleName, timestamp);
       } else {
         // Delete any existing failed reports if no failures exist
-        if (verbose) print('\n🧹 No failures - cleaning up old failed reports...');
+        if (verbose)
+          print('\n🧹 No failures - cleaning up old failed reports...');
         await ReportUtils.cleanOldReports(
           pathName: moduleName,
-          prefixPatterns: ['test_report_failed'],
+          prefixPatterns: ['report_failures'],
           verbose: verbose,
-          keepLatest: false, // Delete all failed reports when there are no failures
+          keepLatest:
+              false, // Delete all failed reports when there are no failures
         );
 
-        // Delete the failed subdirectory if it's empty
+        // Delete the failures subdirectory if it's empty
         final reportDir = await ReportUtils.getReportDirectory();
-        final failedDir = Directory(p.join(reportDir, 'failed'));
+        final failedDir = Directory(p.join(reportDir, 'failures'));
         if (await failedDir.exists()) {
           final isEmpty = await failedDir.list().isEmpty;
           if (isEmpty) {
@@ -651,7 +675,12 @@ class TestOrchestrator {
       if (verbose) print('\n🧹 Cleaning up old reports...');
       await ReportUtils.cleanOldReports(
         pathName: moduleName,
-        prefixPatterns: ['test_report_coverage', 'test_report_analyzer', 'test_report_unified', 'test_report_failed'],
+        prefixPatterns: [
+          'report_coverage',
+          'report_tests',
+          'report_suite',
+          'report_failures'
+        ],
         verbose: verbose,
       );
       if (verbose) print('  ✅ Cleanup complete');
@@ -691,16 +720,14 @@ class TestOrchestrator {
     markdown.writeln();
     markdown.writeln('| Metric | Value |');
     markdown.writeln('|--------|-------|');
-    markdown.writeln(
-        '| Total Tests | ${summary['total_tests'] ?? 'N/A'} |');
+    markdown.writeln('| Total Tests | ${summary['total_tests'] ?? 'N/A'} |');
     markdown.writeln(
         '| Passed Consistently | ${summary['passed_consistently'] ?? 'N/A'} |');
-    markdown
-        .writeln('| Consistent Failures | ❌ $consistentFailures |');
+    markdown.writeln('| Consistent Failures | ❌ $consistentFailures |');
     markdown.writeln('| Flaky Tests | ⚠️ $flakyTests |');
     final passRate = summary['pass_rate'] as num?;
-    markdown.writeln(
-        '| Pass Rate | ${passRate?.toStringAsFixed(1) ?? 'N/A'}% |');
+    markdown
+        .writeln('| Pass Rate | ${passRate?.toStringAsFixed(1) ?? 'N/A'}% |');
     markdown.writeln();
 
     // Add consistent failures section
@@ -709,8 +736,7 @@ class TestOrchestrator {
       markdown.writeln('*Tests that failed all runs*');
       markdown.writeln();
 
-      final failures =
-          testAnalysis['consistent_failures'] as List<dynamic>?;
+      final failures = testAnalysis['consistent_failures'] as List<dynamic>?;
       if (failures != null && failures.isNotEmpty) {
         for (final failure in failures) {
           final failureMap = failure as Map<String, dynamic>;
@@ -813,7 +839,7 @@ class TestOrchestrator {
         timestamp: timestamp,
         markdownContent: markdown.toString(),
         jsonData: jsonData,
-        suffix: 'failed',
+        suffix: 'failures',
         verbose: verbose,
       );
 
@@ -897,7 +923,7 @@ class TestOrchestrator {
         final overallCoverage = toDouble(summary['overall_coverage']);
         if (overallCoverage != null && overallCoverage < 80) {
           recommendations.add(
-            'Increase test coverage - run `dart run test_analyzer:coverage_tool --fix` to generate missing tests',
+            'Increase test coverage - run `dart run test_reporter:analyze_coverage --fix` to generate missing tests',
           );
         }
       }
@@ -945,7 +971,8 @@ class TestOrchestrator {
     print('');
   }
 
-  void printSummary({required bool coverageSuccess, required bool analyzerSuccess}) {
+  void printSummary(
+      {required bool coverageSuccess, required bool analyzerSuccess}) {
     print('\n${"═" * 70}');
     print('   SUMMARY');
     print('${"═" * 70}\n');
@@ -963,7 +990,7 @@ class TestOrchestrator {
     print('  - Tools succeeded: ${coverageSuccess && analyzerSuccess ? 2 : 1}');
     print('  - Tools failed: ${failures.length}');
 
-    print('\n📁 Reports saved to: test_analyzer_reports/');
+    print('\n📁 Reports saved to: tests_reports/');
     print('');
   }
 

@@ -1,4 +1,3 @@
-
 /// # Test Analyzer - Advanced Flutter/Dart Test Debugging Tool
 ///
 /// A comprehensive test analysis tool that identifies flaky tests, detects failure patterns,
@@ -62,7 +61,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:test_analyzer/src/utils/report_utils.dart';
+import 'package:test_reporter/src/utils/report_utils.dart';
 
 class TestAnalyzer {
   TestAnalyzer({
@@ -1272,7 +1271,8 @@ class TestAnalyzer {
                 'test_name': parts.length > 1 ? parts[1] : 'unknown',
                 'success_rate': successRate,
                 'runs': Map<String, bool>.fromEntries(
-                  run.results.entries.map((e) => MapEntry('run_${e.key}', e.value)),
+                  run.results.entries
+                      .map((e) => MapEntry('run_${e.key}', e.value)),
                 ),
               };
             })
@@ -1346,7 +1346,8 @@ class TestAnalyzer {
 
         jsonData['failure_patterns'] = Map<String, int>.fromEntries(
           patternsByType.entries.map(
-            (entry) => MapEntry(entry.key.toString().split('.').last, entry.value),
+            (entry) =>
+                MapEntry(entry.key.toString().split('.').last, entry.value),
           ),
         );
       }
@@ -1357,7 +1358,7 @@ class TestAnalyzer {
         timestamp: timestamp,
         markdownContent: report.toString(),
         jsonData: jsonData,
-        suffix: 'analyzer',
+        suffix: 'tests',
         verbose: true,
       );
 
@@ -1386,7 +1387,8 @@ class TestAnalyzer {
     markdown.writeln('# 🔴 Failed Test Report');
     markdown.writeln();
     markdown.writeln('**Generated:** ${DateTime.now().toLocal()}');
-    markdown.writeln('**Test Path:** `${targetFiles.isNotEmpty ? targetFiles.first : 'all tests'}`');
+    markdown.writeln(
+        '**Test Path:** `${targetFiles.isNotEmpty ? targetFiles.first : 'all tests'}`');
     markdown.writeln('**Source:** Test Analyzer');
     markdown.writeln('**Analysis Runs:** $runCount');
     markdown.writeln();
@@ -1396,10 +1398,13 @@ class TestAnalyzer {
     markdown.writeln('| Metric | Value |');
     markdown.writeln('|--------|-------|');
     markdown.writeln('| Total Tests | ${testRuns.length} |');
-    markdown.writeln('| Passed Consistently | ${testRuns.length - consistentFailures.length - flakyTests.length} |');
-    markdown.writeln('| Consistent Failures | ❌ ${consistentFailures.length} |');
+    markdown.writeln(
+        '| Passed Consistently | ${testRuns.length - consistentFailures.length - flakyTests.length} |');
+    markdown
+        .writeln('| Consistent Failures | ❌ ${consistentFailures.length} |');
     markdown.writeln('| Flaky Tests | ⚠️ ${flakyTests.length} |');
-    markdown.writeln('| Pass Rate | ${(testRuns.isNotEmpty ? ((testRuns.length - consistentFailures.length - flakyTests.length) / testRuns.length * 100) : 0).toStringAsFixed(1)}% |');
+    markdown.writeln(
+        '| Pass Rate | ${(testRuns.isNotEmpty ? ((testRuns.length - consistentFailures.length - flakyTests.length) / testRuns.length * 100) : 0).toStringAsFixed(1)}% |');
     markdown.writeln();
 
     // Add consistent failures section
@@ -1418,7 +1423,8 @@ class TestAnalyzer {
         markdown.writeln('**File:** `$fileName`');
 
         if (pattern != null) {
-          markdown.writeln('**Type:** ${pattern.type.toString().split('.').last}');
+          markdown
+              .writeln('**Type:** ${pattern.type.toString().split('.').last}');
           markdown.writeln('**Category:** ${pattern.category}');
           if (pattern.suggestion != null && pattern.suggestion!.isNotEmpty) {
             markdown.writeln();
@@ -1448,7 +1454,8 @@ class TestAnalyzer {
 
         markdown.writeln('### $testName');
         markdown.writeln('**File:** `$fileName`');
-        markdown.writeln('**Success Rate:** ${successRate.toStringAsFixed(1)}%');
+        markdown
+            .writeln('**Success Rate:** ${successRate.toStringAsFixed(1)}%');
         markdown.writeln('**Run Results:**');
 
         for (final entry in run.results.entries) {
@@ -1463,13 +1470,16 @@ class TestAnalyzer {
     markdown.writeln('## 💡 Recommendations');
     markdown.writeln();
     if (consistentFailures.isNotEmpty) {
-      markdown.writeln('1. **🔴 Critical:** Fix ${consistentFailures.length} consistently failing tests immediately');
+      markdown.writeln(
+          '1. **🔴 Critical:** Fix ${consistentFailures.length} consistently failing tests immediately');
     }
     if (flakyTests.isNotEmpty) {
-      markdown.writeln('${consistentFailures.isNotEmpty ? '2' : '1'}. **⚠️ Important:** Investigate and stabilize ${flakyTests.length} flaky tests');
+      markdown.writeln(
+          '${consistentFailures.isNotEmpty ? '2' : '1'}. **⚠️ Important:** Investigate and stabilize ${flakyTests.length} flaky tests');
     }
     markdown.writeln();
-    markdown.writeln('For detailed analysis and stack traces, see the full analyzer report.');
+    markdown.writeln(
+        'For detailed analysis and stack traces, see the full analyzer report.');
 
     // Build JSON data
     final jsonData = {
@@ -1491,7 +1501,7 @@ class TestAnalyzer {
         timestamp: timestamp,
         markdownContent: markdown.toString(),
         jsonData: jsonData,
-        suffix: 'failed',
+        suffix: 'failures',
         verbose: verbose,
       );
 

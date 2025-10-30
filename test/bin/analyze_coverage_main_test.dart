@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/bin/coverage_tool_lib.dart';
+import 'package:test_reporter/src/bin/analyze_coverage_lib.dart';
 
 /// Tests for coverage_tool main() and CoverageAnalyzer with various configurations
 void main() {
@@ -263,8 +263,7 @@ void main() {
       expect(thresholds.validate(75.0, baseline: 80.0), isFalse);
     });
 
-    test(
-        'should pass when coverage decreased but failOnDecrease is false', () {
+    test('should pass when coverage decreased but failOnDecrease is false', () {
       final thresholds = CoverageThresholds(
         minimum: 70.0,
         failOnDecrease: false,

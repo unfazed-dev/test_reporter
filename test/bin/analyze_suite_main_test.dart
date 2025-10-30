@@ -4,7 +4,7 @@
 /// and helper functions for the unified test analysis orchestrator.
 
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/bin/run_all_lib.dart';
+import 'package:test_reporter/src/bin/analyze_suite_lib.dart';
 
 void main() {
   group('TestOrchestrator Configuration', () {
@@ -101,7 +101,8 @@ void main() {
     });
 
     test('should extract module name from file path', () {
-      final orchestrator = TestOrchestrator(testPath: 'test/auth/login_test.dart');
+      final orchestrator =
+          TestOrchestrator(testPath: 'test/auth/login_test.dart');
       expect(orchestrator.extractModuleName(), equals('login-fi'));
     });
 
@@ -121,7 +122,8 @@ void main() {
     });
 
     test('should handle Windows-style backslashes', () {
-      final orchestrator = TestOrchestrator(testPath: r'test\auth\login_test.dart');
+      final orchestrator =
+          TestOrchestrator(testPath: r'test\auth\login_test.dart');
       expect(orchestrator.extractModuleName(), equals('login-fi'));
     });
 

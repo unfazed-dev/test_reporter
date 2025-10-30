@@ -3,9 +3,9 @@
 /// # Failed Test Extractor - Entry Point
 ///
 /// Command-line entry point for the Failed Test Extractor tool.
-/// All business logic is in lib/src/bin/failed_test_extractor_lib.dart
+/// All business logic is in lib/src/bin/extract_failures_lib.dart
 
-import 'package:test_analyzer/src/bin/failed_test_extractor_lib.dart';
+import 'package:test_reporter/src/bin/extract_failures_lib.dart';
 
 /// Main entry point for the failed test extractor
 void main(List<String> arguments) async {

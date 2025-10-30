@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:test_analyzer/src/utils/extensions.dart';
+import 'package:test_reporter/src/utils/extensions.dart';
 
 void main() {
   group('DurationFormatting', () {

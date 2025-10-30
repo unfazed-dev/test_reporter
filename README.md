@@ -1,6 +1,6 @@
-# Test Analyzer
+# Test Reporter
 
-Comprehensive Flutter/Dart test analysis toolkit with coverage analysis, flaky test detection, unified reporting, and modern Dart 3.x patterns.
+Comprehensive Flutter/Dart test reporting toolkit with coverage analysis, flaky test detection, failure extraction, unified reporting, and modern Dart 3.x patterns.
 
 ## Features
 
@@ -10,7 +10,7 @@ Comprehensive Flutter/Dart test analysis toolkit with coverage analysis, flaky t
 - ✅ **Failed Test Extraction** - Smart extraction and batch rerun commands
 - ✅ **Modern Dart Patterns** - Sealed classes, records, and pattern matching
 - ✅ **Unified Reports** - Single file format with markdown + embedded JSON
-- ✅ **Organized Report Structure** - Auto-organized subdirectories (code_coverage, analyzer, failed, unified)
+- ✅ **Organized Report Structure** - Auto-organized subdirectories (coverage, tests, failures, suite)
 - ✅ **Beautiful CLI** - Colored output, progress indicators, tables
 - ✅ **Comprehensive Testing** - 117+ tests with 100% utility coverage
 
@@ -19,17 +19,17 @@ Comprehensive Flutter/Dart test analysis toolkit with coverage analysis, flaky t
 ### From Git Repository
 ```yaml
 dev_dependencies:
-  test_analyzer:
+  test_reporter:
     git:
-      url: https://github.com/unfazed-dev/test_analyzer.git
+      url: https://github.com/unfazed-dev/test_reporter.git
       ref: main  # or specific tag like v2.0.0
 ```
 
 ### Local Development
 ```yaml
 dev_dependencies:
-  test_analyzer:
-    path: /Users/your-username/Developer/packages/test_analyzer
+  test_reporter:
+    path: /Users/your-username/Developer/packages/test_reporter
 ```
 
 After adding to `pubspec.yaml`, run:
@@ -45,10 +45,10 @@ The **unified orchestrator** runs coverage analysis and test analysis sequential
 
 ```bash
 # Basic usage - analyzes a specific path
-dart run test_analyzer:run_all lib/ui/widgets
+dart run test_reporter:analyze_suite lib/ui/widgets
 
 # With all options
-dart run test_analyzer:run_all lib/ui/widgets \
+dart run test_reporter:analyze_suite lib/ui/widgets \
   --runs=5 \
   --performance \
   --verbose \
@@ -56,18 +56,18 @@ dart run test_analyzer:run_all lib/ui/widgets \
 ```
 
 **What it does:**
-1. Runs `coverage_tool` on the specified path
-2. Runs `test_analyzer` on the corresponding test path
+1. Runs `analyze_coverage` on the specified path
+2. Runs `analyze_tests` on the corresponding test path
 3. Extracts JSON data from both reports
 4. Generates a unified report with combined insights
 5. Provides actionable recommendations
 
 **Output:**
 - Individual reports organized in subdirectories:
-  - Coverage: `test_analyzer_reports/code_coverage/`
-  - Test Analysis: `test_analyzer_reports/analyzer/`
-  - Failed Tests: `test_analyzer_reports/failed/`
-- Unified report: `test_analyzer_reports/unified/{module}_unified_report@{timestamp}.md`
+  - Coverage: `tests_reports/coverage/`
+  - Test Analysis: `tests_reports/tests/`
+  - Failed Tests: `tests_reports/failures/`
+- Unified report: `tests_reports/suite/{module}_suite_report@{timestamp}.md`
 
 ### Individual Tools
 
@@ -77,13 +77,13 @@ Analyzes code coverage for a specific path:
 
 ```bash
 # Basic coverage analysis
-dart run test_analyzer:coverage_tool lib/src/features
+dart run test_reporter:analyze_coverage lib/src/features
 
 # With minimum coverage threshold
-dart run test_analyzer:coverage_tool lib/src/features --min-coverage 95
+dart run test_reporter:analyze_coverage lib/src/features --min-coverage 95
 
 # Verbose output
-dart run test_analyzer:coverage_tool lib/src/features --verbose
+dart run test_reporter:analyze_coverage lib/src/features --verbose
 ```
 
 **Options:**
@@ -92,7 +92,7 @@ dart run test_analyzer:coverage_tool lib/src/features --verbose
 - `--help` - Show help message
 
 **Output:**
-- Report: `test_analyzer_reports/code_coverage/{module}_test_report_coverage@{timestamp}.md`
+- Report: `tests_reports/coverage/{module}_report_coverage@{timestamp}.md`
 - Contains: Coverage metrics, file analysis, uncovered lines, recommendations
 
 #### Test Analysis
@@ -101,16 +101,16 @@ Analyzes test reliability and detects flaky tests:
 
 ```bash
 # Basic test analysis
-dart run test_analyzer:test_analyzer test/features
+dart run test_reporter:analyze_tests test/features
 
 # Multiple test runs to detect flaky tests
-dart run test_analyzer:test_analyzer test/features --runs=5
+dart run test_reporter:analyze_tests test/features --runs=5
 
 # With performance profiling
-dart run test_analyzer:test_analyzer test/features --runs=5 --performance
+dart run test_reporter:analyze_tests test/features --runs=5 --performance
 
 # Run tests in parallel
-dart run test_analyzer:test_analyzer test/features --parallel
+dart run test_reporter:analyze_tests test/features --parallel
 ```
 
 **Options:**
@@ -121,7 +121,7 @@ dart run test_analyzer:test_analyzer test/features --parallel
 - `--help` - Show help message
 
 **Output:**
-- Report: `test_analyzer_reports/analyzer/{module}_test_report_analyzer@{timestamp}.md`
+- Report: `tests_reports/tests/{module}_report_tests@{timestamp}.md`
 - Contains: Pass rate, flaky tests, consistent failures, performance metrics, recommendations
 
 #### Failed Test Extractor
@@ -129,7 +129,7 @@ dart run test_analyzer:test_analyzer test/features --parallel
 Extracts failed test paths from test output and generates batch rerun commands:
 
 ```bash
-dart run test_analyzer:failed_test_extractor
+dart run test_reporter:extract_failures
 ```
 
 **Interactive:**
@@ -142,7 +142,7 @@ dart run test_analyzer:failed_test_extractor
 All reports use a unified format:
 - **Human-readable markdown** for easy review
 - **Embedded JSON data** for machine parsing
-- **Automatic directory creation** (`test_analyzer_reports/`)
+- **Automatic directory creation** (`tests_reports/`)
 - **Organized subdirectories** for different report types
 - **Timestamp-based naming** for version history
 
@@ -151,22 +151,22 @@ All reports use a unified format:
 Reports are automatically organized into subdirectories:
 
 ```
-test_analyzer_reports/
-├── code_coverage/     # Coverage analysis reports
-├── analyzer/          # Test analysis reports
-├── failed/            # Failed test reports
-└── unified/           # Unified combined reports
+tests_reports/
+├── coverage/     # Coverage analysis reports
+├── tests/          # Test reliability reports
+├── failures/            # Failed test reports
+└── suite/           # Unified suite reports
 ```
 
 ### Report Naming Convention
 
-- **Format:** `{module}_test_report_{suffix}@{timestamp}.md`
-- **Example:** `ui_widgets_test_report_coverage@1430_280125.md`
+- **Format:** `{module}_report_{suffix}@{timestamp}.md`
+- **Example:** `ui_widgets_report_coverage@1430_280125.md`
 - **Suffixes:**
-  - `coverage` → saved to `code_coverage/`
-  - `analyzer` → saved to `analyzer/`
-  - `failed` → saved to `failed/`
-  - `unified` → saved to `unified/`
+  - `coverage` → saved to `coverage/`
+  - `tests` → saved to `tests/`
+  - `failures` → saved to `failures/`
+  - `suite` → saved to `suite/`
 
 ### Report Structure
 
@@ -198,10 +198,10 @@ test_analyzer_reports/
 ### Extracting JSON from Reports
 
 ```dart
-import 'package:test_analyzer/test_analyzer.dart';
+import 'package:analyze_tests/analyze_tests.dart';
 
 // Read report file
-final reportContent = File('test_analyzer_reports/code_coverage/module_report_coverage@1234.md').readAsStringSync();
+final reportContent = File('tests_reports/coverage/module_report_coverage@1234.md').readAsStringSync();
 
 // Extract JSON
 final jsonData = ReportUtils.extractJsonFromReport(reportContent);
@@ -220,7 +220,7 @@ if (jsonData != null) {
 The package uses sealed classes for type-safe failure pattern matching:
 
 ```dart
-import 'package:test_analyzer/test_analyzer.dart';
+import 'package:analyze_tests/analyze_tests.dart';
 
 final failure = detectFailureType(errorMessage, stackTrace);
 
@@ -266,7 +266,7 @@ switch (failure) {
 Lightweight data structures for results:
 
 ```dart
-import 'package:test_analyzer/test_analyzer.dart';
+import 'package:analyze_tests/analyze_tests.dart';
 
 // Create analysis result
 final result = successfulAnalysis(
@@ -321,13 +321,13 @@ jobs:
         run: dart pub get
 
       - name: Run unified analysis
-        run: dart run test_analyzer:run_all lib/src --runs=3
+        run: dart run test_reporter:analyze_suite lib/src --runs=3
 
       - name: Upload reports
         uses: actions/upload-artifact@v3
         with:
           name: test-reports
-          path: test_analyzer_reports/
+          path: tests_reports/
 ```
 
 ### GitLab CI
@@ -337,10 +337,10 @@ test_analysis:
   stage: test
   script:
     - dart pub get
-    - dart run test_analyzer:run_all lib/src --runs=3
+    - dart run test_reporter:analyze_suite lib/src --runs=3
   artifacts:
     paths:
-      - test_analyzer_reports/
+      - tests_reports/
     expire_in: 1 week
 ```
 
@@ -349,7 +349,7 @@ test_analysis:
 Add to `.gitignore` if you don't want to commit reports:
 ```gitignore
 # Test analyzer reports (optional - can commit for history)
-test_analyzer_reports/
+tests_reports/
 ```
 
 ## Troubleshooting
@@ -365,7 +365,7 @@ dart pub get
 **Q: Reports not being generated**
 ```bash
 # Solution: Check write permissions in project directory
-ls -la test_analyzer_reports/
+ls -la tests_reports/
 
 # Directory is auto-created, but check parent permissions
 ls -ld .
@@ -383,7 +383,7 @@ find test -name "*_test.dart"
 **Q: Flaky test not detected**
 ```bash
 # Solution: Increase number of runs
-dart run test_analyzer:test_analyzer test/features --runs=10
+dart run test_reporter:analyze_tests test/features --runs=10
 
 # Minimum 2 runs required to detect flaky tests
 ```
@@ -391,14 +391,14 @@ dart run test_analyzer:test_analyzer test/features --runs=10
 **Q: Performance metrics not showing**
 ```bash
 # Solution: Enable performance profiling
-dart run test_analyzer:test_analyzer test/features --performance
+dart run test_reporter:analyze_tests test/features --performance
 ```
 
 **Q: Parallel execution slower**
 ```bash
 # Solution: Parallel execution overhead may not benefit small test suites
 # Use parallel only for large test suites (50+ tests)
-dart run test_analyzer:test_analyzer test/features  # without --parallel
+dart run test_reporter:analyze_tests test/features  # without --parallel
 ```
 
 ### Debugging
@@ -406,7 +406,7 @@ dart run test_analyzer:test_analyzer test/features  # without --parallel
 Enable verbose output for detailed information:
 
 ```bash
-dart run test_analyzer:run_all lib/src --verbose
+dart run test_reporter:analyze_suite lib/src --verbose
 ```
 
 Check analyzer status:
@@ -416,7 +416,7 @@ dart analyze
 
 Run package tests:
 ```bash
-cd path/to/test_analyzer
+cd path/to/analyze_tests
 dart test
 ```
 
@@ -428,7 +428,7 @@ dart test
 4. **Target Specific Paths** - Analyze specific modules instead of entire codebase
 5. **Clean Old Reports** - Reports are auto-cleaned, but manual cleanup available:
    ```bash
-   rm -rf test_analyzer_reports/*_old_*.md
+   rm -rf tests_reports/*_old_*.md
    ```
 
 ## Examples
@@ -437,7 +437,7 @@ dart test
 
 ```bash
 # Full analysis with all features
-dart run test_analyzer:run_all lib/ui/widgets \
+dart run test_reporter:analyze_suite lib/ui/widgets \
   --runs=5 \
   --performance \
   --verbose
@@ -447,21 +447,21 @@ dart run test_analyzer:run_all lib/ui/widgets \
 
 ```bash
 # Fast coverage analysis with threshold
-dart run test_analyzer:coverage_tool lib/ui --min-coverage 90
+dart run test_reporter:analyze_coverage lib/ui --min-coverage 90
 ```
 
 ### Detect Flaky Tests
 
 ```bash
 # Run tests multiple times to detect flakiness
-dart run test_analyzer:test_analyzer test/integration --runs=10
+dart run test_reporter:analyze_tests test/integration --runs=10
 ```
 
 ### CI Pipeline
 
 ```bash
 # Recommended CI command - balance speed and reliability
-dart run test_analyzer:run_all lib/src --runs=3 --parallel
+dart run test_reporter:analyze_suite lib/src --runs=3 --parallel
 ```
 
 ## API Documentation
@@ -518,8 +518,8 @@ dart run test_analyzer:run_all lib/src --runs=3 --parallel
 
 ```bash
 # Clone repository
-git clone https://github.com/unfazed-dev/test_analyzer.git
-cd test_analyzer
+git clone https://github.com/unfazed-dev/test_reporter.git
+cd analyze_tests
 
 # Install dependencies
 dart pub get
@@ -591,8 +591,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
 
 ## Support
 
-- **Issues**: https://github.com/unfazed-dev/test_analyzer/issues
-- **Documentation**: https://github.com/unfazed-dev/test_analyzer
+- **Issues**: https://github.com/unfazed-dev/analyze_tests/issues
+- **Documentation**: https://github.com/unfazed-dev/analyze_tests
 - **Examples**: See `example/` directory
 
 ---
