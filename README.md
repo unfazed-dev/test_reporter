@@ -591,8 +591,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
 
 ## Support
 
-- **Issues**: https://github.com/unfazed-dev/analyze_tests/issues
-- **Documentation**: https://github.com/unfazed-dev/analyze_tests
+- **Issues**: https://github.com/unfazed-dev/test_reporter/issues
+- **Documentation**: https://github.com/unfazed-dev/test_reporter
 - **Examples**: See `example/` directory
 
 ---
