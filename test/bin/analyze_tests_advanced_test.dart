@@ -222,8 +222,7 @@ void main() {
   group('Report and Fix Configuration', () {
     test('should enable both report and fixes', () {
       final analyzer = TestAnalyzer(
-        generateReport: true,
-        generateFixes: true,
+        
       );
 
       expect(analyzer.generateReport, isTrue);

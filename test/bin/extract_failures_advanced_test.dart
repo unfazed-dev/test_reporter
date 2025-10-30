@@ -21,7 +21,7 @@ void main() {
     });
 
     test('should handle test with multi-line error message', () {
-      final multiLineError = '''
+      const multiLineError = '''
 Expected: 42
   Actual: 43
    Which: differs by 1
@@ -179,7 +179,7 @@ Stack trace:
     });
 
     test('should handle results with very old timestamp', () {
-      final oldDate = DateTime(2000, 1, 1);
+      final oldDate = DateTime(2000);
       final results = TestResults(
         failedTests: [],
         totalTests: 5,
@@ -384,7 +384,7 @@ Stack trace:
     test('should handle path with special characters', () {
       final failedTest = FailedTest(
         name: 'test',
-        filePath: r'test/@scope/package-v2.0/test_file.dart',
+        filePath: 'test/@scope/package-v2.0/test_file.dart',
         testId: '1',
       );
 
@@ -440,7 +440,7 @@ Stack trace:
 
   group('Error Message Patterns', () {
     test('should handle assertion error format', () {
-      final error = "Expected: <42>\n  Actual: <43>";
+      const error = 'Expected: <42>\n  Actual: <43>';
       final failedTest = FailedTest(
         name: 'test',
         filePath: 'test.dart',
@@ -453,7 +453,7 @@ Stack trace:
     });
 
     test('should handle exception error format', () {
-      final error = 'Unhandled exception:\nNullPointerException: null';
+      const error = 'Unhandled exception:\nNullPointerException: null';
       final failedTest = FailedTest(
         name: 'test',
         filePath: 'test.dart',
@@ -465,7 +465,7 @@ Stack trace:
     });
 
     test('should handle timeout error', () {
-      final error = 'Test timed out after 30 seconds';
+      const error = 'Test timed out after 30 seconds';
       final failedTest = FailedTest(
         name: 'test',
         filePath: 'test.dart',
@@ -477,7 +477,7 @@ Stack trace:
     });
 
     test('should handle very long error message', () {
-      final error = 'Error: ' + ('x' * 10000);
+      final error = 'Error: ${'x' * 10000}';
       final failedTest = FailedTest(
         name: 'test',
         filePath: 'test.dart',
@@ -502,7 +502,7 @@ Stack trace:
     });
 
     test('should handle multi-file stack trace', () {
-      final stackTrace = '''
+      const stackTrace = '''
 at test_file.dart:15:7
 at helper.dart:42:3
 at main.dart:10:5
@@ -518,7 +518,7 @@ at main.dart:10:5
     });
 
     test('should handle stack trace with package references', () {
-      final stackTrace = 'at package:test_reporter/src/helper.dart:42:3';
+      const stackTrace = 'at package:test_reporter/src/helper.dart:42:3';
       final failedTest = FailedTest(
         name: 'test',
         filePath: 'test.dart',

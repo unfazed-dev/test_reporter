@@ -108,8 +108,6 @@ void main() {
         interactive: true,
         performanceMode: true,
         watch: true,
-        generateFixes: true,
-        generateReport: true,
         slowTestThreshold: 3.0,
         targetFiles: ['test/integration_test.dart'],
         parallel: true,
@@ -330,10 +328,7 @@ void main() {
     test('should configure for CI/CD pipeline', () {
       final analyzer = TestAnalyzer(
         runCount: 1,
-        generateFixes: true,
-        generateReport: true,
         parallel: true,
-        verbose: false,
       );
       expect(analyzer.runCount, equals(1));
       expect(analyzer.generateFixes, isTrue);
@@ -360,7 +355,6 @@ void main() {
     test('should configure watch mode for continuous testing', () {
       final analyzer = TestAnalyzer(
         watch: true,
-        verbose: false,
       );
       expect(analyzer.watch, isTrue);
       expect(analyzer.verbose, isFalse);
@@ -380,8 +374,6 @@ void main() {
       final analyzer = TestAnalyzer(
         runCount: 1,
         generateFixes: false,
-        performanceMode: false,
-        verbose: false,
       );
       expect(analyzer.runCount, equals(1));
       expect(analyzer.generateFixes, isFalse);
@@ -394,8 +386,6 @@ void main() {
         runCount: 10,
         verbose: true,
         performanceMode: true,
-        generateFixes: true,
-        generateReport: true,
       );
       expect(analyzer.runCount, equals(10));
       expect(analyzer.verbose, isTrue);

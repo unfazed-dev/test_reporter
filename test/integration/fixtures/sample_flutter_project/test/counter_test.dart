@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import '../lib/counter.dart';
+import 'package:sample_flutter_project/counter.dart';
 
 void main() {
   group('Counter', () {

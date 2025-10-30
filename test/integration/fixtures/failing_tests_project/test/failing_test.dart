@@ -1,5 +1,5 @@
+import 'package:failing_tests_project/buggy_code.dart';
 import 'package:test/test.dart';
-import '../lib/buggy_code.dart';
 
 void main() {
   group('BuggyCode', () {

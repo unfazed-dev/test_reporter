@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import '../lib/utils.dart';
+import 'package:sample_flutter_project/utils.dart';
 
 void main() {
   group('Utils', () {

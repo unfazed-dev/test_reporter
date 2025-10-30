@@ -6,9 +6,9 @@
 /// Expected tests: ~100
 
 import 'package:test/test.dart';
-import '../mocks/process_mock.dart';
+
 import '../mocks/file_system_mock.dart';
-import '../fixtures/test_fixtures.dart';
+import '../mocks/process_mock.dart';
 
 void main() {
   setUp(() {

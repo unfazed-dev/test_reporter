@@ -44,9 +44,7 @@ void main() {
     test('should configure for CI/CD pipeline', () {
       final orchestrator = TestOrchestrator(
         testPath: 'test/',
-        runs: 3,
         parallel: true,
-        verbose: false,
       );
 
       expect(orchestrator.parallel, isTrue);

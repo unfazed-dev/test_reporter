@@ -41,6 +41,7 @@ void main() {
 
     test('should timeout on long-running operations', () async {
       // Mocked test - would take too long in reality
+      // ignore: unused_local_variable
       final executor =
           BinaryExecutor(timeout: const Duration(milliseconds: 100));
       // Test implementation would go here
@@ -78,7 +79,7 @@ void main() {
     test('should embed JSON in report', () async {
       await tempDir.setupFixture('sample_dart_project');
 
-      final result = await executor.runBinary('extract_failures', ['test']);
+      await executor.runBinary('extract_failures', ['test']);
 
       final reportFiles = Directory('tests_reports/failures')
           .listSync()

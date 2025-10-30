@@ -47,7 +47,7 @@ List<TestTemplate> getProcessExecutionTests(String binaryName) {
       expect(result.stderr, isNotEmpty);
     ''',
     ),
-    TestTemplate(
+    const TestTemplate(
       name: 'should timeout on long-running operations',
       description: 'Test timeout handling',
       isReal: false,
@@ -202,7 +202,7 @@ List<TestTemplate> getWorkflowTests(String binaryName) {
 /// Get cross-tool integration test templates
 List<TestTemplate> getCrossToolTests() {
   return [
-    TestTemplate(
+    const TestTemplate(
       name: 'analyze_suite should orchestrate coverage and tests',
       description: 'Test full suite orchestration',
       code: '''
@@ -218,7 +218,7 @@ List<TestTemplate> getCrossToolTests() {
       expect(Directory('tests_reports/suite').existsSync(), isTrue);
     ''',
     ),
-    TestTemplate(
+    const TestTemplate(
       name: 'reports should have correct naming convention',
       description: 'Verify report naming',
       code: '''
@@ -236,7 +236,7 @@ List<TestTemplate> getCrossToolTests() {
       expect(reports.first, matches(RegExp(r'.*_report_coverage@.*\\.md')));
     ''',
     ),
-    TestTemplate(
+    const TestTemplate(
       name: 'concurrent runs should create unique reports',
       description: 'Test concurrent execution',
       code: '''

@@ -149,11 +149,9 @@ void main() {
         libPath: 'lib/src/auth',
         testPath: 'test/auth',
         autoFix: true,
-        generateReport: true,
         branchCoverage: true,
         incremental: true,
         mutationTesting: true,
-        watchMode: false, // Can't combine watch with other modes in practice
         parallel: true,
         exportJson: true,
         testImpactAnalysis: true,
@@ -238,7 +236,6 @@ void main() {
       final thresholds = CoverageThresholds(
         minimum: 70.0,
         warning: 85.0,
-        failOnDecrease: false,
       );
 
       expect(thresholds.validate(95.0), isTrue);
@@ -266,7 +263,6 @@ void main() {
     test('should pass when coverage decreased but failOnDecrease is false', () {
       final thresholds = CoverageThresholds(
         minimum: 70.0,
-        failOnDecrease: false,
       );
 
       // Coverage decreased but above minimum - should pass
@@ -275,7 +271,6 @@ void main() {
 
     test('should fail when coverage below minimum regardless of baseline', () {
       final thresholds = CoverageThresholds(
-        minimum: 80.0,
         failOnDecrease: true,
       );
 

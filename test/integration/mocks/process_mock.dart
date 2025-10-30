@@ -107,14 +107,14 @@ class MockResponses {
 
   /// Test run with JSON output
   static MockProcessResult testWithJsonOutput() {
-    return MockProcessResult(
+    return const MockProcessResult(
       exitCode: 0,
-      stdout: r"""
+      stdout: '''
 {"suite":{"id":0,"path":"test/auth_test.dart"}}
 {"test":{"id":1,"name":"should authenticate"}}
 {"testDone":{"id":1,"result":"success"}}
 {"done":{"success":true}}
-""",
+''',
       stderr: '',
     );
   }
@@ -130,12 +130,13 @@ class MockResponses {
 
   /// LCOV summary output
   static MockProcessResult lcovSummary() {
-    return MockProcessResult(
+    return const MockProcessResult(
       exitCode: 0,
-      stdout: r"""Reading tracefile coverage/lcov.info
+      stdout: '''
+Reading tracefile coverage/lcov.info
   lines......: 85.5% (1234 of 1443 lines)
   functions..: 92.3% (456 of 494 functions)
-  branches...: 78.9% (234 of 296 branches)""",
+  branches...: 78.9% (234 of 296 branches)''',
       stderr: '',
     );
   }

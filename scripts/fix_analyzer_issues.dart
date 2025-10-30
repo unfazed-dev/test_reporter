@@ -14,7 +14,7 @@ import 'dart:io';
 void main() async {
   stdout.writeln('🔧 Fixing Analyzer Issues');
   stdout.writeln('=' * 60);
-  stdout.writeln('');
+  stdout.writeln();
 
   int totalFixes = 0;
 
@@ -42,10 +42,10 @@ void main() async {
   stdout.writeln('\n📦 Fixing import paths in layout tests...');
   totalFixes += await fixLayoutTestImports();
 
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('=' * 60);
   stdout.writeln('✅ Fixed $totalFixes issues!');
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('Next steps:');
   stdout.writeln('1. Run: dart format .');
   stdout.writeln('2. Run: flutter analyze');
@@ -84,7 +84,8 @@ Future<int> fixLayoutRouterViewIssues() async {
       // Replace RouterView with placeholder
       content = content.replaceAll(
         RegExp(r'const Expanded\(\s*child: RouterView\(\),\s*\)'),
-        '''Expanded(
+        '''
+Expanded(
                 child: Center(
                   child: Text(
                     'Nested routes will appear here after app.dart is configured',

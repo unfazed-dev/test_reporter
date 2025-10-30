@@ -9,14 +9,14 @@ import 'dart:io';
 void main() async {
   stdout.writeln('🔄 Renaming account_manager → participant_manager');
   stdout.writeln('=' * 60);
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('This will update:');
   stdout.writeln('  • View directories');
   stdout.writeln('  • Layout directories');
   stdout.writeln('  • All file contents (class names, imports, paths)');
   stdout.writeln('  • Test files');
   stdout.writeln('  • Route configurations');
-  stdout.writeln('');
+  stdout.writeln();
 
   int totalChanges = 0;
 
@@ -44,13 +44,13 @@ void main() async {
   stdout.writeln('\n📄 Step 6: Updating route template files...');
   totalChanges += await updateTemplateFiles();
 
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('=' * 60);
   stdout.writeln('✅ Rename complete!');
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('Summary:');
   stdout.writeln('  • Total changes: $totalChanges');
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('Next steps:');
   stdout.writeln(
       '  1. Run: dart run build_runner build --delete-conflicting-outputs');

@@ -10,7 +10,7 @@ import 'dart:io';
 void main() async {
   stdout.writeln('🔧 Fixing Remaining Analyzer Issues');
   stdout.writeln('=' * 60);
-  stdout.writeln('');
+  stdout.writeln();
 
   int totalFixes = 0;
 
@@ -26,10 +26,10 @@ void main() async {
   stdout.writeln('\n📦 Renaming template file to exclude from analysis...');
   totalFixes += await renameTemplateFile();
 
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('=' * 60);
   stdout.writeln('✅ Fixed $totalFixes issues!');
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('Running final analyzer check...');
 }
 

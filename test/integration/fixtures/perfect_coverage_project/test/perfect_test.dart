@@ -1,5 +1,5 @@
+import 'package:perfect_coverage_project/perfect.dart';
 import 'package:test/test.dart';
-import '../lib/perfect.dart';
 
 void main() {
   group('Perfect', () {

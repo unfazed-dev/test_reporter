@@ -59,10 +59,10 @@ void main() async {
     }
   }
 
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('=' * 60);
   stdout.writeln('✅ Fixed $totalFixed layout files');
-  stdout.writeln('');
+  stdout.writeln();
   stdout
       .writeln('All layouts now use NestedRouter() for child route rendering');
 }

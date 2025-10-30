@@ -82,7 +82,6 @@ void main() {
         branchCoverage: true,
         incremental: true,
         autoFix: true,
-        generateReport: true,
       );
 
       expect(analyzer.watchMode, isTrue);
@@ -131,7 +130,6 @@ void main() {
 
     test('should validate edge case: coverage equals baseline', () {
       final thresholds = CoverageThresholds(
-        minimum: 80.0,
         failOnDecrease: true,
       );
 
@@ -140,8 +138,6 @@ void main() {
 
     test('should handle very small coverage improvements', () {
       final thresholds = CoverageThresholds(
-        minimum: 80.0,
-        warning: 90.0,
         failOnDecrease: true,
       );
 
@@ -151,7 +147,6 @@ void main() {
 
     test('should handle very small coverage decreases', () {
       final thresholds = CoverageThresholds(
-        minimum: 80.0,
         failOnDecrease: true,
       );
 
@@ -177,7 +172,6 @@ void main() {
         testPath: 'test',
         baselineFile: 'coverage/baseline.json',
         thresholds: CoverageThresholds(
-          minimum: 80.0,
           failOnDecrease: true,
         ),
       );
@@ -283,7 +277,6 @@ void main() {
         libPath: 'lib/src',
         testPath: 'test',
         exportJson: true,
-        generateReport: true,
       );
 
       expect(analyzer.exportJson, isTrue);
@@ -309,7 +302,6 @@ void main() {
         libPath: 'lib/src',
         testPath: 'test',
         autoFix: true,
-        generateReport: true,
       );
 
       expect(analyzer.autoFix, isTrue);
@@ -379,10 +371,7 @@ void main() {
         libPath: 'lib/src',
         testPath: 'test',
         parallel: true,
-        generateReport: true,
         exportJson: true,
-        autoFix: false,
-        watchMode: false,
       );
 
       expect(analyzer.parallel, isTrue);
@@ -399,7 +388,6 @@ void main() {
         incremental: true,
         baselineFile: 'main-baseline.json',
         thresholds: CoverageThresholds(
-          minimum: 80.0,
           failOnDecrease: true,
         ),
       );
@@ -416,7 +404,6 @@ void main() {
         branchCoverage: true,
         mutationTesting: true,
         testImpactAnalysis: true,
-        generateReport: true,
         exportJson: true,
       );
 
@@ -435,7 +422,6 @@ void main() {
         testPath: 'test',
         watchMode: true,
         incremental: true,
-        generateReport: true,
       );
 
       expect(analyzer.watchMode, isTrue);
@@ -448,7 +434,6 @@ void main() {
         libPath: 'lib/src/auth',
         testPath: 'test/auth',
         generateReport: false,
-        autoFix: false,
       );
 
       expect(analyzer.generateReport, isFalse);
@@ -514,15 +499,7 @@ void main() {
       final analyzer = CoverageAnalyzer(
         libPath: 'lib/src',
         testPath: 'test',
-        autoFix: false,
         generateReport: false,
-        branchCoverage: false,
-        incremental: false,
-        mutationTesting: false,
-        watchMode: false,
-        parallel: false,
-        exportJson: false,
-        testImpactAnalysis: false,
       );
 
       expect(analyzer.autoFix, isFalse);
@@ -541,7 +518,6 @@ void main() {
         libPath: 'lib/src',
         testPath: 'test',
         autoFix: true,
-        generateReport: true,
         branchCoverage: true,
         incremental: true,
         mutationTesting: true,

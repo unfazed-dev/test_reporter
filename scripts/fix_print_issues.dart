@@ -57,7 +57,7 @@ void main() async {
     }
   }
 
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('=' * 60);
   stdout.writeln('✅ Fixed $totalReplacements print statements');
 }

@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import '../lib/calculator.dart';
+import 'package:sample_dart_project/calculator.dart';
 
 void main() {
   group('Calculator', () {

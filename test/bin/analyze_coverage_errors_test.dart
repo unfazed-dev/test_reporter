@@ -76,7 +76,7 @@ void main() {
     });
 
     test('should handle NaN-like extreme values', () {
-      final thresholds = CoverageThresholds(minimum: 80.0);
+      final thresholds = CoverageThresholds();
 
       // Test with double.infinity equivalent (very large number)
       expect(thresholds.validate(90.0), isTrue);
@@ -412,8 +412,6 @@ void main() {
         baselineFile: 'baseline.json',
         excludePatterns: ['**/*.g.dart'],
         thresholds: CoverageThresholds(
-          minimum: 80.0,
-          warning: 90.0,
           failOnDecrease: true,
         ),
       );

@@ -16,7 +16,7 @@ import 'dart:io';
 void main() async {
   stdout.writeln('🚀 Kinly Route Generator');
   stdout.writeln('=' * 60);
-  stdout.writeln('');
+  stdout.writeln();
 
   // Define the route structure
   final routes = RouteStructure();
@@ -25,10 +25,10 @@ void main() async {
   final generator = ViewGenerator();
   await generator.generateAll(routes);
 
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('=' * 60);
   stdout.writeln('✅ Generation complete!');
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('Next steps:');
   stdout.writeln('1. Review the generated files');
   stdout.writeln('2. Update lib/app/app.dart with the routes');
@@ -172,7 +172,7 @@ class LayoutDefinition {
   String _toSnakeCase(String text) {
     return text
         .replaceAllMapped(
-            RegExp(r'[A-Z]'), (match) => '_${match.group(0)!.toLowerCase()}')
+            RegExp('[A-Z]'), (match) => '_${match.group(0)!.toLowerCase()}')
         .substring(1);
   }
 }
@@ -195,7 +195,7 @@ class ViewDefinition {
   String _toSnakeCase(String text) {
     return text
         .replaceAllMapped(
-            RegExp(r'[A-Z]'), (match) => '_${match.group(0)!.toLowerCase()}')
+            RegExp('[A-Z]'), (match) => '_${match.group(0)!.toLowerCase()}')
         .substring(1);
   }
 }
@@ -350,7 +350,8 @@ class ViewGenerator {
 
   // Template: Layout Base View
   String _layoutBaseTemplate(LayoutDefinition layout) {
-    return '''import 'package:flutter/material.dart';
+    return '''
+import 'package:flutter/material.dart';
 import 'package:responsive_builder/responsive_builder.dart';
 import 'package:stacked/stacked.dart';
 import '${layout.snakeCase}_view.desktop.dart';
@@ -385,7 +386,8 @@ class ${layout.viewName} extends StackedView<${layout.name}ViewModel> {
   String _layoutPlatformTemplate(LayoutDefinition layout, String platform) {
     final className =
         '${layout.viewName}${platform[0].toUpperCase()}${platform.substring(1)}';
-    return '''import 'package:flutter/material.dart';
+    return '''
+import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
 import 'package:stacked/stacked_annotations.dart';
 import '${layout.snakeCase}_viewmodel.dart';
@@ -424,7 +426,8 @@ class $className extends ViewModelWidget<${layout.name}ViewModel> {
 
   // Template: Layout ViewModel
   String _layoutViewModelTemplate(LayoutDefinition layout) {
-    return '''import 'package:stacked/stacked.dart';
+    return '''
+import 'package:stacked/stacked.dart';
 
 class ${layout.name}ViewModel extends BaseViewModel {
   static const String widgetId = '${layout.snakeCase}_view';
@@ -447,7 +450,8 @@ class ${layout.name}ViewModel extends BaseViewModel {
 
   // Template: View Base
   String _viewBaseTemplate(ViewDefinition view) {
-    return '''import 'package:flutter/material.dart';
+    return '''
+import 'package:flutter/material.dart';
 import 'package:responsive_builder/responsive_builder.dart';
 import 'package:stacked/stacked.dart';
 import '${view.snakeCase}_view.desktop.dart';
@@ -482,7 +486,8 @@ class ${view.viewName} extends StackedView<${view.viewModelName}> {
   String _viewPlatformTemplate(ViewDefinition view, String platform) {
     final className =
         '${view.viewName}${platform[0].toUpperCase()}${platform.substring(1)}';
-    return '''import 'package:flutter/material.dart';
+    return '''
+import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '${view.snakeCase}_viewmodel.dart';
@@ -532,7 +537,8 @@ class $className extends ViewModelWidget<${view.viewModelName}> {
 
   // Template: ViewModel
   String _viewModelTemplate(ViewDefinition view) {
-    return '''import 'package:stacked/stacked.dart';
+    return '''
+import 'package:stacked/stacked.dart';
 import 'package:kinly/app/app.locator.dart';
 
 class ${view.viewModelName} extends BaseViewModel {
@@ -560,7 +566,8 @@ class ${view.viewModelName} extends BaseViewModel {
     final viewModelName = '${viewName}ViewModel';
     final snakeCase = _toSnakeCase(viewName);
 
-    return '''import 'package:flutter_test/flutter_test.dart';
+    return '''
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:kinly/app/app.locator.dart';
 import 'package:kinly/ui/views/$snakeCase/${snakeCase}_viewmodel.dart';
@@ -598,7 +605,7 @@ void main() {
   String _toSnakeCase(String text) {
     return text
         .replaceAllMapped(
-            RegExp(r'[A-Z]'), (match) => '_${match.group(0)!.toLowerCase()}')
+            RegExp('[A-Z]'), (match) => '_${match.group(0)!.toLowerCase()}')
         .substring(1);
   }
 }

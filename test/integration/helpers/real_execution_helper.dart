@@ -149,7 +149,7 @@ class BinaryExecutor {
         exitCode: -1,
         stdout: stdoutBuffer.toString(),
         stderr:
-            '${stderrBuffer.toString()}\nProcess timed out after ${timeout.inSeconds}s',
+            '$stderrBuffer\nProcess timed out after ${timeout.inSeconds}s',
         duration: stopwatch.elapsed,
       );
     } catch (e) {
@@ -157,7 +157,7 @@ class BinaryExecutor {
       return ExecutionResult(
         exitCode: -1,
         stdout: stdoutBuffer.toString(),
-        stderr: '${stderrBuffer.toString()}\nExecution error: $e',
+        stderr: '$stderrBuffer\nExecution error: $e',
         duration: stopwatch.elapsed,
       );
     }

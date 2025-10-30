@@ -15,7 +15,7 @@ import 'dart:io';
 void main() async {
   stdout.writeln('🗂️  Reorganizing Views into Role-Based Folders');
   stdout.writeln('=' * 60);
-  stdout.writeln('');
+  stdout.writeln();
 
   // Define the reorganization mapping
   final viewMapping = {
@@ -106,7 +106,7 @@ void main() async {
     }
   }
 
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('📦 Moving view directories...');
 
   // Step 2: Move view directories
@@ -132,7 +132,7 @@ void main() async {
     }
   }
 
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('🔄 Updating import paths in view files...');
 
   // Step 3: Update imports in moved files
@@ -168,7 +168,7 @@ void main() async {
   }
   stdout.writeln('✓ Updated imports in $importsUpdated view files');
 
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('🧪 Updating test file paths and imports...');
 
   // Step 4: Update test files
@@ -200,20 +200,20 @@ void main() async {
   }
   stdout.writeln('✓ Updated $testsUpdated test files');
 
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('=' * 60);
   stdout.writeln('✅ Reorganization complete!');
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('Summary:');
   stdout.writeln('  • Moved $totalMoved view directories');
   stdout.writeln('  • Updated $importsUpdated import statements');
   stdout.writeln('  • Updated $testsUpdated test files');
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('📝 Next steps:');
   stdout.writeln('  1. Update lib/app/app.dart with new import paths');
   stdout.writeln('  2. Run: dart format .');
   stdout.writeln('  3. Run: flutter analyze');
   stdout.writeln('  4. Run: flutter test');
-  stdout.writeln('');
+  stdout.writeln();
   stdout.writeln('See scripts/NEW_VIEW_STRUCTURE.md for the complete mapping');
 }
