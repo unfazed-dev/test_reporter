@@ -356,4 +356,121 @@ void main() {
       expect(analyzer.verbose, isTrue);
     });
   });
+
+  group('Dependency Analysis', () {
+    test('should enable dependency analysis independently', () {
+      final analyzer = TestAnalyzer(
+        dependencyAnalysis: true,
+      );
+
+      expect(analyzer.dependencyAnalysis, isTrue);
+      expect(analyzer.mutationTesting, isFalse);
+      expect(analyzer.impactAnalysis, isFalse);
+    });
+
+    test('should combine dependency analysis with performance mode', () {
+      final analyzer = TestAnalyzer(
+        dependencyAnalysis: true,
+        performanceMode: true,
+        runCount: 5,
+      );
+
+      expect(analyzer.dependencyAnalysis, isTrue);
+      expect(analyzer.performanceMode, isTrue);
+      expect(analyzer.runCount, equals(5));
+    });
+  });
+
+  group('Mutation Testing', () {
+    test('should enable mutation testing independently', () {
+      final analyzer = TestAnalyzer(
+        mutationTesting: true,
+      );
+
+      expect(analyzer.mutationTesting, isTrue);
+      expect(analyzer.dependencyAnalysis, isFalse);
+      expect(analyzer.impactAnalysis, isFalse);
+    });
+
+    test('should combine mutation testing with high run count', () {
+      final analyzer = TestAnalyzer(
+        mutationTesting: true,
+        runCount: 10,
+        performanceMode: true,
+      );
+
+      expect(analyzer.mutationTesting, isTrue);
+      expect(analyzer.runCount, equals(10));
+      expect(analyzer.performanceMode, isTrue);
+    });
+  });
+
+  group('Impact Analysis', () {
+    test('should enable impact analysis independently', () {
+      final analyzer = TestAnalyzer(
+        impactAnalysis: true,
+      );
+
+      expect(analyzer.impactAnalysis, isTrue);
+      expect(analyzer.dependencyAnalysis, isFalse);
+      expect(analyzer.mutationTesting, isFalse);
+    });
+
+    test('should combine impact analysis with verbose output', () {
+      final analyzer = TestAnalyzer(
+        impactAnalysis: true,
+        verbose: true,
+      );
+
+      expect(analyzer.impactAnalysis, isTrue);
+      expect(analyzer.verbose, isTrue);
+    });
+  });
+
+  group('Watch Mode', () {
+    test('should enable watch mode for continuous testing', () {
+      final analyzer = TestAnalyzer(
+        watch: true,
+        runCount: 1,
+      );
+
+      expect(analyzer.watch, isTrue);
+      expect(analyzer.runCount, equals(1));
+    });
+
+    test('should combine watch mode with advanced features', () {
+      final analyzer = TestAnalyzer(
+        watch: true,
+        impactAnalysis: true,
+        verbose: true,
+      );
+
+      expect(analyzer.watch, isTrue);
+      expect(analyzer.impactAnalysis, isTrue);
+      expect(analyzer.verbose, isTrue);
+    });
+  });
+
+  group('Interactive Mode', () {
+    test('should enable interactive debugging', () {
+      final analyzer = TestAnalyzer(
+        interactive: true,
+      );
+
+      expect(analyzer.interactive, isTrue);
+      expect(analyzer.watch, isFalse);
+    });
+
+    test('should combine interactive with verbose output', () {
+      final analyzer = TestAnalyzer(
+        interactive: true,
+        verbose: true,
+        runCount: 5,
+      );
+
+      expect(analyzer.interactive, isTrue);
+      expect(analyzer.verbose, isTrue);
+      expect(analyzer.runCount, equals(5));
+    });
+  });
 }

@@ -576,4 +576,19 @@ at main.dart:10:5
       expect(results.successRate, equals(1.0));
     });
   });
+
+  group('Watch Mode Configuration', () {
+    test('should create extractor for watch mode operations', () {
+      final extractor = FailedTestExtractor();
+      expect(extractor, isNotNull);
+    });
+
+    test('should support watch mode with auto-rerun', () {
+      // Watch mode is tested through integration tests
+      // This test verifies the extractor can be instantiated
+      // which is required for watch mode functionality
+      final extractor = FailedTestExtractor();
+      expect(extractor, isA<FailedTestExtractor>());
+    });
+  });
 }

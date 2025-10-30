@@ -562,4 +562,124 @@ void main() {
       expect(analyzer.testImpactAnalysis, isTrue);
     });
   });
+
+  group('Exclude Patterns', () {
+    test('should handle multiple exclude patterns', () {
+      final analyzer = CoverageAnalyzer(
+        libPath: 'lib/src',
+        testPath: 'test',
+        excludePatterns: [
+          '*.g.dart',
+          '*.freezed.dart',
+          '*.mocks.dart',
+        ],
+      );
+
+      expect(analyzer.excludePatterns, hasLength(3));
+      expect(analyzer.excludePatterns, contains('*.g.dart'));
+      expect(analyzer.excludePatterns, contains('*.freezed.dart'));
+      expect(analyzer.excludePatterns, contains('*.mocks.dart'));
+    });
+
+    test('should handle exclude patterns with wildcards', () {
+      final analyzer = CoverageAnalyzer(
+        libPath: 'lib/src',
+        testPath: 'test',
+        excludePatterns: [
+          '**/*.generated.dart',
+          '**/mocks/**',
+          'lib/src/generated/**',
+        ],
+      );
+
+      expect(analyzer.excludePatterns, hasLength(3));
+      expect(analyzer.excludePatterns, contains('**/*.generated.dart'));
+      expect(analyzer.excludePatterns, contains('**/mocks/**'));
+      expect(analyzer.excludePatterns, contains('lib/src/generated/**'));
+    });
+
+    test('should handle empty exclude patterns list', () {
+      final analyzer = CoverageAnalyzer(
+        libPath: 'lib/src',
+        testPath: 'test',
+        excludePatterns: [],
+      );
+
+      expect(analyzer.excludePatterns, isEmpty);
+    });
+  });
+
+  group('Baseline Comparison', () {
+    test('should configure baseline file path correctly', () {
+      final analyzer = CoverageAnalyzer(
+        libPath: 'lib/src',
+        testPath: 'test',
+        baselineFile: 'coverage-baseline.json',
+      );
+
+      expect(analyzer.baselineFile, equals('coverage-baseline.json'));
+    });
+
+    test('should handle relative baseline file paths', () {
+      final analyzer = CoverageAnalyzer(
+        libPath: 'lib/src',
+        testPath: 'test',
+        baselineFile: '../baselines/main-coverage.json',
+      );
+
+      expect(analyzer.baselineFile, equals('../baselines/main-coverage.json'));
+    });
+
+    test('should handle absolute baseline file paths', () {
+      final analyzer = CoverageAnalyzer(
+        libPath: 'lib/src',
+        testPath: 'test',
+        baselineFile: '/tmp/coverage-baseline.json',
+      );
+
+      expect(analyzer.baselineFile, equals('/tmp/coverage-baseline.json'));
+    });
+
+    test('should configure fail-on-decrease with baseline', () {
+      final analyzer = CoverageAnalyzer(
+        libPath: 'lib/src',
+        testPath: 'test',
+        baselineFile: 'baseline.json',
+        thresholds: CoverageThresholds(
+          minimum: 85.0,
+          failOnDecrease: true,
+        ),
+      );
+
+      expect(analyzer.baselineFile, isNotNull);
+      expect(analyzer.thresholds.failOnDecrease, isTrue);
+      expect(analyzer.thresholds.minimum, equals(85.0));
+    });
+
+    test('should handle baseline without fail-on-decrease', () {
+      final analyzer = CoverageAnalyzer(
+        libPath: 'lib/src',
+        testPath: 'test',
+        baselineFile: 'baseline.json',
+        thresholds: CoverageThresholds(minimum: 75.0),
+      );
+
+      expect(analyzer.baselineFile, isNotNull);
+      expect(analyzer.thresholds.failOnDecrease, isFalse);
+    });
+
+    test('should combine baseline with exclude patterns', () {
+      final analyzer = CoverageAnalyzer(
+        libPath: 'lib/src',
+        testPath: 'test',
+        baselineFile: 'baseline.json',
+        excludePatterns: ['*.g.dart', '*.freezed.dart'],
+        thresholds: CoverageThresholds(failOnDecrease: true),
+      );
+
+      expect(analyzer.baselineFile, isNotNull);
+      expect(analyzer.excludePatterns, hasLength(2));
+      expect(analyzer.thresholds.failOnDecrease, isTrue);
+    });
+  });
 }
