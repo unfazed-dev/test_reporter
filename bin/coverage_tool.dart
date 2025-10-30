@@ -651,8 +651,13 @@ class CoverageAnalyzer {
     // Calculate overall coverage for files in the analyzed path
     var totalLinesInPath = 0;
     var coveredLinesInPath = 0;
+    // Normalize libPath for comparison (remove lib/ prefix if present for matching)
+    final normalizedLibPath = libPath.startsWith('lib/')
+        ? libPath.substring(4) // Remove 'lib/' prefix
+        : libPath;
+
     for (final file in totalLines.keys) {
-      if (file.contains(libPath.replaceAll('lib/', ''))) {
+      if (file.contains(normalizedLibPath)) {
         totalLinesInPath += totalLines[file] ?? 0;
         coveredLinesInPath += hitLines[file] ?? 0;
       }
@@ -664,9 +669,13 @@ class CoverageAnalyzer {
 
     // Report uncovered lines based on path filter
     print('\n📈 Coverage Summary:');
+    // Normalize libPath for comparison
+    final normalizedLibPath2 =
+        libPath.startsWith('lib/') ? libPath.substring(4) : libPath;
+
     for (final file in uncoveredLines.keys) {
       // Check if file is in the path we're analyzing
-      if (file.contains(libPath.replaceAll('lib/', '')) &&
+      if (file.contains(normalizedLibPath2) &&
           uncoveredLines[file]!.isNotEmpty) {
         print('  File: $file');
         print('    Uncovered lines: ${uncoveredLines[file]!.toList()..sort()}');
@@ -863,8 +872,12 @@ class CoverageAnalyzer {
     final fileCoverages = <String, double>{};
 
     // Use lcov data if available
+    // Normalize libPath for comparison
+    final normalizedLibPath3 =
+        libPath.startsWith('lib/') ? libPath.substring(4) : libPath;
+
     for (final file in totalLinesData.keys) {
-      if (file.contains(libPath.replaceAll('lib/', ''))) {
+      if (file.contains(normalizedLibPath3)) {
         final total = totalLinesData[file] ?? 0;
         final hits = hitLinesData[file] ?? 0;
         totalLines += total;
@@ -873,6 +886,15 @@ class CoverageAnalyzer {
           fileCoverages[file] = (hits / total) * 100;
         }
       }
+    }
+
+    // If no lcov data (e.g., bin/ executables), use manual analysis
+    if (totalLines == 0 && sourceFiles.isNotEmpty) {
+      for (final sourceFile in sourceFiles.values) {
+        totalLines += sourceFile.testableLines.length;
+        fileCoverages[sourceFile.path] = 0.0; // Manual analysis shows untested
+      }
+      // coveredLines remains 0 since we haven't run actual coverage
     }
 
     final overallPercentage =
@@ -1031,8 +1053,18 @@ class CoverageAnalyzer {
 
     for (final file in fileCoverages.keys) {
       final fileName = file.split('/').last;
-      final total = totalLinesData[file] ?? 0;
-      final hits = hitLinesData[file] ?? 0;
+      var total = totalLinesData[file] ?? 0;
+      var hits = hitLinesData[file] ?? 0;
+
+      // If no lcov data, use manual analysis
+      if (total == 0) {
+        final sourceFile = sourceFiles[file];
+        if (sourceFile != null) {
+          total = sourceFile.testableLines.length;
+          hits = 0; // Manual analysis doesn't track covered lines
+        }
+      }
+
       final percentage = fileCoverages[file]!;
       final statusIcon = percentage >= 80
           ? '✅'
@@ -1178,7 +1210,7 @@ class CoverageAnalyzer {
       '2. **View HTML report:** `genhtml coverage/lcov.info -o coverage/html && open coverage/html/index.html`',
     );
     report.writeln(
-      '3. **Run specific tests:** `flutter test test/${libPath.replaceAll("lib/src/", "")}/`',
+      '3. **Run specific tests:** `flutter test $testPath`',
     );
     report.writeln();
 
@@ -1738,7 +1770,6 @@ class CoverageAnalyzer {
     return '$pathName$suffix';
   }
 
-
   /// Export coverage data as JSON
   Future<void> exportJsonReport() async {
     print('\n📄 Exporting JSON report...');
@@ -1748,8 +1779,12 @@ class CoverageAnalyzer {
     var filteredCoveredLines = 0;
     var filteredFileCount = 0;
 
+    // Normalize libPath for comparison
+    final normalizedLibPath4 =
+        libPath.startsWith('lib/') ? libPath.substring(4) : libPath;
+
     for (final file in totalLinesData.keys) {
-      if (file.contains(libPath.replaceAll('lib/', ''))) {
+      if (file.contains(normalizedLibPath4)) {
         filteredTotalLines += totalLinesData[file] ?? 0;
         filteredCoveredLines += hitLinesData[file] ?? 0;
         filteredFileCount++;
@@ -1766,7 +1801,7 @@ class CoverageAnalyzer {
       'libPath': libPath,
       'files': <String, dynamic>{},
       'uncovered': uncoveredLines
-          .where((line) => line.contains(libPath.replaceAll('lib/', '')))
+          .where((line) => line.contains(normalizedLibPath4))
           .toList(),
       'metrics': {
         'totalLines': filteredTotalLines,
@@ -1788,9 +1823,10 @@ class CoverageAnalyzer {
 
     // Add file-level data - filter to only include files in the analyzed path
     final filesMap = <String, dynamic>{};
+    // Normalize libPath for comparison (reuse from above)
     for (final file in totalLinesData.keys) {
       // Only include files that are in the libPath being analyzed
-      if (!file.contains(libPath.replaceAll('lib/', ''))) {
+      if (!file.contains(normalizedLibPath4)) {
         continue;
       }
 
@@ -1968,9 +2004,9 @@ void main(List<String> args) async {
     }
   }
 
-  // Parse paths
-  var libPath = 'lib/src';
-  var testPath = 'test';
+  // Parse paths - allow any source directory (bin/, lib/, scripts/, etc.)
+  String? libPath;
+  String? testPath;
 
   // Collect non-flag arguments
   final nonFlagArgs = <String>[];
@@ -1998,73 +2034,55 @@ void main(List<String> args) async {
 
   // Process non-flag arguments
   if (nonFlagArgs.isNotEmpty) {
-    // First argument is the lib/module path
+    // First argument is the source path (can be any directory)
     final firstArg = nonFlagArgs[0];
-    if (firstArg.startsWith('lib/')) {
-      libPath = firstArg;
-      // If there's a second argument, use it as test path
-      if (nonFlagArgs.length > 1) {
-        testPath = nonFlagArgs[1];
-      } else {
-        // Auto-derive test path - handle lib/src/ pattern specially
-        String derivedTestPath;
-        if (firstArg.startsWith('lib/src/')) {
-          // For lib/src/X, map to test/X (remove the src/ part)
-          final moduleName = firstArg.substring('lib/src/'.length);
-          derivedTestPath = 'test/$moduleName';
-        } else {
-          // For other lib/ paths, just replace lib/ with test/
-          derivedTestPath = firstArg.replaceFirst('lib/', 'test/');
-        }
+    libPath = firstArg;
 
-        // Check if derived path exists, otherwise use 'test/'
-        final derivedFile = File(derivedTestPath);
-        final derivedDir = Directory(derivedTestPath);
-        if (derivedFile.existsSync() || derivedDir.existsSync()) {
-          testPath = derivedTestPath;
+    // If there's a second argument, use it as test path
+    if (nonFlagArgs.length > 1) {
+      testPath = nonFlagArgs[1];
+    } else {
+      // Auto-derive test path based on source path
+      String derivedTestPath;
+
+      if (firstArg.startsWith('lib/src/')) {
+        // For lib/src/X, map to test/X (remove the src/ part)
+        final moduleName = firstArg.substring('lib/src/'.length);
+        derivedTestPath = 'test/$moduleName';
+      } else if (firstArg.startsWith('lib/')) {
+        // For lib/X, map to test/X
+        derivedTestPath = firstArg.replaceFirst('lib/', 'test/');
+      } else if (firstArg.startsWith('test/')) {
+        // Already a test path
+        derivedTestPath = firstArg;
+      } else {
+        // For any other directory (bin/, scripts/, etc.), map to test/<directory>/
+        // e.g., bin/ → test/bin/, scripts/auth/ → test/scripts/auth/
+        derivedTestPath = 'test/$firstArg';
+      }
+
+      // Check if derived path exists
+      final derivedFile = File(derivedTestPath);
+      final derivedDir = Directory(derivedTestPath);
+      if (derivedFile.existsSync() || derivedDir.existsSync()) {
+        testPath = derivedTestPath;
+      } else {
+        // Try removing trailing slash and check again
+        final withoutSlash = derivedTestPath.replaceAll(RegExp(r'/$'), '');
+        if (Directory(withoutSlash).existsSync() ||
+            File(withoutSlash).existsSync()) {
+          testPath = withoutSlash;
         } else {
-          // Derived path doesn't exist, use root test directory
+          // Default to test/ directory
           testPath = 'test/';
         }
       }
-    } else if (firstArg.startsWith('test/')) {
-      testPath = firstArg;
-      libPath = firstArg.replaceFirst('test/', 'lib/');
-    } else {
-      // Assume it's a module name
-      libPath = 'lib/src/$firstArg';
-      testPath = nonFlagArgs.length > 1 ? nonFlagArgs[1] : 'test/$firstArg';
     }
   }
 
-  // Smart validation: if derived test path doesn't exist, try to find the actual test location
-  if (!Directory(testPath).existsSync() && !File(testPath).existsSync()) {
-    // Extract the module name from the lib path
-    var moduleName = '';
-    if (libPath.startsWith('lib/src/')) {
-      moduleName = libPath.substring('lib/src/'.length);
-    } else if (libPath.startsWith('lib/')) {
-      moduleName = libPath.substring('lib/'.length);
-    }
-
-    if (moduleName.isNotEmpty) {
-      // Try different test path patterns
-      final possibleTestPaths = [
-        'test/$moduleName',
-        'test/src/$moduleName',
-        'test/${moduleName.split('/').last}', // Just the last part of the path
-      ];
-
-      for (final possiblePath in possibleTestPaths) {
-        if (Directory(possiblePath).existsSync() ||
-            File(possiblePath).existsSync() ||
-            File('${possiblePath}_test.dart').existsSync()) {
-          testPath = possiblePath;
-          break;
-        }
-      }
-    }
-  }
+  // Set defaults if not provided
+  libPath ??= 'lib/src';
+  testPath ??= 'test';
 
   // Print usage if no valid paths
   if (args.contains('--help') || args.contains('-h')) {
