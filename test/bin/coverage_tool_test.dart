@@ -1,44 +1,42 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:test_analyzer/src/bin/coverage_tool_lib.dart';
 
 import 'helpers/report_helpers.dart';
 import 'helpers/test_fixtures.dart';
-
-// Import the coverage tool to access classes
-// Note: Since the file is a script, we'll test components independently
 
 /// Testing CoverageThresholds class functionality
 void main() {
   group('CoverageThresholds', () {
     test('validate should pass when coverage meets minimum', () {
-      final thresholds = MockCoverageThresholds();
+      final thresholds = CoverageThresholds();
       final result = thresholds.validate(85.0);
       expect(result, isTrue);
     });
 
     test('validate should fail when coverage below minimum', () {
-      final thresholds = MockCoverageThresholds();
+      final thresholds = CoverageThresholds();
       final result = thresholds.validate(75.0);
       expect(result, isFalse);
     });
 
     test('validate should pass when coverage above warning', () {
-      final thresholds = MockCoverageThresholds();
+      final thresholds = CoverageThresholds();
       final result = thresholds.validate(95.0);
       expect(result, isTrue);
     });
 
     test('validate should pass with warning when between minimum and warning',
         () {
-      final thresholds = MockCoverageThresholds();
+      final thresholds = CoverageThresholds();
       final result = thresholds.validate(85.0);
       expect(result, isTrue);
     });
 
     test('validate should fail when coverage decreased and failOnDecrease true',
         () {
-      final thresholds = MockCoverageThresholds(
+      final thresholds = CoverageThresholds(
         minimum: 70.0,
         failOnDecrease: true,
       );
@@ -49,7 +47,7 @@ void main() {
     test(
         'validate should pass when coverage decreased but failOnDecrease false',
         () {
-      final thresholds = MockCoverageThresholds(
+      final thresholds = CoverageThresholds(
         minimum: 70.0,
       );
       final result = thresholds.validate(85.0, baseline: 90.0);
@@ -57,7 +55,7 @@ void main() {
     });
 
     test('validate should pass when coverage increased with baseline', () {
-      final thresholds = MockCoverageThresholds(
+      final thresholds = CoverageThresholds(
         minimum: 70.0,
         failOnDecrease: true,
       );
@@ -66,25 +64,25 @@ void main() {
     });
 
     test('validate should pass when coverage equals minimum threshold', () {
-      final thresholds = MockCoverageThresholds();
+      final thresholds = CoverageThresholds();
       final result = thresholds.validate(80.0);
       expect(result, isTrue);
     });
 
     test('validate should pass when coverage equals warning threshold', () {
-      final thresholds = MockCoverageThresholds();
+      final thresholds = CoverageThresholds();
       final result = thresholds.validate(90.0);
       expect(result, isTrue);
     });
 
     test('validate should handle 0% coverage correctly', () {
-      final thresholds = MockCoverageThresholds(minimum: 0.0);
+      final thresholds = CoverageThresholds(minimum: 0.0);
       final result = thresholds.validate(0.0);
       expect(result, isTrue);
     });
 
     test('validate should handle 100% coverage correctly', () {
-      final thresholds = MockCoverageThresholds();
+      final thresholds = CoverageThresholds();
       final result = thresholds.validate(100.0);
       expect(result, isTrue);
     });
@@ -415,29 +413,6 @@ end_of_record
       expect(nameMatch?.group(1), equals('example_app'));
     });
   });
-}
-
-// Mock implementation of CoverageThresholds for testing
-class MockCoverageThresholds {
-  MockCoverageThresholds({
-    this.minimum = 80.0,
-    this.warning = 90.0,
-    this.failOnDecrease = false,
-  });
-
-  final double minimum;
-  final double warning;
-  final bool failOnDecrease;
-
-  bool validate(double coverage, {double? baseline}) {
-    if (coverage < minimum) {
-      return false;
-    }
-    if (baseline != null && failOnDecrease && coverage < baseline) {
-      return false;
-    }
-    return true;
-  }
 }
 
 // Utility function to normalize paths (extracted from coverage_tool.dart)

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:test_analyzer/src/bin/failed_test_extractor_lib.dart';
 
 import 'helpers/report_helpers.dart';
 import 'helpers/test_fixtures.dart';
@@ -9,7 +10,7 @@ import 'helpers/test_fixtures.dart';
 void main() {
   group('FailedTest', () {
     test('should create FailedTest with required fields', () {
-      final failedTest = MockFailedTest(
+      final failedTest = FailedTest(
         name: 'example test',
         filePath: 'test/example_test.dart',
         testId: '1',
@@ -21,7 +22,7 @@ void main() {
     });
 
     test('should create FailedTest with optional fields', () {
-      final failedTest = MockFailedTest(
+      final failedTest = FailedTest(
         name: 'example test',
         filePath: 'test/example_test.dart',
         testId: '1',
@@ -38,7 +39,7 @@ void main() {
     });
 
     test('toString should format correctly', () {
-      final failedTest = MockFailedTest(
+      final failedTest = FailedTest(
         name: 'example test',
         filePath: 'test/example_test.dart',
         testId: '1',
@@ -53,55 +54,65 @@ void main() {
 
   group('TestResults', () {
     test('should calculate failedCount correctly', () {
-      final results = MockTestResults(
+      final results = TestResults(
         failedTests: [
-          MockFailedTest(name: 'test1', filePath: 'test1.dart', testId: '1'),
-          MockFailedTest(name: 'test2', filePath: 'test2.dart', testId: '2'),
+          FailedTest(name: 'test1', filePath: 'test1.dart', testId: '1'),
+          FailedTest(name: 'test2', filePath: 'test2.dart', testId: '2'),
         ],
         totalTests: 10,
         passedTests: 8,
+        totalTime: Duration.zero,
+        timestamp: DateTime.now(),
       );
 
       expect(results.failedCount, equals(2));
     });
 
     test('should calculate successRate correctly', () {
-      final results = MockTestResults(
+      final results = TestResults(
         failedTests: [],
         totalTests: 100,
         passedTests: 85,
+        totalTime: Duration.zero,
+        timestamp: DateTime.now(),
       );
 
       expect(results.successRate, closeTo(85.0, 0.01));
     });
 
     test('should handle 0% success rate', () {
-      final results = MockTestResults(
+      final results = TestResults(
         failedTests: [
-          MockFailedTest(name: 'test1', filePath: 'test1.dart', testId: '1'),
+          FailedTest(name: 'test1', filePath: 'test1.dart', testId: '1'),
         ],
         totalTests: 1,
         passedTests: 0,
+        totalTime: Duration.zero,
+        timestamp: DateTime.now(),
       );
 
       expect(results.successRate, equals(0.0));
     });
 
     test('should handle 100% success rate', () {
-      final results = MockTestResults(
+      final results = TestResults(
         failedTests: [],
         totalTests: 10,
         passedTests: 10,
+        totalTime: Duration.zero,
+        timestamp: DateTime.now(),
       );
 
       expect(results.successRate, equals(100.0));
     });
 
     test('should handle empty test results', () {
-      final results = MockTestResults(
+      final results = TestResults(
         failedTests: [],
         totalTests: 0,
         passedTests: 0,
+        totalTime: Duration.zero,
+        timestamp: DateTime.now(),
       );
 
       expect(results.successRate, equals(0.0));
@@ -465,50 +476,6 @@ void main() {
 }
 
 // Mock classes for testing
-
-class MockFailedTest {
-  MockFailedTest({
-    required this.name,
-    required this.filePath,
-    required this.testId,
-    this.group,
-    this.error,
-    this.stackTrace,
-    this.runtime,
-  });
-
-  final String name;
-  final String filePath;
-  final String? group;
-  final String? error;
-  final String? stackTrace;
-  final Duration? runtime;
-  final String testId;
-
-  @override
-  String toString() => '$filePath: $name';
-}
-
-class MockTestResults {
-  MockTestResults({
-    required this.failedTests,
-    required this.totalTests,
-    required this.passedTests,
-    Duration? totalTime,
-    DateTime? timestamp,
-  })  : totalTime = totalTime ?? Duration.zero,
-        timestamp = timestamp ?? DateTime.now();
-
-  final List<MockFailedTest> failedTests;
-  final int totalTests;
-  final int passedTests;
-  final Duration totalTime;
-  final DateTime timestamp;
-
-  int get failedCount => failedTests.length;
-  double get successRate =>
-      totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
-}
 
 // Utility functions extracted from failed_test_extractor.dart
 

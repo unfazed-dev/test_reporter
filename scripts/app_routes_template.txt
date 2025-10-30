@@ -1,0 +1,231 @@
+// ============================================================
+// COPY THIS INTO lib/app/app.dart
+// ============================================================
+//
+// Replace the existing routes array in @StackedApp with this:
+//
+// After copying, run:
+// dart run build_runner build --delete-conflicting-outputs
+// ============================================================
+
+routes: [
+  CustomRoute(page: StartupView, initial: true),
+
+  // Main Layout
+  CustomRoute(
+    page: MainLayoutView,
+    deferredLoading: true,
+    path: '/',
+    guards: [],
+    children: [
+      CustomRoute(page: MainView, path: '', initial: true),
+    ],
+  ),
+
+  // Admin Layout
+  CustomRoute(
+    page: AdminLayoutView,
+    deferredLoading: true,
+    path: '/admin',
+    guards: [],
+    children: [
+      CustomRoute(page: AdminDashboardView, path: '', initial: true),
+      CustomRoute(page: AdminAccessView, path: 'access'),
+      CustomRoute(page: AdminHumanResourcesView, path: 'human-resources'),
+      CustomRoute(page: AdminFinancesView, path: 'finances'),
+      CustomRoute(page: AdminMarketingView, path: 'marketing'),
+      CustomRoute(page: AdminAccountingView, path: 'accounting'),
+    ],
+  ),
+
+  // Auth Layout
+  CustomRoute(
+    page: AuthLayoutView,
+    deferredLoading: true,
+    path: '/authenticate',
+    children: [
+      CustomRoute(page: AuthSignUpView, path: 'sign-up', initial: true),
+      CustomRoute(page: AuthSignInView, path: 'sign-in'),
+    ],
+  ),
+
+  // Onboarding Layout
+  CustomRoute(
+    page: OnboardingLayoutView,
+    deferredLoading: true,
+    path: '/onboarding',
+    children: [
+      CustomRoute(page: OnboardingView, path: '', initial: true),
+    ],
+  ),
+
+  // Settings Layout
+  CustomRoute(
+    page: SettingsLayoutView,
+    deferredLoading: true,
+    path: '/settings',
+    children: [
+      CustomRoute(page: SettingsView, path: '', initial: true),
+    ],
+  ),
+
+  // Participant Layout
+  CustomRoute(
+    page: ParticipantLayoutView,
+    deferredLoading: true,
+    path: '/participant',
+    guards: [],
+    children: [
+      CustomRoute(page: ParticipantDashboardView, path: '', initial: true),
+      CustomRoute(page: ParticipantInboxView, path: 'inbox'),
+      CustomRoute(page: ParticipantBookingsView, path: 'bookings'),
+      CustomRoute(page: ParticipantTeamView, path: 'team'),
+      CustomRoute(page: ParticipantJournalView, path: 'journal'),
+      CustomRoute(page: ParticipantProfileView, path: 'profile'),
+      CustomRoute(page: ParticipantInvoicesView, path: 'invoices'),
+      CustomRoute(page: ParticipantShopView, path: 'shop'),
+      CustomRoute(page: ParticipantAccountView, path: 'account'),
+      CustomRoute(page: ParticipantRequestsView, path: 'requests'),
+      CustomRoute(page: ParticipantFundsView, path: 'funds'),
+    ],
+  ),
+
+  // Provider Layout
+  CustomRoute(
+    page: ProviderLayoutView,
+    deferredLoading: true,
+    path: '/provider',
+    guards: [],
+    children: [
+      CustomRoute(page: ProviderDashboardView, path: '', initial: true),
+      CustomRoute(page: ProviderInboxView, path: 'inbox'),
+      CustomRoute(page: ProviderBookingsView, path: 'bookings'),
+      CustomRoute(page: ProviderClientsView, path: 'clients'),
+      CustomRoute(page: ProviderJournalView, path: 'journal'),
+      CustomRoute(page: ProviderProfileView, path: 'profile'),
+      CustomRoute(page: ProviderInvoicesView, path: 'invoices'),
+      CustomRoute(page: ProviderShopView, path: 'shop'),
+      CustomRoute(page: ProviderAccountView, path: 'account'),
+      CustomRoute(page: ProviderRequestsView, path: 'requests'),
+      CustomRoute(page: ProviderFundsView, path: 'funds'),
+      CustomRoute(page: ProviderTravelBookView, path: 'travel-book'),
+    ],
+  ),
+
+  // Supporter Layout
+  CustomRoute(
+    page: SupporterLayoutView,
+    deferredLoading: true,
+    path: '/supporter',
+    guards: [],
+    children: [
+      CustomRoute(page: SupporterDashboardView, path: '', initial: true),
+      CustomRoute(page: SupporterParticipantsView, path: 'participants'),
+      CustomRoute(page: SupporterProvidersView, path: 'providers'),
+      CustomRoute(page: SupporterInvoicesView, path: 'invoices'),
+      CustomRoute(page: SupporterMeetingsView, path: 'meetings'),
+      CustomRoute(page: SupporterInboxView, path: 'inbox'),
+      CustomRoute(page: SupporterFundsView, path: 'funds'),
+      CustomRoute(page: SupporterRequestsView, path: 'requests'),
+      CustomRoute(page: SupporterJournalView, path: 'journal'),
+      CustomRoute(page: SupporterPaymentsView, path: 'payments'),
+      CustomRoute(page: SupporterTravelBookView, path: 'travel-book'),
+      CustomRoute(page: SupporterShopView, path: 'shop'),
+    ],
+  ),
+
+  // Participant Manager Layout
+  CustomRoute(
+    page: ParticipantManagerLayoutView,
+    deferredLoading: true,
+    path: '/participant-manager',
+    guards: [],
+    children: [
+      CustomRoute(page: ParticipantManagerDashboardView, path: '', initial: true),
+      CustomRoute(page: ParticipantManagerInboxView, path: 'inbox'),
+      CustomRoute(page: ParticipantManagerTeamView, path: 'team'),
+      CustomRoute(page: ParticipantManagerBookingsView, path: 'bookings'),
+    ],
+  ),
+
+  // Page not found
+  CustomRoute(page: UnknownView, deferredLoading: true, path: '/404'),
+
+  // Redirect routes
+  RedirectRoute(path: '/login', redirectTo: '/authenticate/sign-in'),
+  RedirectRoute(path: '/register', redirectTo: '/authenticate/sign-up'),
+  RedirectRoute(path: '/sign-in', redirectTo: '/authenticate/sign-in'),
+  RedirectRoute(path: '/sign-up', redirectTo: '/authenticate/sign-up'),
+
+  // When none of the above routes match, redirect to UnknownView
+  RedirectRoute(path: '*', redirectTo: '/404'),
+],
+
+// ============================================================
+// IMPORTS NEEDED AT TOP OF app.dart
+// ============================================================
+//
+// Add these imports to the top of lib/app/app.dart:
+//
+// import 'package:kinly/ui/layouts/main_layout/main_layout_view.dart';
+// import 'package:kinly/ui/layouts/admin_layout/admin_layout_view.dart';
+// import 'package:kinly/ui/layouts/auth_layout/auth_layout_view.dart';
+// import 'package:kinly/ui/layouts/onboarding_layout/onboarding_layout_view.dart';
+// import 'package:kinly/ui/layouts/settings_layout/settings_layout_view.dart';
+// import 'package:kinly/ui/layouts/participant_layout/participant_layout_view.dart';
+// import 'package:kinly/ui/layouts/provider_layout/provider_layout_view.dart';
+// import 'package:kinly/ui/layouts/supporter_layout/supporter_layout_view.dart';
+// import 'package:kinly/ui/layouts/account_manager_layout/account_manager_layout_view.dart';
+//
+// import 'package:kinly/ui/views/main/main_view.dart';
+// import 'package:kinly/ui/views/admin_dashboard/admin_dashboard_view.dart';
+// import 'package:kinly/ui/views/admin_access/admin_access_view.dart';
+// import 'package:kinly/ui/views/admin_human_resources/admin_human_resources_view.dart';
+// import 'package:kinly/ui/views/admin_finances/admin_finances_view.dart';
+// import 'package:kinly/ui/views/admin_marketing/admin_marketing_view.dart';
+// import 'package:kinly/ui/views/admin_accounting/admin_accounting_view.dart';
+// import 'package:kinly/ui/views/auth_sign_up/auth_sign_up_view.dart';
+// import 'package:kinly/ui/views/auth_sign_in/auth_sign_in_view.dart';
+// import 'package:kinly/ui/views/onboarding/onboarding_view.dart';
+// import 'package:kinly/ui/views/settings/settings_view.dart';
+// import 'package:kinly/ui/views/participant_dashboard/participant_dashboard_view.dart';
+// import 'package:kinly/ui/views/participant_inbox/participant_inbox_view.dart';
+// import 'package:kinly/ui/views/participant_bookings/participant_bookings_view.dart';
+// import 'package:kinly/ui/views/participant_team/participant_team_view.dart';
+// import 'package:kinly/ui/views/participant_journal/participant_journal_view.dart';
+// import 'package:kinly/ui/views/participant_profile/participant_profile_view.dart';
+// import 'package:kinly/ui/views/participant_invoices/participant_invoices_view.dart';
+// import 'package:kinly/ui/views/participant_shop/participant_shop_view.dart';
+// import 'package:kinly/ui/views/participant_account/participant_account_view.dart';
+// import 'package:kinly/ui/views/participant_requests/participant_requests_view.dart';
+// import 'package:kinly/ui/views/participant_funds/participant_funds_view.dart';
+// import 'package:kinly/ui/views/provider_dashboard/provider_dashboard_view.dart';
+// import 'package:kinly/ui/views/provider_inbox/provider_inbox_view.dart';
+// import 'package:kinly/ui/views/provider_bookings/provider_bookings_view.dart';
+// import 'package:kinly/ui/views/provider_clients/provider_clients_view.dart';
+// import 'package:kinly/ui/views/provider_journal/provider_journal_view.dart';
+// import 'package:kinly/ui/views/provider_profile/provider_profile_view.dart';
+// import 'package:kinly/ui/views/provider_invoices/provider_invoices_view.dart';
+// import 'package:kinly/ui/views/provider_shop/provider_shop_view.dart';
+// import 'package:kinly/ui/views/provider_account/provider_account_view.dart';
+// import 'package:kinly/ui/views/provider_requests/provider_requests_view.dart';
+// import 'package:kinly/ui/views/provider_funds/provider_funds_view.dart';
+// import 'package:kinly/ui/views/provider_travel_book/provider_travel_book_view.dart';
+// import 'package:kinly/ui/views/supporter_dashboard/supporter_dashboard_view.dart';
+// import 'package:kinly/ui/views/supporter_participants/supporter_participants_view.dart';
+// import 'package:kinly/ui/views/supporter_providers/supporter_providers_view.dart';
+// import 'package:kinly/ui/views/supporter_invoices/supporter_invoices_view.dart';
+// import 'package:kinly/ui/views/supporter_meetings/supporter_meetings_view.dart';
+// import 'package:kinly/ui/views/supporter_inbox/supporter_inbox_view.dart';
+// import 'package:kinly/ui/views/supporter_funds/supporter_funds_view.dart';
+// import 'package:kinly/ui/views/supporter_requests/supporter_requests_view.dart';
+// import 'package:kinly/ui/views/supporter_journal/supporter_journal_view.dart';
+// import 'package:kinly/ui/views/supporter_payments/supporter_payments_view.dart';
+// import 'package:kinly/ui/views/supporter_travel_book/supporter_travel_book_view.dart';
+// import 'package:kinly/ui/views/supporter_shop/supporter_shop_view.dart';
+// import 'package:kinly/ui/views/account_manager_dashboard/account_manager_dashboard_view.dart';
+// import 'package:kinly/ui/views/account_manager_inbox/account_manager_inbox_view.dart';
+// import 'package:kinly/ui/views/account_manager_team/account_manager_team_view.dart';
+// import 'package:kinly/ui/views/account_manager_bookings/account_manager_bookings_view.dart';
+//
+// ============================================================
