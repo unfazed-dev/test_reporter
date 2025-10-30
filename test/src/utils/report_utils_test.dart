@@ -74,7 +74,7 @@ void main() {
       final reportDir = await ReportUtils.getReportDirectory();
 
       expect(await Directory(reportDir).exists(), isTrue);
-      expect(reportDir, endsWith('test_analyzer_reports'));
+      expect(reportDir, endsWith('tests_reports'));
     });
 
     test('should return existing report directory', () async {
@@ -126,9 +126,9 @@ void main() {
         suffix: 'coverage',
       );
 
-      expect(path, contains('test_analyzer_reports'));
-      expect(path, contains('code_coverage'));
-      expect(path, endsWith('module-fo_test_report_coverage@1234_010125.md'));
+      expect(path, contains('tests_reports'));
+      expect(path, contains('coverage'));
+      expect(path, endsWith('module-fo_report_coverage@1234_010125.md'));
 
       // Verify subdirectory was created
       final subdirPath = p.dirname(path);
@@ -140,11 +140,11 @@ void main() {
       final path = await ReportUtils.getReportPath(
         'test-fo',
         '1234_010125',
-        suffix: 'analyzer',
+        suffix: 'tests',
       );
 
-      expect(path, contains('analyzer'));
-      expect(path, endsWith('test-fo_test_report_analyzer@1234_010125.md'));
+      expect(path, contains('tests'));
+      expect(path, endsWith('test-fo_report_analyzer@1234_010125.md'));
     });
 
     test('should generate path in failed subdirectory for failed suffix',
@@ -152,11 +152,11 @@ void main() {
       final path = await ReportUtils.getReportPath(
         'module-fi',
         '1234_010125',
-        suffix: 'failed',
+        suffix: 'failures',
       );
 
-      expect(path, contains('failed'));
-      expect(path, endsWith('module-fi_test_report_failed@1234_010125.md'));
+      expect(path, contains('failures'));
+      expect(path, endsWith('module-fi_report_failed@1234_010125.md'));
     });
 
     test('should generate path in unified subdirectory for empty suffix',
@@ -166,7 +166,7 @@ void main() {
         '1234_010125',
       );
 
-      expect(path, contains('unified'));
+      expect(path, contains('suite'));
       expect(path, endsWith('src-fo_test_report@1234_010125.md'));
     });
 
@@ -178,7 +178,7 @@ void main() {
         suffix: 'unknown',
       );
 
-      expect(path, contains('unified'));
+      expect(path, contains('suite'));
     });
   });
 
@@ -360,64 +360,64 @@ Here's an example:
       final reportDir = await ReportUtils.getReportDirectory();
 
       // Create subdirectories
-      await Directory(p.join(reportDir, 'code_coverage'))
+      await Directory(p.join(reportDir, 'coverage'))
           .create(recursive: true);
-      await Directory(p.join(reportDir, 'analyzer')).create(recursive: true);
+      await Directory(p.join(reportDir, 'tests')).create(recursive: true);
 
       // Create multiple test report files (older and newer)
-      await File(p.join(reportDir, 'code_coverage',
-              'module-fo_test_report_coverage@1234_010125.md'))
+      await File(p.join(reportDir, 'coverage',
+              'module-fo_report_coverage@1234_010125.md'))
           .create();
-      await File(p.join(reportDir, 'code_coverage',
-              'module-fo_test_report_coverage@5678_010125.md'))
+      await File(p.join(reportDir, 'coverage',
+              'module-fo_report_coverage@5678_010125.md'))
           .create();
-      await File(p.join(reportDir, 'analyzer',
-              'module-fo_test_report_analyzer@1234_010125.md'))
+      await File(p.join(reportDir, 'tests',
+              'module-fo_report_analyzer@1234_010125.md'))
           .create();
-      await File(p.join(reportDir, 'analyzer',
-              'module-fo_test_report_analyzer@5678_010125.md'))
+      await File(p.join(reportDir, 'tests',
+              'module-fo_report_analyzer@5678_010125.md'))
           .create();
-      await File(p.join(reportDir, 'code_coverage',
-              'other-fo_test_report_coverage@1234_010125.md'))
+      await File(p.join(reportDir, 'coverage',
+              'other-fo_report_coverage@1234_010125.md'))
           .create();
 
       await ReportUtils.cleanOldReports(
         pathName: 'module-fo',
-        prefixPatterns: ['test_report_coverage', 'test_report_analyzer'],
+        prefixPatterns: ['report_coverage', 'report_analyzer'],
       );
 
       // Check that old module-fo reports were deleted
       expect(
-        await File(p.join(reportDir, 'code_coverage',
-                'module-fo_test_report_coverage@1234_010125.md'))
+        await File(p.join(reportDir, 'coverage',
+                'module-fo_report_coverage@1234_010125.md'))
             .exists(),
         isFalse,
       );
       expect(
-        await File(p.join(reportDir, 'analyzer',
-                'module-fo_test_report_analyzer@1234_010125.md'))
+        await File(p.join(reportDir, 'tests',
+                'module-fo_report_analyzer@1234_010125.md'))
             .exists(),
         isFalse,
       );
 
       // Check that latest module-fo reports still exist
       expect(
-        await File(p.join(reportDir, 'code_coverage',
-                'module-fo_test_report_coverage@5678_010125.md'))
+        await File(p.join(reportDir, 'coverage',
+                'module-fo_report_coverage@5678_010125.md'))
             .exists(),
         isTrue,
       );
       expect(
-        await File(p.join(reportDir, 'analyzer',
-                'module-fo_test_report_analyzer@5678_010125.md'))
+        await File(p.join(reportDir, 'tests',
+                'module-fo_report_analyzer@5678_010125.md'))
             .exists(),
         isTrue,
       );
 
       // Check that other reports still exist
       expect(
-        await File(p.join(reportDir, 'code_coverage',
-                'other-fo_test_report_coverage@1234_010125.md'))
+        await File(p.join(reportDir, 'coverage',
+                'other-fo_report_coverage@1234_010125.md'))
             .exists(),
         isTrue,
       );
@@ -434,18 +434,18 @@ Here's an example:
       final reportDir = await ReportUtils.getReportDirectory();
 
       // Create code_coverage subdirectory
-      await Directory(p.join(reportDir, 'code_coverage'))
+      await Directory(p.join(reportDir, 'coverage'))
           .create(recursive: true);
 
-      await File(p.join(reportDir, 'code_coverage',
-              'test-fo_test_report_coverage@1234.md'))
+      await File(p.join(reportDir, 'coverage',
+              'test-fo_report_coverage@1234.md'))
           .create();
 
       // Should not throw with verbose=true
       await ReportUtils.cleanOldReports(
         pathName: 'test-fo',
-        prefixPatterns: ['test_report_coverage'],
-        subdirectory: 'code_coverage',
+        prefixPatterns: ['report_coverage'],
+        subdirectory: 'coverage',
         verbose: true,
       );
     });
@@ -459,7 +459,7 @@ Here's an example:
       // Should not throw when encountering directory
       await ReportUtils.cleanOldReports(
         pathName: 'module-fo',
-        prefixPatterns: ['test_report'],
+        prefixPatterns: ['report'],
       );
     });
 
@@ -467,17 +467,17 @@ Here's an example:
       final reportDir = await ReportUtils.getReportDirectory();
 
       // Create code_coverage subdirectory
-      await Directory(p.join(reportDir, 'code_coverage'))
+      await Directory(p.join(reportDir, 'coverage'))
           .create(recursive: true);
 
       // Create a test report file in code_coverage subdirectory
       final testFile = File(p.join(
-          reportDir, 'code_coverage', 'test-fo_test_report_coverage@1234.md'));
+          reportDir, 'coverage', 'test-fo_report_coverage@1234.md'));
       await testFile.create();
 
       // Create an immutable file to trigger deletion error
       final immutableFile = File(p.join(
-          reportDir, 'code_coverage', 'test-fo_test_report_coverage@5678.md'));
+          reportDir, 'coverage', 'test-fo_report_coverage@5678.md'));
       await immutableFile.create();
 
       // Try to make file immutable (Unix/Mac only with chflags)
@@ -494,8 +494,8 @@ Here's an example:
       // This should log an error for immutable file but not throw
       await ReportUtils.cleanOldReports(
         pathName: 'test-fo',
-        prefixPatterns: ['test_report_coverage'],
-        subdirectory: 'code_coverage',
+        prefixPatterns: ['report_coverage'],
+        subdirectory: 'coverage',
         verbose: true,
       );
 
