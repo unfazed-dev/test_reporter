@@ -4,6 +4,7 @@
 /// without touching actual disk.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 /// In-memory file system for testing

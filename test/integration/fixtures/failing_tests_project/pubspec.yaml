@@ -1,0 +1,8 @@
+name: failing_tests_project
+version: 1.0.0
+description: A project with intentionally failing tests
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dev_dependencies:
+  test: ^1.25.0

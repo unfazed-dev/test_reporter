@@ -1,0 +1,15 @@
+name: sample_flutter_project
+version: 1.0.0
+description: A sample Flutter project for integration testing
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  test: ^1.25.0
+  flutter_lints: ^3.0.0
