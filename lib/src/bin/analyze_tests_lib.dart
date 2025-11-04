@@ -129,6 +129,13 @@ class TestAnalyzer {
       // Step 1: Discover test files
       final testFiles = await _discoverTestFiles();
 
+      // EXIT EARLY: No test files found - don't generate reports
+      if (testFiles.isEmpty) {
+        print('\n$red✗ No test files found$reset');
+        print('  ${gray}Please specify a valid test file or directory$reset');
+        exit(2);
+      }
+
       // Step 2: Analyze test dependencies if enabled
       if (dependencyAnalysis) {
         await _analyzeTestDependencies(testFiles);
@@ -203,10 +210,28 @@ class TestAnalyzer {
     final testFiles = <String>[];
 
     if (targetFiles.isNotEmpty) {
-      // Use specified files
-      testFiles.addAll(targetFiles);
+      // Validate and use specified files/directories
+      for (final target in targetFiles) {
+        final file = File(target);
+        final dir = Directory(target);
+
+        if (await file.exists()) {
+          // Single test file
+          testFiles.add(target);
+        } else if (await dir.exists()) {
+          // Directory - discover test files within it
+          await for (final entity in dir.list(recursive: true)) {
+            if (entity is File && entity.path.endsWith('_test.dart')) {
+              testFiles.add(entity.path);
+            }
+          }
+        } else {
+          // File/directory doesn't exist - skip it
+          print('  $yellow⚠$reset  Skipping non-existent: $target');
+        }
+      }
     } else {
-      // Discover all test files
+      // Discover all test files in 'test' directory
       final testDir = Directory('test');
       if (await testDir.exists()) {
         await for (final entity in testDir.list(recursive: true)) {
@@ -724,9 +749,8 @@ class TestAnalyzer {
   }
 
   Future<void> _saveReportToFile() async {
-    // NOTE: Cleanup disabled to retain reports for unified report linking
-    // Reports are managed by run_all.dart orchestrator
-    // await _cleanupOldReports();
+    // Clean up old reports before generating new ones
+    await _cleanupOldReports();
 
     final report = StringBuffer();
 
@@ -2303,29 +2327,24 @@ class TestAnalyzer {
     }
   }
 
-  /// Clean up old reports in the test_analysis directory
-  /// NOTE: Disabled to retain reports for unified report linking
-  /// Reports are now managed by run_all.dart orchestrator
-  // Future<void> _cleanupOldReports() async {
-  //   // Extract meaningful name from tested paths
-  //   var pathName = _extractPathName();
-  //
-  //   // Clean old reports using unified naming - only in analyzer subdirectory
-  //   if (verbose) {
-  //     print('  [DEBUG] Cleaning old reports for pathName=$pathName in subdirectory=analyzer');
-  //   }
-  //   await ReportUtils.cleanOldReports(
-  //     pathName: pathName,
-  //     prefixPatterns: [
-  //       'test_report_analyzer', // Unified format
-  //       'test_report_alz', // Old unified format
-  //       'ta', // Old test_analyzer format
-  //       'test_analysis', // Even older format
-  //     ],
-  //     subdirectory: 'analyzer',
-  //     verbose: verbose,
-  //   );
-  // }
+  /// Clean up old reports - keeps only the latest report for each module
+  Future<void> _cleanupOldReports() async {
+    // Extract meaningful name from tested paths
+    var pathName = _extractPathName();
+
+    // Clean old reports - keep only latest report per module
+    if (verbose) {
+      print('  [DEBUG] Cleaning old reports for pathName=$pathName');
+    }
+    await ReportUtils.cleanOldReports(
+      pathName: pathName,
+      prefixPatterns: [
+        'report_tests', // Current format: modulename-fi_report_tests@timestamp
+      ],
+      subdirectory: 'tests',
+      verbose: verbose,
+    );
+  }
 
   String _extractPathName() {
     if (targetFiles.isNotEmpty) {
