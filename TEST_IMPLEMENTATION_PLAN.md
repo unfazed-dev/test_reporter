@@ -20,7 +20,7 @@
 ```
 lib/src/
 ├── bin/                4 files    6,699 lines    0% → 100%
-├── models/             2 files      593 lines    0% → 100%
+├── models/             2 files      593 lines    ✅ 100%
 └── utils/              5 files      374 lines    0% → 100%
 ```
 
