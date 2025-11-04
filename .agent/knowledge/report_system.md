@@ -1,6 +1,6 @@
 # Report System - test_reporter
 
-**Last Updated**: January 2025
+**Last Updated**: November 2025
 **Purpose**: Understanding report generation, naming, and management
 **Token Estimate**: ~8-10K tokens
 
@@ -13,22 +13,22 @@ All reports are generated in the `tests_reports/` directory:
 ```
 tests_reports/
 ├── tests/          # TestAnalyzer reports
-│   ├── auth_service-fo_analysis@1435_041124.md
-│   ├── auth_service-fo_analysis@1435_041124.json
-│   └── user_test-fi_analysis@0920_041124.md
+│   ├── auth_service-fo_analysis@1435_041125.md
+│   ├── auth_service-fo_analysis@1435_041125.json
+│   └── user_test-fi_analysis@0920_041125.md
 │
 ├── coverage/       # CoverageAnalyzer reports
-│   ├── auth_service-fo_coverage@1230_041124.md
-│   ├── auth_service-fo_coverage@1230_041124.json
-│   └── utils-fo_coverage@1445_041124.md
+│   ├── auth_service-fo_coverage@1230_041125.md
+│   ├── auth_service-fo_coverage@1230_041125.json
+│   └── utils-fo_coverage@1445_041125.md
 │
 ├── failures/       # FailedTestExtractor reports
-│   ├── integration-fo_failures@1000_041124.md
-│   └── integration-fo_failures@1000_041124.json
+│   ├── integration-fo_failures@1000_041125.md
+│   └── integration-fo_failures@1000_041125.json
 │
 └── suite/          # TestOrchestrator unified reports
-    ├── all_tests-fo_suite@1500_041124.md
-    └── all_tests-fo_suite@1500_041124.json
+    ├── all_tests-fo_suite@1500_041125.md
+    └── all_tests-fo_suite@1500_041125.json
 ```
 
 ---
@@ -112,7 +112,7 @@ String extractModuleName() {
 - **MM**: Month
 - **YY**: Year (2 digits)
 
-**Example**: `1435_041124` = January 4, 2025 at 14:35
+**Example**: `1435_041125` = November 4, 2025 at 14:35
 
 **Generation**:
 ```dart
@@ -380,9 +380,9 @@ await ReportUtils.cleanOldReports(
 );
 
 // Generates output like:
-//   🗑️  Removed old report: auth_service-fo_analysis@1200_041124.md
-//   🗑️  Removed old report: auth_service-fo_analysis@1200_041124.json
-//   🗑️  Removed old report: auth_service-fo_coverage@1130_041124.md
+//   🗑️  Removed old report: auth_service-fo_analysis@1200_041125.md
+//   🗑️  Removed old report: auth_service-fo_analysis@1200_041125.json
+//   🗑️  Removed old report: auth_service-fo_coverage@1130_041125.md
 ```
 
 ---
@@ -480,16 +480,16 @@ print('   JSON: $jsonPath');
 Without cleanup:
 ```
 tests_reports/tests/
-├── auth_service-fo_analysis@1200_041124.md  (older)
-├── auth_service-fo_analysis@1300_041124.md  (older)
-├── auth_service-fo_analysis@1400_041124.md  (latest) ← KEPT
+├── auth_service-fo_analysis@1200_041125.md  (older)
+├── auth_service-fo_analysis@1300_041125.md  (older)
+├── auth_service-fo_analysis@1400_041125.md  (latest) ← KEPT
 └── ... potentially hundreds of old reports
 ```
 
 With cleanup:
 ```
 tests_reports/tests/
-└── auth_service-fo_analysis@1400_041124.md  (latest) ← KEPT
+└── auth_service-fo_analysis@1400_041125.md  (latest) ← KEPT
 ```
 
 ### Customizing Retention
@@ -614,13 +614,13 @@ ls -t tests_reports/tests/auth_service-fo_* | head -1
 ### View report in terminal with colors
 
 ```bash
-cat tests_reports/tests/auth_service-fo_analysis@1435_041124.md
+cat tests_reports/tests/auth_service-fo_analysis@1435_041125.md
 ```
 
 ### Parse JSON for specific metric
 
 ```bash
-jq '.summary.successRate' tests_reports/tests/auth_service-fo_analysis@1435_041124.json
+jq '.summary.successRate' tests_reports/tests/auth_service-fo_analysis@1435_041125.json
 ```
 
 ### Archive all reports

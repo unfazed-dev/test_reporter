@@ -1,6 +1,6 @@
 # Failure Patterns - test_reporter
 
-**Last Updated**: January 2025
+**Last Updated**: November 2025
 **Purpose**: Understanding the sealed class failure type system and pattern detection
 **Token Estimate**: ~8-12K tokens
 
@@ -564,7 +564,7 @@ void handleFailure(FailureType failure) {
 
 ## Adding New Failure Types
 
-**See SOP**: `.agent/prompts/01_adding_failure_pattern.md`
+**See SOP**: `.agent/guides/01_adding_failure_pattern.md`
 
 ### Steps Summary:
 

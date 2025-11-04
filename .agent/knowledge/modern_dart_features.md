@@ -1,6 +1,6 @@
 # Modern Dart Features - test_reporter
 
-**Last Updated**: January 2025
+**Last Updated**: November 2025
 **Purpose**: Understanding sealed classes, records, and modern Dart 3+ patterns
 **Token Estimate**: ~6-8K tokens
 

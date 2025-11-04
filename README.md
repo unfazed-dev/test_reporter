@@ -7,7 +7,7 @@ Comprehensive Flutter/Dart test reporting toolkit providing coverage analysis, f
 
 ## Features
 
-### >ê Test Analyzer (`analyze_tests`)
+### >ï¿½ Test Analyzer (`analyze_tests`)
 - **Flaky Test Detection** - Runs tests multiple times to identify intermittent failures
 - **Pattern Recognition** - Detects null errors, timeouts, assertions, type errors, etc.
 - **Performance Profiling** - Identifies slow tests and performance bottlenecks
@@ -15,7 +15,7 @@ Comprehensive Flutter/Dart test reporting toolkit providing coverage analysis, f
 - **Parallel Execution** - Run tests in parallel with configurable worker pool
 - **Watch Mode** - Continuous testing with auto re-run on file changes
 
-### =Ê Coverage Analyzer (`analyze_coverage`)
+### =ï¿½ Coverage Analyzer (`analyze_coverage`)
 - **Line & Branch Coverage** - Comprehensive coverage analysis
 - **Auto-Fix Generation** - Automatically generate missing test cases with `--fix`
 - **Incremental Analysis** - Only analyze changed files (git diff)
@@ -31,7 +31,7 @@ Comprehensive Flutter/Dart test reporting toolkit providing coverage analysis, f
 - **Watch Mode** - Continuously monitor and rerun failed tests on file changes
 - **Detailed Reporting** - Comprehensive failure analysis and statistics
 
-### <¯ Suite Analyzer (`analyze_suite`)
+### <ï¿½ Suite Analyzer (`analyze_suite`)
 - **Unified Orchestrator** - Runs all analysis tools in sequence
 - **Combined Reports** - Single comprehensive report with all insights
 - **Configurable Runs** - Set number of test runs for flaky detection
@@ -261,8 +261,8 @@ Reports follow this pattern:
 ```
 
 Examples:
-- `auth_service-fo_coverage@1435_041124.md` (folder analysis)
-- `user_test-fi_analysis@0920_041124.json` (file analysis)
+- `auth_service-fo_coverage@1435_041125.md` (folder analysis)
+- `user_test-fi_analysis@0920_041125.json` (file analysis)
 
 ### Report Formats
 
@@ -342,7 +342,7 @@ dart format .
 
 ### Adding Features
 
-See SOPs in `.agent/prompts/`:
+See SOPs in `.agent/guides/`:
 - Adding new failure patterns
 - Creating new analyzers
 - Extending report types

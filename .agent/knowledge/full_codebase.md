@@ -1,6 +1,6 @@
 # Full Codebase Context - test_reporter
 
-**Last Updated**: January 2025
+**Last Updated**: November 2025
 **Purpose**: Complete project overview for deep exploration and major refactoring tasks
 **Token Estimate**: ~15-20K tokens
 
@@ -66,8 +66,8 @@ test_reporter/
 │
 ├── .agent/                              # AI documentation system
 │   ├── README.md
-│   ├── contexts/
-│   ├── prompts/
+│   ├── knowledge/
+│   ├── guides/
 │   ├── templates/
 │   └── archives/
 │
@@ -301,9 +301,9 @@ tests_reports/
 - `-fi`: File analysis (e.g., `test/my_test.dart`)
 
 **Examples**:
-- `auth_service-fo_coverage@1435_041124.md`
-- `user_test-fi_analysis@0920_041124.json`
-- `all_tests-fo_suite@1200_041124.md`
+- `auth_service-fo_coverage@1435_041125.md`
+- `user_test-fi_analysis@0920_041125.json`
+- `all_tests-fo_suite@1200_041125.md`
 
 ### Report Management
 

@@ -130,10 +130,10 @@ await ReportUtils.cleanOldReports(
 
 Review output:
 ```
-🔎 Checking file: auth_service-fo_analysis@1200_041124.md in tests
+🔎 Checking file: auth_service-fo_analysis@1200_041125.md in tests
   Looking for: auth_service-fo_analysis@ OR authservicefo_analysis__
   ✅ MATCHED pattern: analysis
-🗑️  Removed old report: auth_service-fo_analysis@1200_041124.md
+🗑️  Removed old report: auth_service-fo_analysis@1200_041125.md
 ```
 
 ### 5. Tests Not Found

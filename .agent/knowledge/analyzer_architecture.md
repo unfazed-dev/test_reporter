@@ -1,6 +1,6 @@
 # Analyzer Architecture - test_reporter
 
-**Last Updated**: January 2025
+**Last Updated**: November 2025
 **Purpose**: Deep understanding of how the 4 analyzer tools work
 **Token Estimate**: ~10-15K tokens
 
@@ -697,7 +697,7 @@ await ReportUtils.cleanOldReports(
 
 // Generate new report
 final reportDir = await ReportUtils.getReportDirectory();
-final reportPath = '$reportDir/coverage/auth_service-fo_coverage@1435_041124.md';
+final reportPath = '$reportDir/coverage/auth_service-fo_coverage@1435_041125.md';
 ```
 
 ### CLI Argument Parsing

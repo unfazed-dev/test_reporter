@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Last Updated**: January 2025
+**Last Updated**: November 2025
 
 > **CRITICAL**: This file is automatically loaded by Claude Code at session start. Contains essential project rules and session startup procedures.
 
@@ -300,7 +300,7 @@ All tools generate reports in `tests_reports/` with subdirectories:
 **Report Naming Convention**:
 - Format: `{module_name}_{report_type}@HHMM_DDMMYY.{md|json}`
 - Module suffix: `-fo` (folder analysis), `-fi` (file analysis)
-- Example: `auth_service-fo_coverage@1435_041124.md`
+- Example: `auth_service-fo_coverage@1435_041125.md`
 
 **Report Management**:
 - `ReportUtils.cleanOldReports()` removes old reports, keeping only latest per pattern
