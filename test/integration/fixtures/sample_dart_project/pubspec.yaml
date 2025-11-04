@@ -1,9 +1,0 @@
-name: sample_dart_project
-version: 1.0.0
-description: A sample Dart project for integration testing
-environment:
-  sdk: '>=3.0.0 <4.0.0'
-
-dev_dependencies:
-  test: ^1.25.0
-  lints: ^3.0.0

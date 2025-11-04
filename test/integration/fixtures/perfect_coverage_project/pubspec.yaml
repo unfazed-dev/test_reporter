@@ -1,8 +1,0 @@
-name: perfect_coverage_project
-version: 1.0.0
-description: A project with 100% test coverage
-environment:
-  sdk: '>=3.0.0 <4.0.0'
-
-dev_dependencies:
-  test: ^1.25.0
