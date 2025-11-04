@@ -1344,8 +1344,8 @@ class CoverageAnalyzer {
     // Clean up old coverage reports, keeping only the latest
     await ReportUtils.cleanOldReports(
       pathName: pathName,
-      prefixPatterns: ['test_report_coverage'],
-      subdirectory: 'code_coverage',
+      prefixPatterns: ['report_coverage'],
+      subdirectory: 'quality',
     );
   }
 

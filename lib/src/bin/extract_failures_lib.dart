@@ -739,7 +739,15 @@ class FailedTestExtractor {
       timestamp: simpleTimestamp,
       markdownContent: markdown.toString(),
       jsonData: jsonData,
-      suffix: 'failed',
+      suffix: 'failures',
+      verbose: _args['verbose'] as bool,
+    );
+
+    // Clean old reports (keep only latest per module)
+    await ReportUtils.cleanOldReports(
+      pathName: '$moduleName-fo',
+      prefixPatterns: ['report_failures'],
+      subdirectory: 'failures',
       verbose: _args['verbose'] as bool,
     );
 

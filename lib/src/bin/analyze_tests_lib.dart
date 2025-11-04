@@ -749,9 +749,6 @@ class TestAnalyzer {
   }
 
   Future<void> _saveReportToFile() async {
-    // Clean up old reports before generating new ones
-    await _cleanupOldReports();
-
     final report = StringBuffer();
 
     // Header
@@ -1392,6 +1389,9 @@ class TestAnalyzer {
       if (consistentFailures.isNotEmpty || flakyTests.isNotEmpty) {
         await _saveFailedReport(timestamp, pathName, jsonData);
       }
+
+      // Clean up old reports AFTER generating new ones
+      await _cleanupOldReports();
     } catch (e, stackTrace) {
       print('\n$yellow⚠️ Could not save report to file: $e$reset');
       if (verbose) {
@@ -2336,12 +2336,24 @@ class TestAnalyzer {
     if (verbose) {
       print('  [DEBUG] Cleaning old reports for pathName=$pathName');
     }
+
+    // Clean test reports in reliability/ subdirectory
     await ReportUtils.cleanOldReports(
       pathName: pathName,
       prefixPatterns: [
         'report_tests', // Current format: modulename-fi_report_tests@timestamp
       ],
-      subdirectory: 'tests',
+      subdirectory: 'reliability',
+      verbose: verbose,
+    );
+
+    // Clean failure reports in failures/ subdirectory
+    await ReportUtils.cleanOldReports(
+      pathName: pathName,
+      prefixPatterns: [
+        'report_failures', // Failed test reports
+      ],
+      subdirectory: 'failures',
       verbose: verbose,
     );
   }

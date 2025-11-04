@@ -17,23 +17,51 @@ class ReportUtils {
     return reportDir.path;
   }
 
-  /// Clean old reports for a specific path pattern
+  /// Cleans old reports matching the specified patterns.
   ///
-  /// If [subdirectory] is provided, only cleans reports in that subdirectory.
-  /// Otherwise, cleans reports in all subdirectories (tests/, coverage/, failures/, suite/).
+  /// Removes old reports keeping only the latest timestamp per pattern.
+  ///
+  /// **Naming Format**: `{pathName}_{pattern}@{timestamp}.{ext}`
+  ///
+  /// **Example**: `flaky-fi_report_tests@2153_041125.md`
+  ///
+  /// **Parameters**:
+  /// - [pathName]: Module name (e.g., `'flaky-fi'`, `'auth_service-fo'`)
+  /// - [prefixPatterns]: Patterns to match (e.g., `['report_tests']`)
+  /// - [subdirectory]: Optional subdirectory filter (`'reliability'`, `'quality'`, etc.)
+  /// - [verbose]: Print detailed cleanup information
+  /// - [keepLatest]: Keep the latest report (default: true)
+  /// - [baseDir]: Optional base directory (for testing). Defaults to project's tests_reports/
+  ///
+  /// **Cleanup Strategy**:
+  /// 1. Groups reports by pattern
+  /// 2. Sorts by timestamp (newest first)
+  /// 3. Keeps only the latest report per pattern
+  /// 4. Deletes all older reports
+  ///
+  /// **Example**:
+  /// ```dart
+  /// await ReportUtils.cleanOldReports(
+  ///   pathName: 'flaky-fi',
+  ///   prefixPatterns: ['report_tests'],
+  ///   subdirectory: 'reliability',
+  ///   verbose: true,
+  /// );
+  /// ```
   static Future<void> cleanOldReports({
     required String pathName,
     required List<String> prefixPatterns,
     String? subdirectory,
     bool verbose = false,
     bool keepLatest = true,
+    String? baseDir,
   }) async {
-    final reportDir = await getReportDirectory();
+    final reportDir = baseDir ?? await getReportDirectory();
 
     // List of subdirectories to clean
     final subdirs = subdirectory != null
         ? [subdirectory]
-        : ['tests', 'coverage', 'failures', 'suite'];
+        : ['reliability', 'quality', 'failures', 'suite'];
 
     for (final subdir in subdirs) {
       final dir = Directory(p.join(reportDir, subdir));
@@ -47,11 +75,16 @@ class ReportUtils {
 
         final fileName = file.path.split('/').last;
         if (verbose) print('  🔎 Checking file: $fileName in $subdir');
+
         for (final pattern in prefixPatterns) {
-          final match1 = '${pathName}_$pattern@';
-          final match2 = '${pathName.replaceAll('_', '')}_${pattern}__';
-          if (verbose) print('    Looking for: $match1 OR $match2');
-          if (fileName.startsWith(match1) || fileName.startsWith(match2)) {
+          // Match pattern: {pathName}_{pattern}@{timestamp}.{ext}
+          final matchPattern = '${pathName}_$pattern@';
+
+          if (verbose) {
+            print('    Looking for pattern: $matchPattern');
+          }
+
+          if (fileName.startsWith(matchPattern)) {
             if (verbose) print('    ✅ MATCHED pattern: $pattern');
             filesByPattern.putIfAbsent(pattern, () => []).add(file);
             break;
@@ -59,25 +92,46 @@ class ReportUtils {
         }
       }
 
-      // For each pattern, keep the latest and delete the rest
+      // For each pattern, keep all files with the latest timestamp
       for (final entry in filesByPattern.entries) {
         final files = entry.value;
         if (files.isEmpty) continue;
 
-        // Sort by filename (timestamp is in the filename)
-        files.sort((a, b) => b.path.compareTo(a.path)); // Descending order
+        // Group files by timestamp (extract from @timestamp.ext pattern)
+        final filesByTimestamp = <String, List<File>>{};
+        for (final file in files) {
+          final fileName = file.path.split('/').last;
+          // Extract timestamp: modulename_pattern@HHMM_DDMMYY.ext
+          final atIndex = fileName.lastIndexOf('@');
+          final dotIndex = fileName.lastIndexOf('.');
+          if (atIndex != -1 && dotIndex != -1) {
+            final timestamp = fileName.substring(atIndex + 1, dotIndex);
+            filesByTimestamp.putIfAbsent(timestamp, () => []).add(file);
+          }
+        }
 
-        // Keep the latest (first after sort), delete the rest
-        final filesToDelete = keepLatest ? files.skip(1) : files;
+        if (filesByTimestamp.isEmpty) continue;
 
-        for (final file in filesToDelete) {
-          try {
-            final fileName = file.path.split('/').last;
-            await file.delete();
-            if (verbose) print('  🗑️  Removed old report: $fileName');
-          } catch (e) {
-            if (verbose) {
-              print('  ⚠️  Failed to delete ${file.path.split('/').last}: $e');
+        // Sort timestamps (newest first)
+        final sortedTimestamps = filesByTimestamp.keys.toList()
+          ..sort((a, b) => b.compareTo(a));
+
+        // Keep all files with the latest timestamp, delete the rest
+        final latestTimestamp = sortedTimestamps.first;
+
+        for (final timestamp in sortedTimestamps) {
+          if (!keepLatest || timestamp != latestTimestamp) {
+            for (final file in filesByTimestamp[timestamp]!) {
+              try {
+                final fileName = file.path.split('/').last;
+                await file.delete();
+                if (verbose) print('  🗑️  Removed old report: $fileName');
+              } catch (e) {
+                if (verbose) {
+                  print(
+                      '  ⚠️  Failed to delete ${file.path.split('/').last}: $e');
+                }
+              }
             }
           }
         }
@@ -96,8 +150,8 @@ class ReportUtils {
   /// Get full report path for a module
   ///
   /// Organizes reports into subdirectories based on tool suffix:
-  /// - 'coverage' -> coverage/
-  /// - 'tests' -> tests/
+  /// - 'coverage' -> quality/
+  /// - 'tests' -> reliability/
   /// - 'failures' -> failures/
   /// - '' (empty) -> suite/
   ///
@@ -108,14 +162,15 @@ class ReportUtils {
     String moduleName,
     String timestamp, {
     String suffix = '',
+    String? baseDir,
   }) async {
-    final reportDir = await getReportDirectory();
+    final reportDir = baseDir ?? await getReportDirectory();
 
     // Determine subdirectory based on suffix
     // Suffix should be full tool name: coverage, tests, failures, or empty for suite
     final subdir = switch (suffix) {
-      'coverage' => 'coverage',
-      'tests' => 'tests',
+      'coverage' => 'quality',
+      'tests' => 'reliability',
       'failures' => 'failures',
       _ => 'suite',
     };
@@ -156,12 +211,17 @@ class ReportUtils {
     required Map<String, dynamic> jsonData,
     String suffix = '',
     bool verbose = false,
+    String? baseDir,
   }) async {
     // NOTE: Cleanup is now handled by the calling code (coverage_tool, test_analyzer, run_all)
     // This prevents accidentally deleting reports that need to be retained for the unified report
 
-    final reportPath =
-        await getReportPath(moduleName, timestamp, suffix: suffix);
+    final reportPath = await getReportPath(
+      moduleName,
+      timestamp,
+      suffix: suffix,
+      baseDir: baseDir,
+    );
     final file = File(reportPath);
 
     // Build unified report content

@@ -89,6 +89,72 @@ class TestOrchestrator {
     return '$moduleName$suffix';
   }
 
+  /// Detect source path from test path for coverage analysis
+  ///
+  /// Maps test paths to their corresponding source paths:
+  /// - `test/foo_test.dart` → `lib/foo.dart` (if exists) or `lib/src` (fallback)
+  /// - `test/integration/` → `lib/integration/` (if exists) or `lib/src` (fallback)
+  /// - `lib/src/utils` → `lib/src/utils` (pass through)
+  ///
+  /// This ensures coverage analysis runs on SOURCE code, not test files.
+  String detectSourcePath(String inputPath) {
+    String sourcePath = inputPath;
+
+    if (inputPath.startsWith('test')) {
+      // Test path provided - derive source path
+      sourcePath = inputPath.replaceFirst('test', 'lib');
+
+      // If it's a test file, remove _test suffix
+      if (sourcePath.endsWith('_test.dart')) {
+        sourcePath = sourcePath.replaceFirst('_test.dart', '.dart');
+      }
+
+      // Special case: 'test/' -> 'lib/src' (not just 'lib/')
+      if (sourcePath == 'lib/' || sourcePath == 'lib') {
+        sourcePath = 'lib/src';
+      } else {
+        // Check if derived path exists, otherwise default to lib/src
+        final derivedFile = File(sourcePath);
+        final derivedDir = Directory(sourcePath);
+
+        if (!derivedFile.existsSync() && !derivedDir.existsSync()) {
+          // Path doesn't exist, use lib/src as default
+          sourcePath = 'lib/src';
+        }
+      }
+    } else if (inputPath == 'lib' || inputPath == 'lib/') {
+      // If given just 'lib' or 'lib/', use 'lib/src'
+      sourcePath = 'lib/src';
+    }
+
+    return sourcePath;
+  }
+
+  /// Detect test path from source path for test analysis
+  ///
+  /// Maps source paths to their corresponding test paths:
+  /// - `lib/foo.dart` → `test/foo_test.dart` (adds _test suffix)
+  /// - `lib/src/utils/` → `test/src/utils/` (mirrors directory structure)
+  /// - `test/integration/` → `test/integration/` (pass through)
+  String detectTestPath(String inputPath) {
+    String testPath = inputPath;
+
+    if (inputPath.startsWith('lib')) {
+      // Source path provided - derive test path
+      testPath = inputPath.replaceFirst('lib', 'test');
+
+      // If it's a specific file (ends with .dart but not _test.dart), add _test suffix
+      if (testPath.endsWith('.dart') && !testPath.endsWith('_test.dart')) {
+        testPath = testPath.replaceFirst('.dart', '_test.dart');
+      }
+    } else if (!inputPath.startsWith('test')) {
+      // Default to 'test/' if ambiguous
+      testPath = 'test/';
+    }
+
+    return testPath;
+  }
+
   Future<void> runAll() async {
     printHeader();
 
@@ -111,36 +177,23 @@ class TestOrchestrator {
 
   Future<bool> runCoverageTool() async {
     try {
-      // Determine source path for coverage
-      String sourcePath = testPath;
-      if (testPath.startsWith('test')) {
-        // If given test path, derive source path
-        sourcePath = testPath.replaceFirst('test', 'lib');
+      // Detect source path from test path for coverage analysis
+      final sourcePath = detectSourcePath(testPath);
 
-        // Check if derived path exists, otherwise default to lib/src
-        final derivedFile = File(sourcePath);
-        final derivedDir = Directory(sourcePath);
-
-        if (!derivedFile.existsSync() && !derivedDir.existsSync()) {
-          // Path doesn't exist, use lib/src as default
-          sourcePath = 'lib/src';
-        }
-      } else if (testPath == 'lib') {
-        // If given just 'lib', use 'lib/src'
-        sourcePath = 'lib/src';
+      if (verbose) {
+        print('  [INFO] Test path: $testPath');
+        print('  [INFO] Source path for coverage: $sourcePath');
       }
 
       final args = <String>[
         'run',
         'test_reporter:analyze_coverage',
         sourcePath,
-        testPath, // Pass testPath for consistent naming
       ];
 
       if (verbose) {
         args.add('--verbose');
-        print(
-            '  [DEBUG] Running analyze_coverage with args: $sourcePath $testPath');
+        print('  [DEBUG] Running analyze_coverage on: $sourcePath');
       }
 
       final process = await Process.start('dart', args);
@@ -218,20 +271,12 @@ class TestOrchestrator {
 
   Future<bool> runTestAnalyzer() async {
     try {
-      // Determine test path for analyzer
-      String actualTestPath = testPath;
-      if (testPath.startsWith('lib')) {
-        // If given lib path, derive test path
-        actualTestPath = testPath.replaceFirst('lib', 'test');
+      // Detect test path from input for test analysis
+      final actualTestPath = detectTestPath(testPath);
 
-        // If it's a specific file (ends with .dart but not _test.dart), add _test suffix
-        if (actualTestPath.endsWith('.dart') &&
-            !actualTestPath.endsWith('_test.dart')) {
-          actualTestPath = actualTestPath.replaceFirst('.dart', '_test.dart');
-        }
-      } else if (!testPath.startsWith('test')) {
-        // Default to 'test/' if ambiguous
-        actualTestPath = 'test/';
+      if (verbose) {
+        print('  [INFO] Input path: $testPath');
+        print('  [INFO] Test path for analysis: $actualTestPath');
       }
 
       final args = <String>[
@@ -242,7 +287,10 @@ class TestOrchestrator {
       ];
 
       if (performance) args.add('--performance');
-      if (verbose) args.add('--verbose');
+      if (verbose) {
+        args.add('--verbose');
+        print('  [DEBUG] Running analyze_tests on: $actualTestPath');
+      }
       if (parallel) args.add('--parallel');
 
       final process = await Process.start('dart', args);
@@ -357,8 +405,8 @@ class TestOrchestrator {
       // Determine subdirectory based on prefix
       // prefix will be like 'report_coverage' or 'report_tests'
       final subdir = switch (prefix) {
-        String s when s.contains('_coverage') => 'coverage',
-        String s when s.contains('_tests') => 'tests',
+        String s when s.contains('_coverage') => 'quality',
+        String s when s.contains('_tests') => 'reliability',
         String s when s.contains('_failures') => 'failures',
         _ => 'suite',
       };
@@ -558,7 +606,7 @@ class TestOrchestrator {
     if (reportPaths.containsKey('analyzer')) {
       final analyzerFile = p.basename(reportPaths['analyzer']!);
       report.writeln(
-          '- 📊 **[Test Reliability Analysis](../analyzer/$analyzerFile)** - Flaky tests, performance metrics, test behavior');
+          '- 📊 **[Test Reliability Analysis](../reliability/$analyzerFile)** - Flaky tests, performance metrics, test behavior');
     } else {
       report.writeln('- 📊 **Test Reliability Analysis** - ⚠️ Not available');
     }
@@ -575,7 +623,7 @@ class TestOrchestrator {
     if (reportPaths.containsKey('coverage')) {
       final coverageFile = p.basename(reportPaths['coverage']!);
       report.writeln(
-          '- 📈 **[Coverage Analysis](../coverage/$coverageFile)** - Code coverage breakdown, untested code, testability');
+          '- 📈 **[Coverage Analysis](../quality/$coverageFile)** - Code coverage breakdown, untested code, testability');
     } else {
       report.writeln('- 📈 **Coverage Analysis** - ⚠️ Not available');
     }
@@ -636,6 +684,34 @@ class TestOrchestrator {
 
       print('  ✅ Unified report saved to: $reportPath');
 
+      // Delete intermediate reports (coverage and tests)
+      // The suite report already contains all their data in embedded JSON
+      if (verbose) print('\n🧹 Cleaning up intermediate reports...');
+
+      if (reportPaths.containsKey('coverage')) {
+        try {
+          final coverageFile = File(reportPaths['coverage']!);
+          if (await coverageFile.exists()) {
+            await coverageFile.delete();
+            if (verbose) print('  🗑️  Deleted intermediate coverage report');
+          }
+        } catch (e) {
+          if (verbose) print('  ⚠️  Could not delete coverage report: $e');
+        }
+      }
+
+      if (reportPaths.containsKey('analyzer')) {
+        try {
+          final testsFile = File(reportPaths['analyzer']!);
+          if (await testsFile.exists()) {
+            await testsFile.delete();
+            if (verbose) print('  🗑️  Deleted intermediate tests report');
+          }
+        } catch (e) {
+          if (verbose) print('  ⚠️  Could not delete tests report: $e');
+        }
+      }
+
       // Check if there are failures to determine if we need a failed report
       final analysisData = results['test_analysis'] as Map<String, dynamic>?;
       final analysisSummary = analysisData?['summary'] as Map<String, dynamic>?;
@@ -671,15 +747,14 @@ class TestOrchestrator {
         }
       }
 
-      // Clean up old reports, keeping only the latest for each type
-      if (verbose) print('\n🧹 Cleaning up old reports...');
+      // Clean up old suite and failures reports
+      // Note: coverage and tests reports are already deleted above
+      if (verbose) print('\n🧹 Cleaning up old suite reports...');
       await ReportUtils.cleanOldReports(
         pathName: moduleName,
         prefixPatterns: [
-          'report_coverage',
-          'report_tests',
           'report_suite',
-          'report_failures'
+          'report_failures',
         ],
         verbose: verbose,
       );

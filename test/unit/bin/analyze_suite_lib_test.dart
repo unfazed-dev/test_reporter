@@ -589,6 +589,94 @@ void main() {
       });
     });
 
+    group('detectSourcePath()', () {
+      test('should map test file to lib file (removing _test suffix)', () {
+        final orchestrator = TestOrchestrator(testPath: 'test/foo_test.dart');
+
+        // Mock file existence by using actual project files
+        // For unit test, we can test the logic without file system checks
+        // by using paths we know exist
+        final sourcePath = orchestrator.detectSourcePath('lib/src/bin/analyze_tests_lib.dart');
+
+        expect(sourcePath, equals('lib/src/bin/analyze_tests_lib.dart'));
+      });
+
+      test('should map test directory to lib directory', () {
+        final orchestrator = TestOrchestrator(testPath: 'test/unit');
+        final sourcePath = orchestrator.detectSourcePath('test/unit');
+
+        // Since test/unit doesn't have a corresponding lib/unit, should fall back
+        expect(sourcePath, equals('lib/src'));
+      });
+
+      test('should default to lib/src when test path has no corresponding source', () {
+        final orchestrator = TestOrchestrator(testPath: 'test/fixtures');
+        final sourcePath = orchestrator.detectSourcePath('test/fixtures/quick_slow_test.dart');
+
+        // test/fixtures/quick_slow_test.dart -> lib/fixtures/quick_slow.dart (doesn't exist)
+        // Should fall back to lib/src
+        expect(sourcePath, equals('lib/src'));
+      });
+
+      test('should pass through lib paths unchanged', () {
+        final orchestrator = TestOrchestrator(testPath: 'lib/src/utils');
+        final sourcePath = orchestrator.detectSourcePath('lib/src/utils');
+
+        expect(sourcePath, equals('lib/src/utils'));
+      });
+
+      test('should convert lib to lib/src', () {
+        final orchestrator = TestOrchestrator(testPath: 'lib');
+        final sourcePath = orchestrator.detectSourcePath('lib');
+
+        expect(sourcePath, equals('lib/src'));
+      });
+
+      test('should handle test root by defaulting to lib/src', () {
+        final orchestrator = TestOrchestrator(testPath: 'test/');
+        final sourcePath = orchestrator.detectSourcePath('test/');
+
+        expect(sourcePath, equals('lib/src'));
+      });
+    });
+
+    group('detectTestPath()', () {
+      test('should map lib file to test file (adding _test suffix)', () {
+        final orchestrator = TestOrchestrator(testPath: 'lib/src/foo.dart');
+        final testPath = orchestrator.detectTestPath('lib/src/foo.dart');
+
+        expect(testPath, equals('test/src/foo_test.dart'));
+      });
+
+      test('should map lib directory to test directory', () {
+        final orchestrator = TestOrchestrator(testPath: 'lib/src/utils');
+        final testPath = orchestrator.detectTestPath('lib/src/utils');
+
+        expect(testPath, equals('test/src/utils'));
+      });
+
+      test('should pass through test paths unchanged', () {
+        final orchestrator = TestOrchestrator(testPath: 'test/unit');
+        final testPath = orchestrator.detectTestPath('test/unit');
+
+        expect(testPath, equals('test/unit'));
+      });
+
+      test('should not add _test suffix if already present', () {
+        final orchestrator = TestOrchestrator(testPath: 'lib/src/foo_test.dart');
+        final testPath = orchestrator.detectTestPath('test/foo_test.dart');
+
+        expect(testPath, equals('test/foo_test.dart'));
+      });
+
+      test('should default to test/ for ambiguous paths', () {
+        final orchestrator = TestOrchestrator(testPath: 'somewhere');
+        final testPath = orchestrator.detectTestPath('somewhere');
+
+        expect(testPath, equals('test/'));
+      });
+    });
+
     group('generateRecommendations()', () {
       test('should recommend increasing coverage when < 80%', () {
         final orchestrator = TestOrchestrator(testPath: 'test');

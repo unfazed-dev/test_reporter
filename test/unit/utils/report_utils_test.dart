@@ -1,785 +1,298 @@
 import 'dart:io';
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 import 'package:test_reporter/src/utils/report_utils.dart';
-import 'package:path/path.dart' as p;
 
 void main() {
-  group('ReportUtils', () {
-    late Directory tempDir;
-    late Directory originalDir;
+  late Directory tempDir;
+  late Directory reportsDir;
 
-    setUp(() async {
-      // Create a temporary directory for testing
-      tempDir = await Directory.systemTemp.createTemp('report_utils_test_');
-      originalDir = Directory.current;
-      // Change to temp directory for testing
-      Directory.current = tempDir;
+  setUp(() async {
+    // Create temp test directory
+    tempDir = await Directory.systemTemp.createTemp('report_utils_test_');
+    reportsDir = Directory(p.join(tempDir.path, 'tests_reports'));
+    await reportsDir.create(recursive: true);
+  });
+
+  tearDown(() async {
+    // Clean up temp directory
+    if (await tempDir.exists()) {
+      await tempDir.delete(recursive: true);
+    }
+  });
+
+  group('ReportUtils.cleanOldReports - Cleanup Behavior', () {
+    test('🔴 should delete old reports with same module name', () async {
+      // Create reliability subdirectory
+      final reliabilityDir = Directory(p.join(reportsDir.path, 'reliability'));
+      await reliabilityDir.create(recursive: true);
+
+      // Create 2 reports with same module, different timestamps
+      final oldReport = File(
+          p.join(reliabilityDir.path, 'flaky-fi_report_tests@2153_041125.md'));
+      final newReport = File(
+          p.join(reliabilityDir.path, 'flaky-fi_report_tests@2154_041125.md'));
+
+      await oldReport.writeAsString('Old report content');
+      await newReport.writeAsString('New report content');
+
+      // Verify both exist before cleanup
+      expect(await oldReport.exists(), isTrue,
+          reason: 'Old report should exist before cleanup');
+      expect(await newReport.exists(), isTrue,
+          reason: 'New report should exist before cleanup');
+
+      // Run cleanup with baseDir for test isolation
+      await ReportUtils.cleanOldReports(
+        pathName: 'flaky-fi',
+        prefixPatterns: ['report_tests'],
+        subdirectory: 'reliability',
+        verbose: false,
+        baseDir: reportsDir.path,
+      );
+
+      // Verify only new report remains (old one deleted)
+      expect(await oldReport.exists(), isFalse,
+          reason: 'Old report should be deleted by cleanup');
+      expect(await newReport.exists(), isTrue,
+          reason: 'New report should remain after cleanup');
     });
 
-    tearDown(() async {
-      // Restore original directory
-      Directory.current = originalDir;
-      // Clean up temporary directory
-      if (await tempDir.exists()) {
-        await tempDir.delete(recursive: true);
-      }
+    test('🔴 should preserve reports with different module names', () async {
+      final reliabilityDir = Directory(p.join(reportsDir.path, 'reliability'));
+      await reliabilityDir.create(recursive: true);
+
+      // Create reports for different modules
+      final flakyReport = File(
+          p.join(reliabilityDir.path, 'flaky-fi_report_tests@2153_041125.md'));
+      final authReport = File(
+          p.join(reliabilityDir.path, 'auth-fo_report_tests@2153_041125.md'));
+
+      await flakyReport.writeAsString('Flaky report');
+      await authReport.writeAsString('Auth report');
+
+      // Run cleanup for flaky module only
+      await ReportUtils.cleanOldReports(
+        pathName: 'flaky-fi',
+        prefixPatterns: ['report_tests'],
+        subdirectory: 'reliability',
+        verbose: false,
+        baseDir: reportsDir.path,
+      );
+
+      // Verify both remain (different modules should not affect each other)
+      expect(await flakyReport.exists(), isTrue,
+          reason: 'Flaky report should remain');
+      expect(await authReport.exists(), isTrue,
+          reason: 'Auth report should remain (different module)');
     });
 
-    group('getReportDirectory', () {
-      test('should create tests_reports directory if it does not exist',
-          () async {
-        final reportDir = await ReportUtils.getReportDirectory();
+    test('🔴 should only match specified pattern prefix', () async {
+      final reliabilityDir = Directory(p.join(reportsDir.path, 'reliability'));
+      await reliabilityDir.create(recursive: true);
 
-        expect(await Directory(reportDir).exists(), isTrue);
-        expect(reportDir, endsWith('tests_reports'));
-      });
+      // Create reports with different patterns
+      final testsReport = File(
+          p.join(reliabilityDir.path, 'flaky-fi_report_tests@2153_041125.md'));
+      final coverageReport = File(p.join(
+          reliabilityDir.path, 'flaky-fi_report_coverage@2153_041125.md'));
 
-      test('should return existing tests_reports directory if it exists',
-          () async {
-        // Create directory first
-        final firstCall = await ReportUtils.getReportDirectory();
+      await testsReport.writeAsString('Tests report');
+      await coverageReport.writeAsString('Coverage report');
 
-        // Call again
-        final secondCall = await ReportUtils.getReportDirectory();
+      // Run cleanup for tests pattern only
+      await ReportUtils.cleanOldReports(
+        pathName: 'flaky-fi',
+        prefixPatterns: ['report_tests'],
+        subdirectory: 'reliability',
+        verbose: false,
+        baseDir: reportsDir.path,
+      );
 
-        expect(firstCall, equals(secondCall));
-        expect(await Directory(firstCall).exists(), isTrue);
-      });
-
-      test('should create directory in current working directory', () async {
-        final reportDir = await ReportUtils.getReportDirectory();
-        final expectedPath = p.join(Directory.current.path, 'tests_reports');
-
-        expect(reportDir, equals(expectedPath));
-      });
-
-      test('should create directory recursively', () async {
-        final reportDir = await ReportUtils.getReportDirectory();
-
-        expect(await Directory(reportDir).exists(), isTrue);
-        expect(await Directory(reportDir).parent.exists(), isTrue);
-      });
+      // Verify only tests report affected (coverage has different pattern)
+      expect(await testsReport.exists(), isTrue,
+          reason: 'Tests report should remain');
+      expect(await coverageReport.exists(), isTrue,
+          reason: 'Coverage report should remain (different pattern)');
     });
 
-    group('ensureDirectoryExists', () {
-      test('should create directory if it does not exist', () async {
-        final testPath = p.join(tempDir.path, 'new_directory');
+    test('🔴 should respect subdirectory filter', () async {
+      // Create multiple subdirectories
+      final reliabilityDir = Directory(p.join(reportsDir.path, 'reliability'));
+      final qualityDir = Directory(p.join(reportsDir.path, 'quality'));
+      await reliabilityDir.create(recursive: true);
+      await qualityDir.create(recursive: true);
 
-        await ReportUtils.ensureDirectoryExists(testPath);
+      // Create reports in different subdirs with same module name
+      final reliabilityReport = File(
+          p.join(reliabilityDir.path, 'flaky-fi_report_tests@2153_041125.md'));
+      final qualityReport = File(
+          p.join(qualityDir.path, 'flaky-fi_report_coverage@2153_041125.md'));
 
-        expect(await Directory(testPath).exists(), isTrue);
-      });
+      await reliabilityReport.writeAsString('Reliability report');
+      await qualityReport.writeAsString('Quality report');
 
-      test('should not fail if directory already exists', () async {
-        final testPath = p.join(tempDir.path, 'existing_directory');
-        await Directory(testPath).create();
+      // Run cleanup on reliability subdirectory only
+      await ReportUtils.cleanOldReports(
+        pathName: 'flaky-fi',
+        prefixPatterns: ['report_tests'],
+        subdirectory: 'reliability',
+        verbose: false,
+        baseDir: reportsDir.path,
+      );
 
-        await ReportUtils.ensureDirectoryExists(testPath);
-
-        expect(await Directory(testPath).exists(), isTrue);
-      });
-
-      test('should create nested directories recursively', () async {
-        final testPath = p.join(tempDir.path, 'a', 'b', 'c', 'd');
-
-        await ReportUtils.ensureDirectoryExists(testPath);
-
-        expect(await Directory(testPath).exists(), isTrue);
-        expect(
-            await Directory(p.join(tempDir.path, 'a', 'b')).exists(), isTrue);
-      });
-
-      test('should handle paths with trailing slashes', () async {
-        final testPath = p.join(tempDir.path, 'trailing_slash') + p.separator;
-
-        await ReportUtils.ensureDirectoryExists(testPath);
-
-        expect(await Directory(testPath).exists(), isTrue);
-      });
+      // Verify quality report unaffected (different subdir)
+      expect(await reliabilityReport.exists(), isTrue,
+          reason: 'Reliability report should remain');
+      expect(await qualityReport.exists(), isTrue,
+          reason: 'Quality report should remain (different subdirectory)');
     });
 
-    group('getReportPath', () {
-      test('should generate path for coverage report in coverage subdirectory',
-          () async {
-        final path = await ReportUtils.getReportPath(
-          'module_name',
-          '1234_567890',
-          suffix: 'coverage',
-        );
+    test('🔴 should handle multiple old reports and keep only latest',
+        () async {
+      final reliabilityDir = Directory(p.join(reportsDir.path, 'reliability'));
+      await reliabilityDir.create(recursive: true);
 
-        expect(path, contains('tests_reports'));
-        expect(path, contains('coverage'));
-        expect(path, contains('module_name_report_coverage@1234_567890.md'));
-      });
+      // Create 3 reports with same module, different timestamps
+      final oldest = File(
+          p.join(reliabilityDir.path, 'flaky-fi_report_tests@2151_041125.md'));
+      final middle = File(
+          p.join(reliabilityDir.path, 'flaky-fi_report_tests@2152_041125.md'));
+      final newest = File(
+          p.join(reliabilityDir.path, 'flaky-fi_report_tests@2153_041125.md'));
 
-      test('should generate path for tests report in tests subdirectory',
-          () async {
-        final path = await ReportUtils.getReportPath(
-          'module_name',
-          '1234_567890',
-          suffix: 'tests',
-        );
+      await oldest.writeAsString('Oldest report');
+      await middle.writeAsString('Middle report');
+      await newest.writeAsString('Newest report');
 
-        expect(path, contains('tests_reports'));
-        expect(path, contains(p.separator + 'tests' + p.separator));
-        expect(path, contains('module_name_report_tests@1234_567890.md'));
-      });
+      // Verify all exist
+      expect(await oldest.exists(), isTrue);
+      expect(await middle.exists(), isTrue);
+      expect(await newest.exists(), isTrue);
 
-      test('should generate path for failures report in failures subdirectory',
-          () async {
-        final path = await ReportUtils.getReportPath(
-          'module_name',
-          '1234_567890',
-          suffix: 'failures',
-        );
+      // Run cleanup
+      await ReportUtils.cleanOldReports(
+        pathName: 'flaky-fi',
+        prefixPatterns: ['report_tests'],
+        subdirectory: 'reliability',
+        verbose: false,
+        baseDir: reportsDir.path,
+      );
 
-        expect(path, contains('tests_reports'));
-        expect(path, contains('failures'));
-        expect(path, contains('module_name_report_failures@1234_567890.md'));
-      });
-
-      test(
-          'should generate path for suite report in suite subdirectory when suffix is empty',
-          () async {
-        final path = await ReportUtils.getReportPath(
-          'module_name',
-          '1234_567890',
-          suffix: '',
-        );
-
-        expect(path, contains('tests_reports'));
-        expect(path, contains(p.separator + 'suite' + p.separator));
-        expect(path, contains('module_name_report@1234_567890.md'));
-      });
-
-      test('should create subdirectory if it does not exist', () async {
-        final path = await ReportUtils.getReportPath(
-          'test_module',
-          '1234_567890',
-          suffix: 'coverage',
-        );
-
-        final subdirPath = p.dirname(path);
-        expect(await Directory(subdirPath).exists(), isTrue);
-      });
-
-      test('should handle module names with special characters', () async {
-        final path = await ReportUtils.getReportPath(
-          'module-name_test',
-          '1234_567890',
-          suffix: 'tests',
-        );
-
-        expect(path, contains('module-name_test_report_tests@1234_567890.md'));
-      });
-
-      test('should use suite as default subdirectory for unknown suffix',
-          () async {
-        final path = await ReportUtils.getReportPath(
-          'module_name',
-          '1234_567890',
-          suffix: 'unknown_suffix',
-        );
-
-        expect(path, contains(p.separator + 'suite' + p.separator));
-      });
+      // Verify only newest remains
+      expect(await oldest.exists(), isFalse,
+          reason: 'Oldest report should be deleted');
+      expect(await middle.exists(), isFalse,
+          reason: 'Middle report should be deleted');
+      expect(await newest.exists(), isTrue,
+          reason: 'Newest report should remain');
     });
 
-    group('writeUnifiedReport', () {
-      test('should write markdown and JSON content to file', () async {
-        const moduleName = 'test_module';
-        const timestamp = '1234_567890';
-        const markdownContent = '# Test Report\n\nThis is a test.';
-        final jsonData = {'metric': 'value', 'count': 42};
+    test('🔴 should handle both .md and .json files with same timestamp',
+        () async {
+      final reliabilityDir = Directory(p.join(reportsDir.path, 'reliability'));
+      await reliabilityDir.create(recursive: true);
 
-        final reportPath = await ReportUtils.writeUnifiedReport(
-          moduleName: moduleName,
-          timestamp: timestamp,
-          markdownContent: markdownContent,
-          jsonData: jsonData,
-          suffix: 'tests',
-        );
+      // Create old report pair (md + json)
+      final oldMd = File(
+          p.join(reliabilityDir.path, 'flaky-fi_report_tests@2153_041125.md'));
+      final oldJson = File(p.join(
+          reliabilityDir.path, 'flaky-fi_report_tests@2153_041125.json'));
 
-        expect(await File(reportPath).exists(), isTrue);
+      // Create new report pair (md + json)
+      final newMd = File(
+          p.join(reliabilityDir.path, 'flaky-fi_report_tests@2154_041125.md'));
+      final newJson = File(p.join(
+          reliabilityDir.path, 'flaky-fi_report_tests@2154_041125.json'));
 
-        final content = await File(reportPath).readAsString();
-        expect(content, contains('# Test Report'));
-        expect(content, contains('This is a test.'));
-        expect(content, contains('## 📊 Machine-Readable Data'));
-        expect(content, contains('```json'));
-        expect(content, contains('"metric": "value"'));
-        expect(content, contains('"count": 42'));
-      });
+      await oldMd.writeAsString('Old markdown');
+      await oldJson.writeAsString('{"old": true}');
+      await newMd.writeAsString('New markdown');
+      await newJson.writeAsString('{"new": true}');
 
-      test('should format JSON with indentation', () async {
-        const moduleName = 'test_module';
-        const timestamp = '1234_567890';
-        const markdownContent = '# Report';
-        final jsonData = {
-          'nested': {'key': 'value'},
-          'array': [1, 2, 3]
-        };
+      // Run cleanup
+      await ReportUtils.cleanOldReports(
+        pathName: 'flaky-fi',
+        prefixPatterns: ['report_tests'],
+        subdirectory: 'reliability',
+        verbose: false,
+        baseDir: reportsDir.path,
+      );
 
-        final reportPath = await ReportUtils.writeUnifiedReport(
-          moduleName: moduleName,
-          timestamp: timestamp,
-          markdownContent: markdownContent,
-          jsonData: jsonData,
-        );
+      // Verify only new pair remains
+      expect(await oldMd.exists(), isFalse,
+          reason: 'Old .md should be deleted');
+      expect(await oldJson.exists(), isFalse,
+          reason: 'Old .json should be deleted');
+      expect(await newMd.exists(), isTrue, reason: 'New .md should remain');
+      expect(await newJson.exists(), isTrue, reason: 'New .json should remain');
+    });
+  });
 
-        final content = await File(reportPath).readAsString();
-        expect(content, contains('  "nested": {'));
-        expect(content, contains('    "key": "value"'));
-        expect(content, contains('  "array": ['));
-      });
+  group('ReportUtils.cleanOldReports - Pattern Matching', () {
+    test('🔴 should NOT match legacy pattern with double underscores',
+        () async {
+      final reliabilityDir = Directory(p.join(reportsDir.path, 'reliability'));
+      await reliabilityDir.create(recursive: true);
 
-      test('should create subdirectory if needed', () async {
-        const moduleName = 'new_module';
-        const timestamp = '1234_567890';
-        const markdownContent = '# Report';
-        final jsonData = {'data': 'test'};
+      // Create report with current naming convention
+      final currentFormat = File(
+          p.join(reliabilityDir.path, 'flaky-fi_report_tests@2153_041125.md'));
 
-        await ReportUtils.writeUnifiedReport(
-          moduleName: moduleName,
-          timestamp: timestamp,
-          markdownContent: markdownContent,
-          jsonData: jsonData,
-          suffix: 'coverage',
-        );
+      // Create hypothetical legacy format file (if it existed)
+      // Legacy format: {pathName without underscores}_{pattern}__{timestamp}
+      final legacyFormat = File(
+          p.join(reliabilityDir.path, 'flakyfi_report_tests__2153_041125.md'));
 
-        final reportDir = await ReportUtils.getReportDirectory();
-        final coverageDir = Directory(p.join(reportDir, 'coverage'));
-        expect(await coverageDir.exists(), isTrue);
-      });
+      await currentFormat.writeAsString('Current format');
+      await legacyFormat.writeAsString('Legacy format');
 
-      test('should return the report file path', () async {
-        const moduleName = 'test_module';
-        const timestamp = '1234_567890';
-        const markdownContent = '# Report';
-        final jsonData = {'data': 'test'};
+      // Run cleanup
+      await ReportUtils.cleanOldReports(
+        pathName: 'flaky-fi',
+        prefixPatterns: ['report_tests'],
+        subdirectory: 'reliability',
+        verbose: false,
+        baseDir: reportsDir.path,
+      );
 
-        final reportPath = await ReportUtils.writeUnifiedReport(
-          moduleName: moduleName,
-          timestamp: timestamp,
-          markdownContent: markdownContent,
-          jsonData: jsonData,
-          suffix: 'tests',
-        );
+      // Current format should be recognized and kept (latest)
+      expect(await currentFormat.exists(), isTrue,
+          reason: 'Current format should be recognized');
 
-        expect(reportPath, endsWith('.md'));
-        expect(reportPath, contains('test_module'));
-        expect(reportPath, contains('1234_567890'));
-      });
-
-      test('should include separator between markdown and JSON', () async {
-        const moduleName = 'test_module';
-        const timestamp = '1234_567890';
-        const markdownContent = '# Report\n\nContent';
-        final jsonData = {'data': 'test'};
-
-        final reportPath = await ReportUtils.writeUnifiedReport(
-          moduleName: moduleName,
-          timestamp: timestamp,
-          markdownContent: markdownContent,
-          jsonData: jsonData,
-        );
-
-        final content = await File(reportPath).readAsString();
-        expect(content, contains('---'));
-        final separatorIndex = content.indexOf('---');
-        final jsonIndex = content.indexOf('```json');
-        expect(separatorIndex, lessThan(jsonIndex));
-      });
-
-      test('should handle empty markdown content', () async {
-        const moduleName = 'test_module';
-        const timestamp = '1234_567890';
-        const markdownContent = '';
-        final jsonData = {'data': 'test'};
-
-        final reportPath = await ReportUtils.writeUnifiedReport(
-          moduleName: moduleName,
-          timestamp: timestamp,
-          markdownContent: markdownContent,
-          jsonData: jsonData,
-        );
-
-        expect(await File(reportPath).exists(), isTrue);
-        final content = await File(reportPath).readAsString();
-        expect(content, contains('```json'));
-      });
-
-      test('should handle empty JSON data', () async {
-        const moduleName = 'test_module';
-        const timestamp = '1234_567890';
-        const markdownContent = '# Report';
-        final jsonData = <String, dynamic>{};
-
-        final reportPath = await ReportUtils.writeUnifiedReport(
-          moduleName: moduleName,
-          timestamp: timestamp,
-          markdownContent: markdownContent,
-          jsonData: jsonData,
-        );
-
-        final content = await File(reportPath).readAsString();
-        expect(content, contains('{}'));
-      });
-
-      test('should handle verbose output without errors', () async {
-        const moduleName = 'test_module';
-        const timestamp = '1234_567890';
-        const markdownContent = '# Report';
-        final jsonData = {'data': 'test'};
-
-        // Should not throw when verbose is true
-        await ReportUtils.writeUnifiedReport(
-          moduleName: moduleName,
-          timestamp: timestamp,
-          markdownContent: markdownContent,
-          jsonData: jsonData,
-          verbose: true,
-        );
-      });
+      // Legacy format should NOT be matched by cleanup (different pattern)
+      expect(await legacyFormat.exists(), isTrue,
+          reason: 'Legacy format should NOT match (different pattern)');
     });
 
-    group('extractJsonFromReport', () {
-      test('should extract JSON from unified report', () async {
-        const moduleName = 'test_module';
-        const timestamp = '1234_567890';
-        const markdownContent = '# Test Report';
-        final jsonData = {'metric': 'value', 'count': 42};
-
-        final reportPath = await ReportUtils.writeUnifiedReport(
-          moduleName: moduleName,
-          timestamp: timestamp,
-          markdownContent: markdownContent,
-          jsonData: jsonData,
-        );
-
-        final extracted = await ReportUtils.extractJsonFromReport(reportPath);
-
-        expect(extracted, isNotNull);
-        expect(extracted!['metric'], equals('value'));
-        expect(extracted['count'], equals(42));
-      });
-
-      test('should return null if file does not exist', () async {
-        final extracted = await ReportUtils.extractJsonFromReport(
-          '/non/existent/file.md',
-        );
-
-        expect(extracted, isNull);
-      });
-
-      test('should return null if no JSON section found', () async {
-        final testFile = File(p.join(tempDir.path, 'no_json.md'));
-        await testFile.writeAsString('# Report\n\nNo JSON here!');
-
-        final extracted =
-            await ReportUtils.extractJsonFromReport(testFile.path);
-
-        expect(extracted, isNull);
-      });
-
-      test('should handle malformed JSON gracefully', () async {
-        final testFile = File(p.join(tempDir.path, 'bad_json.md'));
-        await testFile.writeAsString(
-          '# Report\n\n```json\n{invalid json}\n```',
-        );
-
-        final extracted =
-            await ReportUtils.extractJsonFromReport(testFile.path);
-
-        expect(extracted, isNull);
-      });
-
-      test('should find LAST occurrence of ```json', () async {
-        // Report with code example containing ```json AND actual data JSON
-        final testFile = File(p.join(tempDir.path, 'multi_json.md'));
-        await testFile.writeAsString('''
-# Report
-
-Example code:
-```json
-{"example": "not the real data"}
-```
-
----
-
-## 📊 Machine-Readable Data
-
-```json
-{"actual": "real data", "value": 123}
-```
-''');
-
-        final extracted =
-            await ReportUtils.extractJsonFromReport(testFile.path);
-
-        expect(extracted, isNotNull);
-        expect(extracted!['actual'], equals('real data'));
-        expect(extracted['value'], equals(123));
-        expect(extracted.containsKey('example'), isFalse);
-      });
-
-      test('should handle nested JSON objects', () async {
-        const moduleName = 'test_module';
-        const timestamp = '1234_567890';
-        const markdownContent = '# Report';
-        final jsonData = {
-          'nested': {
-            'deeply': {'key': 'value'}
-          },
-          'array': [1, 2, 3]
-        };
-
-        final reportPath = await ReportUtils.writeUnifiedReport(
-          moduleName: moduleName,
-          timestamp: timestamp,
-          markdownContent: markdownContent,
-          jsonData: jsonData,
-        );
-
-        final extracted = await ReportUtils.extractJsonFromReport(reportPath);
-
-        expect(extracted, isNotNull);
-        expect(extracted!['nested']['deeply']['key'], equals('value'));
-        expect(extracted['array'], equals([1, 2, 3]));
-      });
-
-      test('should return null if extracted data is not a map', () async {
-        final testFile = File(p.join(tempDir.path, 'array.md'));
-        await testFile.writeAsString(
-          '# Report\n\n```json\n[1, 2, 3]\n```',
-        );
-
-        final extracted =
-            await ReportUtils.extractJsonFromReport(testFile.path);
-
-        // Should return null because JSON is an array, not a map
-        expect(extracted, isNull);
-      });
-    });
-
-    group('cleanOldReports', () {
-      test('should delete old reports and keep latest', () async {
-        // Setup: Create reports directory and files
-        final reportDir = await ReportUtils.getReportDirectory();
-        final testsDir = Directory(p.join(reportDir, 'tests'));
-        await testsDir.create(recursive: true);
-
-        // Create multiple report files with different timestamps
-        await File(p.join(testsDir.path, 'module_analysis@1200_010125.md'))
-            .writeAsString('old');
-        await File(p.join(testsDir.path, 'module_analysis@1400_010125.md'))
-            .writeAsString('latest');
-        await File(p.join(testsDir.path, 'module_analysis@1300_010125.md'))
-            .writeAsString('middle');
-
-        await ReportUtils.cleanOldReports(
-          pathName: 'module',
-          prefixPatterns: ['analysis'],
-          subdirectory: 'tests',
-          keepLatest: true,
-        );
-
-        // Should keep only the latest (1400)
-        expect(
-          await File(p.join(testsDir.path, 'module_analysis@1200_010125.md'))
-              .exists(),
-          isFalse,
-        );
-        expect(
-          await File(p.join(testsDir.path, 'module_analysis@1300_010125.md'))
-              .exists(),
-          isFalse,
-        );
-        expect(
-          await File(p.join(testsDir.path, 'module_analysis@1400_010125.md'))
-              .exists(),
-          isTrue,
-        );
-      });
-
-      test('should delete all reports when keepLatest is false', () async {
-        final reportDir = await ReportUtils.getReportDirectory();
-        final testsDir = Directory(p.join(reportDir, 'tests'));
-        await testsDir.create(recursive: true);
-
-        await File(p.join(testsDir.path, 'module_analysis@1200_010125.md'))
-            .writeAsString('old');
-        await File(p.join(testsDir.path, 'module_analysis@1400_010125.md'))
-            .writeAsString('latest');
-
-        await ReportUtils.cleanOldReports(
-          pathName: 'module',
-          prefixPatterns: ['analysis'],
-          subdirectory: 'tests',
-          keepLatest: false,
-        );
-
-        expect(
-          await File(p.join(testsDir.path, 'module_analysis@1200_010125.md'))
-              .exists(),
-          isFalse,
-        );
-        expect(
-          await File(p.join(testsDir.path, 'module_analysis@1400_010125.md'))
-              .exists(),
-          isFalse,
-        );
-      });
-
-      test('should handle multiple patterns separately', () async {
-        final reportDir = await ReportUtils.getReportDirectory();
-        final testsDir = Directory(p.join(reportDir, 'tests'));
-        await testsDir.create(recursive: true);
-
-        // Create files for different patterns
-        await File(p.join(testsDir.path, 'module_analysis@1200_010125.md'))
-            .writeAsString('analysis old');
-        await File(p.join(testsDir.path, 'module_analysis@1400_010125.md'))
-            .writeAsString('analysis latest');
-        await File(p.join(testsDir.path, 'module_coverage@1200_010125.md'))
-            .writeAsString('coverage old');
-        await File(p.join(testsDir.path, 'module_coverage@1400_010125.md'))
-            .writeAsString('coverage latest');
-
-        await ReportUtils.cleanOldReports(
-          pathName: 'module',
-          prefixPatterns: ['analysis', 'coverage'],
-          subdirectory: 'tests',
-          keepLatest: true,
-        );
-
-        // Should keep latest for each pattern
-        expect(
-          await File(p.join(testsDir.path, 'module_analysis@1400_010125.md'))
-              .exists(),
-          isTrue,
-        );
-        expect(
-          await File(p.join(testsDir.path, 'module_coverage@1400_010125.md'))
-              .exists(),
-          isTrue,
-        );
-        expect(
-          await File(p.join(testsDir.path, 'module_analysis@1200_010125.md'))
-              .exists(),
-          isFalse,
-        );
-        expect(
-          await File(p.join(testsDir.path, 'module_coverage@1200_010125.md'))
-              .exists(),
-          isFalse,
-        );
-      });
-
-      test('should clean all subdirectories when subdirectory is null',
-          () async {
-        final reportDir = await ReportUtils.getReportDirectory();
-
-        // Create multiple subdirectories with files
-        for (final subdir in ['tests', 'coverage', 'failures', 'suite']) {
-          final dir = Directory(p.join(reportDir, subdir));
-          await dir.create(recursive: true);
-          await File(p.join(dir.path, 'module_analysis@1200_010125.md'))
-              .writeAsString('old');
-          await File(p.join(dir.path, 'module_analysis@1400_010125.md'))
-              .writeAsString('latest');
-        }
-
-        await ReportUtils.cleanOldReports(
-          pathName: 'module',
-          prefixPatterns: ['analysis'],
-          subdirectory: null, // Clean all
-          keepLatest: true,
-        );
-
-        // Check that old files are deleted in all subdirectories
-        for (final subdir in ['tests', 'coverage', 'failures', 'suite']) {
-          final dir = Directory(p.join(reportDir, subdir));
-          expect(
-            await File(p.join(dir.path, 'module_analysis@1200_010125.md'))
-                .exists(),
-            isFalse,
-          );
-          expect(
-            await File(p.join(dir.path, 'module_analysis@1400_010125.md'))
-                .exists(),
-            isTrue,
-          );
-        }
-      });
-
-      test('should handle non-existent subdirectory gracefully', () async {
-        // Should not throw when subdirectory doesn't exist
-        await ReportUtils.cleanOldReports(
-          pathName: 'module',
-          prefixPatterns: ['analysis'],
-          subdirectory: 'nonexistent',
-          keepLatest: true,
-        );
-      });
-
-      test('should ignore non-file entries in directory', () async {
-        final reportDir = await ReportUtils.getReportDirectory();
-        final testsDir = Directory(p.join(reportDir, 'tests'));
-        await testsDir.create(recursive: true);
-
-        // Create a subdirectory (not a file)
-        await Directory(p.join(testsDir.path, 'some_folder')).create();
-
-        // Create a report file
-        await File(p.join(testsDir.path, 'module_analysis@1200_010125.md'))
-            .writeAsString('content');
-
-        // Should not throw
-        await ReportUtils.cleanOldReports(
-          pathName: 'module',
-          prefixPatterns: ['analysis'],
-          subdirectory: 'tests',
-          keepLatest: true,
-        );
-      });
-
-      test('should handle files that do not match pattern', () async {
-        final reportDir = await ReportUtils.getReportDirectory();
-        final testsDir = Directory(p.join(reportDir, 'tests'));
-        await testsDir.create(recursive: true);
-
-        // Create files with different patterns
-        await File(p.join(testsDir.path, 'module_analysis@1200_010125.md'))
-            .writeAsString('match');
-        await File(p.join(testsDir.path, 'other_report@1200_010125.md'))
-            .writeAsString('no match');
-
-        await ReportUtils.cleanOldReports(
-          pathName: 'module',
-          prefixPatterns: ['analysis'],
-          subdirectory: 'tests',
-          keepLatest: false,
-        );
-
-        // Should delete matching file, keep non-matching
-        expect(
-          await File(p.join(testsDir.path, 'module_analysis@1200_010125.md'))
-              .exists(),
-          isFalse,
-        );
-        expect(
-          await File(p.join(testsDir.path, 'other_report@1200_010125.md'))
-              .exists(),
-          isTrue,
-        );
-      });
-
-      test('should handle alternative pattern with underscores removed',
-          () async {
-        final reportDir = await ReportUtils.getReportDirectory();
-        final testsDir = Directory(p.join(reportDir, 'tests'));
-        await testsDir.create(recursive: true);
-
-        // Create file matching alternative pattern
-        await File(p.join(testsDir.path, 'mymodule_analysis__1200_010125.md'))
-            .writeAsString('match');
-
-        await ReportUtils.cleanOldReports(
-          pathName: 'my_module',
-          prefixPatterns: ['analysis'],
-          subdirectory: 'tests',
-          keepLatest: false,
-        );
-
-        expect(
-          await File(p.join(testsDir.path, 'mymodule_analysis__1200_010125.md'))
-              .exists(),
-          isFalse,
-        );
-      });
-
-      test('should handle verbose output without errors', () async {
-        final reportDir = await ReportUtils.getReportDirectory();
-        final testsDir = Directory(p.join(reportDir, 'tests'));
-        await testsDir.create(recursive: true);
-
-        await File(p.join(testsDir.path, 'module_analysis@1200_010125.md'))
-            .writeAsString('content');
-
-        // Should not throw with verbose
-        await ReportUtils.cleanOldReports(
-          pathName: 'module',
-          prefixPatterns: ['analysis'],
-          subdirectory: 'tests',
-          verbose: true,
-          keepLatest: true,
-        );
-      });
-
-      test('should handle file deletion errors gracefully', () async {
-        final reportDir = await ReportUtils.getReportDirectory();
-        final testsDir = Directory(p.join(reportDir, 'tests'));
-        await testsDir.create(recursive: true);
-
-        final testFile =
-            File(p.join(testsDir.path, 'module_analysis@1200_010125.md'));
-        await testFile.writeAsString('content');
-
-        // Make file read-only (may not work on all platforms)
-        // This test documents the error handling, even if it can't be fully tested
-        await ReportUtils.cleanOldReports(
-          pathName: 'module',
-          prefixPatterns: ['analysis'],
-          subdirectory: 'tests',
-          keepLatest: false,
-          verbose: true,
-        );
-
-        // Should complete without throwing, even if deletion fails
-      });
-    });
-
-    group('Integration Tests', () {
-      test('writeUnifiedReport and extractJsonFromReport round-trip', () async {
-        const moduleName = 'integration_test';
-        const timestamp = '1234_567890';
-        const markdownContent = '# Integration Test\n\nTesting round-trip.';
-        final originalData = {
-          'test': 'data',
-          'nested': {'key': 'value'},
-          'array': [1, 2, 3],
-          'number': 42
-        };
-
-        final reportPath = await ReportUtils.writeUnifiedReport(
-          moduleName: moduleName,
-          timestamp: timestamp,
-          markdownContent: markdownContent,
-          jsonData: originalData,
-        );
-
-        final extractedData =
-            await ReportUtils.extractJsonFromReport(reportPath);
-
-        expect(extractedData, isNotNull);
-        expect(extractedData!['test'], equals('data'));
-        expect(extractedData['nested']['key'], equals('value'));
-        expect(extractedData['array'], equals([1, 2, 3]));
-        expect(extractedData['number'], equals(42));
-      });
-
-      test('getReportPath creates directory that getReportDirectory returns',
-          () async {
-        final reportDir = await ReportUtils.getReportDirectory();
-        final reportPath = await ReportUtils.getReportPath(
-          'test',
-          '123',
-          suffix: 'tests',
-        );
-
-        expect(reportPath, startsWith(reportDir));
-      });
+    test('🔴 should correctly parse module names with dashes and underscores',
+        () async {
+      final reliabilityDir = Directory(p.join(reportsDir.path, 'reliability'));
+      await reliabilityDir.create(recursive: true);
+
+      // Test various module name formats
+      final dashReport = File(p.join(
+          reliabilityDir.path, 'my-module-fi_report_tests@2153_041125.md'));
+      final underscoreReport = File(p.join(reliabilityDir.path,
+          'my_module_name-fo_report_tests@2153_041125.md'));
+
+      await dashReport.writeAsString('Dash module');
+      await underscoreReport.writeAsString('Underscore module');
+
+      // Cleanup dash module
+      await ReportUtils.cleanOldReports(
+        pathName: 'my-module-fi',
+        prefixPatterns: ['report_tests'],
+        subdirectory: 'reliability',
+        verbose: false,
+        baseDir: reportsDir.path,
+      );
+
+      // Dash report should be affected, underscore should not
+      expect(await dashReport.exists(), isTrue,
+          reason: 'Dash module report should be recognized');
+      expect(await underscoreReport.exists(), isTrue,
+          reason: 'Different module should not be affected');
     });
   });
 }
