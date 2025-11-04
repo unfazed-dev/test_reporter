@@ -1,0 +1,340 @@
+# SOP: Adding New Report Type
+
+**Estimated Time**: 1-2 hours
+**Token Budget**: 60-80K tokens
+**Difficulty**: Medium
+**🔴🟢♻️ TDD**: MANDATORY - Write tests for report generation first
+
+---
+
+## Overview
+
+This SOP guides you through adding a new report format or subdirectory using **Test-Driven Development**.
+
+**Example**: Adding XML reports alongside markdown and JSON
+
+**TDD Approach**:
+1. 🔴 Write failing test for new report format
+2. 🟢 Implement report generator minimally
+3. ♻️ Refactor and enhance while keeping tests green
+
+---
+
+## Step 0: 🔴 RED Phase - Write Failing Test
+
+**File**: `test/unit/utils/report_utils_test.dart`
+
+```dart
+test('should generate XML report', () {
+  final xmlReport = ReportGenerator.generateXML(testData);
+
+  expect(xmlReport, contains('<?xml version'));
+  expect(xmlReport, contains('<test-report>'));
+  // This will FAIL - generateXML doesn't exist yet
+});
+```
+
+Run test to confirm RED phase before implementing!
+
+---
+
+## Step 1: 🟢 GREEN Phase - Understand Current Report System
+
+Read `.agent/knowledge/report_system.md` for complete understanding of:
+- Report directory structure (`tests_reports/`)
+- Naming conventions (`{module}_{type}@{timestamp}.{format}`)
+- `ReportUtils` API
+- Cleanup logic
+
+---
+
+## Step 2: Choose Report Type
+
+### Option A: New Format for Existing Subdirectory
+
+Example: Add XML format to test analysis reports
+
+**Files affected**:
+- `lib/src/bin/analyze_tests_lib.dart` (add XML generation)
+
+### Option B: New Subdirectory for New Analysis Type
+
+Example: Add `performance/` subdirectory for performance reports
+
+**Files affected**:
+- Create new subdirectory in `tests_reports/performance/`
+- Update `ReportUtils` if needed
+- Update `.gitignore` if needed
+
+---
+
+## Step 3: Implement New Format (Option A)
+
+### 3.1 Create Generator Method
+
+```dart
+String generateXmlReport() {
+  final buffer = StringBuffer();
+
+  buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
+  buffer.writeln('<testReport>');
+  buffer.writeln('  <summary>');
+  buffer.writeln('    <totalTests>${testRuns.length}</totalTests>');
+  buffer.writeln('    <passedTests>$passedCount</passedTests>');
+  buffer.writeln('    <failedTests>$failedCount</failedTests>');
+  buffer.writeln('  </summary>');
+
+  buffer.writeln('  <failures>');
+  for (final failure in failures.entries) {
+    buffer.writeln('    <test name="${failure.key}">');
+    buffer.writeln('      <error>${failure.value.first.message}</error>');
+    buffer.writeln('    </test>');
+  }
+  buffer.writeln('  </failures>');
+
+  buffer.writeln('</testReport>');
+
+  return buffer.toString();
+}
+```
+
+### 3.2 Add to Report Generation
+
+```dart
+Future<void> generateReport() async {
+  // ... existing markdown and JSON generation
+
+  // Add XML report
+  final xml = generateXmlReport();
+  final xmlPath = '$reportDir/$subdir/${moduleName}_analysis@$timestamp.xml';
+  await File(xmlPath).writeAsString(xml);
+
+  print('   XML: $xmlPath');
+}
+```
+
+### 3.3 Update Cleanup Logic
+
+```dart
+await ReportUtils.cleanOldReports(
+  pathName: moduleName,
+  prefixPatterns: ['analysis'],  // Cleans .md, .json, .xml with this prefix
+  subdirectory: 'tests',
+  verbose: verbose,
+);
+```
+
+---
+
+## Step 4: Implement New Subdirectory (Option B)
+
+### 4.1 Create Directory Structure
+
+```dart
+Future<void> generateReport() async {
+  final reportDir = await ReportUtils.getReportDirectory();
+
+  // Create new subdirectory
+  final perfDir = Directory('$reportDir/performance');
+  if (!await perfDir.exists()) {
+    await perfDir.create(recursive: true);
+  }
+
+  // Generate reports
+  final mdPath = '$reportDir/performance/${moduleName}_performance@$timestamp.md';
+  final jsonPath = '$reportDir/performance/${moduleName}_performance@$timestamp.json';
+
+  await File(mdPath).writeAsString(markdown);
+  await File(jsonPath).writeAsString(json);
+}
+```
+
+### 4.2 Update ReportUtils Cleanup
+
+```dart
+await ReportUtils.cleanOldReports(
+  pathName: moduleName,
+  prefixPatterns: ['performance'],
+  subdirectory: 'performance',  // New subdirectory
+  verbose: verbose,
+);
+```
+
+### 4.3 Update .gitignore (if needed)
+
+```
+# Reports (generated)
+reports/
+tests_reports/
+```
+
+Already covers all subdirectories!
+
+---
+
+## Step 5: Document the New Report Type
+
+### 5.1 Update README.md
+
+Add to report output section:
+
+```markdown
+## Report Output
+
+All tools generate reports in the `tests_reports/` directory:
+
+\`\`\`
+tests_reports/
+├── tests/         # Test reliability reports
+├── coverage/      # Coverage analysis reports
+├── failures/      # Failed test extraction reports
+├── suite/         # Unified suite reports
+└── performance/   # Performance analysis reports  ← NEW
+\`\`\`
+```
+
+### 5.2 Update report_system.md
+
+**File**: `.agent/knowledge/report_system.md`
+
+Add subdirectory documentation:
+
+```markdown
+### performance/
+
+**Contains**: Performance analysis reports
+**Pattern**: `{module}_performance@{timestamp}.{md|json}`
+
+**Generated by**:
+- `dart run test_reporter:analyze_performance`
+```
+
+### 5.3 Update report_format_template.md
+
+Add examples for the new format.
+
+---
+
+## Step 6: Test the New Report Type
+
+### 6.1 Generate Test Reports
+
+```bash
+# Run the analyzer that generates your new report type
+dart run test_reporter:analyze_tests test/ --performance
+
+# Check the new reports
+ls -la tests_reports/performance/
+```
+
+### 6.2 Verify Cleanup
+
+```bash
+# Run multiple times
+dart run test_reporter:analyze_tests test/
+dart run test_reporter:analyze_tests test/
+dart run test_reporter:analyze_tests test/
+
+# Should only have latest report
+ls -la tests_reports/tests/
+```
+
+### 6.3 Validate Format
+
+For XML:
+```bash
+xmllint tests_reports/tests/test-fo_analysis@*.xml
+```
+
+For JSON:
+```bash
+cat tests_reports/tests/test-fo_analysis@*.json | jq .
+```
+
+---
+
+## Step 7: Commit Changes
+
+```bash
+dart analyze
+dart format .
+
+git add lib/src/bin/
+git add .agent/knowledge/report_system.md
+git add README.md
+
+git commit -m "feat: add XML report format"
+# or
+git commit -m "feat: add performance report subdirectory"
+```
+
+---
+
+## Common Report Formats
+
+### HTML Reports
+
+```dart
+String generateHtmlReport() {
+  return '''
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Analysis Report</title>
+  <style>
+    body { font-family: sans-serif; }
+    .success { color: green; }
+    .failure { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Test Analysis Report</h1>
+  <p>Total Tests: ${testRuns.length}</p>
+  <!-- Add more content -->
+</body>
+</html>
+''';
+}
+```
+
+### CSV Reports
+
+```dart
+String generateCsvReport() {
+  final buffer = StringBuffer();
+
+  // Header
+  buffer.writeln('Test Name,Status,Duration,Error');
+
+  // Data
+  for (final test in testRuns.entries) {
+    final name = test.key;
+    final status = test.value.passed ? 'PASS' : 'FAIL';
+    final duration = test.value.duration;
+    final error = test.value.error ?? '';
+
+    buffer.writeln('$name,$status,$duration,"$error"');
+  }
+
+  return buffer.toString();
+}
+```
+
+---
+
+## Checklist
+
+- [ ] Chose report type (new format or new subdirectory)
+- [ ] Implemented generator method
+- [ ] Added to report generation workflow
+- [ ] Updated cleanup logic
+- [ ] Tested report generation
+- [ ] Verified cleanup works
+- [ ] Validated format (if applicable)
+- [ ] Updated documentation
+- [ ] Committed changes
+
+---
+
+**Token usage**: ~60-70K tokens
+**Next steps**: Consider CI/CD integration for new format
