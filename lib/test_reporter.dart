@@ -15,6 +15,7 @@ export 'src/utils/constants.dart';
 export 'src/utils/extensions.dart';
 
 // Export utilities
+export 'src/utils/checklist_utils.dart';
 export 'src/utils/formatting_utils.dart';
 export 'src/utils/path_utils.dart';
 export 'src/utils/report_utils.dart';
