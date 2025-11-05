@@ -60,7 +60,7 @@ Phase 3: ⬜ NOT STARTED - Enhanced Features (validation, registry, docs)
 **File**: `lib/src/utils/path_resolver.dart`
 **Tests**: `test/unit/utils/path_resolver_test.dart`
 **Estimated Time**: 2 hours
-**Status**: ⬜ NOT STARTED
+**Status**: ✅ COMPLETE (2025-11-05)
 
 #### 🔴 RED Phase (30 min)
 
@@ -182,7 +182,7 @@ Phase 3: ⬜ NOT STARTED - Enhanced Features (validation, registry, docs)
 **File**: `lib/src/utils/module_identifier.dart`
 **Tests**: `test/unit/utils/module_identifier_test.dart`
 **Estimated Time**: 2 hours
-**Status**: ⬜ NOT STARTED
+**Status**: ✅ COMPLETE (2025-11-05)
 
 #### 🔴 RED Phase (30 min)
 
@@ -305,7 +305,7 @@ Phase 3: ⬜ NOT STARTED - Enhanced Features (validation, registry, docs)
 **File**: `lib/src/utils/report_manager.dart`
 **Tests**: `test/unit/utils/report_manager_test.dart`
 **Estimated Time**: 2-3 hours
-**Status**: ⬜ NOT STARTED
+**Status**: ✅ COMPLETE (2025-11-05)
 
 #### 🔴 RED Phase (1 hour)
 
@@ -503,8 +503,8 @@ Phase 3: ⬜ NOT STARTED - Enhanced Features (validation, registry, docs)
 **File**: `lib/src/bin/analyze_coverage_lib.dart`
 **Tests**: `test/integration/analyzers/coverage_analyzer_test.dart`
 **Estimated Time**: 2-2.5 hours
-**Status**: ⬜ NOT STARTED
-**Lines to Remove**: ~35 lines (_extractPathName) + cleanup code
+**Status**: ✅ COMPLETE (2025-11-05)
+**Lines Removed**: 67 lines (2200 → 2133)
 
 #### 🔴 RED Phase (30 min)
 
@@ -586,8 +586,8 @@ Phase 3: ⬜ NOT STARTED - Enhanced Features (validation, registry, docs)
 **File**: `lib/src/bin/analyze_tests_lib.dart`
 **Tests**: `test/integration/analyzers/test_analyzer_test.dart`
 **Estimated Time**: 2-2.5 hours
-**Status**: ⬜ NOT STARTED
-**Lines to Remove**: ~35 lines (_extractPathName) + ~20 lines (_cleanupOldReports)
+**Status**: ✅ COMPLETE (2025-11-05)
+**Lines Removed**: 32 lines (2694 → 2662)
 
 #### 🔴 RED Phase (30 min)
 
@@ -655,8 +655,8 @@ Phase 3: ⬜ NOT STARTED - Enhanced Features (validation, registry, docs)
 **File**: `lib/src/bin/analyze_suite_lib.dart`
 **Tests**: `test/integration/analyzers/suite_analyzer_test.dart`
 **Estimated Time**: 2-2.5 hours
-**Status**: ⬜ NOT STARTED
-**Lines to Remove**: ~30 (detectSourcePath) + ~20 (detectTestPath) + ~25 (extractModuleName) + ~30 (manual deletion) = ~105 lines
+**Status**: ✅ COMPLETE (2025-11-05)
+**Lines Removed**: 71 lines (1121 → 1050)
 
 #### 🔴 RED Phase (30 min)
 
@@ -729,8 +729,8 @@ Phase 3: ⬜ NOT STARTED - Enhanced Features (validation, registry, docs)
 **File**: `lib/src/bin/extract_failures_lib.dart`
 **Tests**: `test/integration/analyzers/failures_extractor_test.dart`
 **Estimated Time**: 1.5-2 hours
-**Status**: ⬜ NOT STARTED
-**Lines to Remove**: ~20 lines (module naming + cleanup)
+**Status**: ✅ COMPLETE (2025-11-05)
+**Lines Changed**: Module naming simplified, consistent with other tools
 
 #### 🔴 RED Phase (30 min)
 
