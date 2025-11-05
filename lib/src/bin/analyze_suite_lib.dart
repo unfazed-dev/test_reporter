@@ -32,6 +32,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
+import 'package:test_reporter/src/utils/module_identifier.dart';
+import 'package:test_reporter/src/utils/path_resolver.dart';
 import 'package:test_reporter/src/utils/report_utils.dart';
 
 /// Helper to safely convert numeric values to double
@@ -64,95 +66,22 @@ class TestOrchestrator {
 
   /// Extract module name from test path for report naming
   String extractModuleName() {
-    final path = testPath.replaceAll(r'\', '/').replaceAll(RegExp(r'/$'), '');
-    final segments = path.split('/').where((s) => s.isNotEmpty).toList();
-
-    if (segments.isEmpty) return 'all_tests-fo';
-
-    var moduleName = segments.last;
-    String suffix;
-
-    // If it's a file, extract the test name properly
-    if (moduleName.endsWith('.dart')) {
-      moduleName = moduleName.substring(0, moduleName.length - 5);
-      if (moduleName.endsWith('_test')) {
-        moduleName = moduleName.substring(0, moduleName.length - 5);
-      }
-      suffix = '-fi';
-    } else if (moduleName == 'test') {
-      return 'test-fo';
-    } else {
-      // It's a folder
-      suffix = '-fo';
-    }
-
-    return '$moduleName$suffix';
+    return ModuleIdentifier.getQualifiedModuleName(testPath);
   }
 
   /// Detect source path from test path for coverage analysis
   ///
-  /// Maps test paths to their corresponding source paths:
-  /// - `test/foo_test.dart` → `lib/foo.dart` (if exists) or `lib/src` (fallback)
-  /// - `test/integration/` → `lib/integration/` (if exists) or `lib/src` (fallback)
-  /// - `lib/src/utils` → `lib/src/utils` (pass through)
-  ///
+  /// Maps test paths to their corresponding source paths using PathResolver.
   /// This ensures coverage analysis runs on SOURCE code, not test files.
   String detectSourcePath(String inputPath) {
-    String sourcePath = inputPath;
-
-    if (inputPath.startsWith('test')) {
-      // Test path provided - derive source path
-      sourcePath = inputPath.replaceFirst('test', 'lib');
-
-      // If it's a test file, remove _test suffix
-      if (sourcePath.endsWith('_test.dart')) {
-        sourcePath = sourcePath.replaceFirst('_test.dart', '.dart');
-      }
-
-      // Special case: 'test/' -> 'lib/src' (not just 'lib/')
-      if (sourcePath == 'lib/' || sourcePath == 'lib') {
-        sourcePath = 'lib/src';
-      } else {
-        // Check if derived path exists, otherwise default to lib/src
-        final derivedFile = File(sourcePath);
-        final derivedDir = Directory(sourcePath);
-
-        if (!derivedFile.existsSync() && !derivedDir.existsSync()) {
-          // Path doesn't exist, use lib/src as default
-          sourcePath = 'lib/src';
-        }
-      }
-    } else if (inputPath == 'lib' || inputPath == 'lib/') {
-      // If given just 'lib' or 'lib/', use 'lib/src'
-      sourcePath = 'lib/src';
-    }
-
-    return sourcePath;
+    return PathResolver.inferSourcePath(inputPath) ?? 'lib/src';
   }
 
   /// Detect test path from source path for test analysis
   ///
-  /// Maps source paths to their corresponding test paths:
-  /// - `lib/foo.dart` → `test/foo_test.dart` (adds _test suffix)
-  /// - `lib/src/utils/` → `test/src/utils/` (mirrors directory structure)
-  /// - `test/integration/` → `test/integration/` (pass through)
+  /// Maps source paths to their corresponding test paths using PathResolver.
   String detectTestPath(String inputPath) {
-    String testPath = inputPath;
-
-    if (inputPath.startsWith('lib')) {
-      // Source path provided - derive test path
-      testPath = inputPath.replaceFirst('lib', 'test');
-
-      // If it's a specific file (ends with .dart but not _test.dart), add _test suffix
-      if (testPath.endsWith('.dart') && !testPath.endsWith('_test.dart')) {
-        testPath = testPath.replaceFirst('.dart', '_test.dart');
-      }
-    } else if (!inputPath.startsWith('test')) {
-      // Default to 'test/' if ambiguous
-      testPath = 'test/';
-    }
-
-    return testPath;
+    return PathResolver.inferTestPath(inputPath) ?? 'test/';
   }
 
   Future<void> runAll() async {
