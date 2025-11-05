@@ -61,6 +61,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:test_reporter/src/utils/module_identifier.dart';
 import 'package:test_reporter/src/utils/report_utils.dart';
 
 class TestAnalyzer {
@@ -1237,8 +1238,10 @@ class TestAnalyzer {
           '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}_'
           '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
 
-      // Extract meaningful name from tested paths
-      final pathName = _extractPathName();
+      // Extract qualified module name from test path
+      final moduleName = targetFiles.isNotEmpty
+          ? ModuleIdentifier.getQualifiedModuleName(targetFiles.first)
+          : 'all-tests-pr';
 
       // Build JSON export with all key metrics
       final jsonData = <String, dynamic>{
@@ -1375,7 +1378,7 @@ class TestAnalyzer {
 
       // Write unified report
       final reportPath = await ReportUtils.writeUnifiedReport(
-        moduleName: pathName,
+        moduleName: moduleName,
         timestamp: timestamp,
         markdownContent: report.toString(),
         jsonData: jsonData,
@@ -1387,7 +1390,7 @@ class TestAnalyzer {
 
       // Generate failed report if there are failures or flaky tests
       if (consistentFailures.isNotEmpty || flakyTests.isNotEmpty) {
-        await _saveFailedReport(timestamp, pathName, jsonData);
+        await _saveFailedReport(timestamp, moduleName, jsonData);
       }
 
       // Clean up old reports AFTER generating new ones
@@ -2329,17 +2332,19 @@ class TestAnalyzer {
 
   /// Clean up old reports - keeps only the latest report for each module
   Future<void> _cleanupOldReports() async {
-    // Extract meaningful name from tested paths
-    var pathName = _extractPathName();
+    // Extract qualified module name from test path
+    final moduleName = targetFiles.isNotEmpty
+        ? ModuleIdentifier.getQualifiedModuleName(targetFiles.first)
+        : 'all-tests-pr';
 
     // Clean old reports - keep only latest report per module
     if (verbose) {
-      print('  [DEBUG] Cleaning old reports for pathName=$pathName');
+      print('  [DEBUG] Cleaning old reports for moduleName=$moduleName');
     }
 
     // Clean test reports in reliability/ subdirectory
     await ReportUtils.cleanOldReports(
-      pathName: pathName,
+      pathName: moduleName,
       prefixPatterns: [
         'report_tests', // Current format: modulename-fi_report_tests@timestamp
       ],
@@ -2349,50 +2354,13 @@ class TestAnalyzer {
 
     // Clean failure reports in failures/ subdirectory
     await ReportUtils.cleanOldReports(
-      pathName: pathName,
+      pathName: moduleName,
       prefixPatterns: [
         'report_failures', // Failed test reports
       ],
       subdirectory: 'failures',
       verbose: verbose,
     );
-  }
-
-  String _extractPathName() {
-    if (targetFiles.isNotEmpty) {
-      // Extract just the module name (last part of the path)
-      final path = targetFiles.first
-          .replaceAll(r'\', '/')
-          .replaceAll(RegExp(r'/$'), ''); // Remove trailing slash
-      final segments = path.split('/').where((s) => s.isNotEmpty).toList();
-
-      if (segments.isEmpty) {
-        return 'all_tests-fo';
-      }
-
-      var pathName = segments.last;
-      String suffix;
-
-      // If it's a file (ends with .dart), extract the test name properly
-      if (pathName.endsWith('.dart')) {
-        // Remove .dart extension
-        pathName = pathName.substring(0, pathName.length - 5);
-        // Remove _test suffix if present
-        if (pathName.endsWith('_test')) {
-          pathName = pathName.substring(0, pathName.length - 5);
-        }
-        suffix = '-fi';
-      } else if (pathName == 'test') {
-        // Special case: if analyzing just the 'test' folder, use 'all_tests'
-        return 'test-fo';
-      } else {
-        // It's a folder
-        suffix = '-fo';
-      }
-
-      return '$pathName$suffix';
-    }
-    return 'all_tests-fo';
   }
 
   /// Watch mode for continuous testing
