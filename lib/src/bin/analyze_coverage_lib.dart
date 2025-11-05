@@ -31,6 +31,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:test_reporter/src/utils/module_identifier.dart';
+import 'package:test_reporter/src/utils/path_resolver.dart';
 import 'package:test_reporter/src/utils/report_utils.dart';
 
 class CoverageThresholds {
@@ -849,8 +851,8 @@ class CoverageAnalyzer {
         '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}_'
         '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
 
-    // Extract meaningful name from tested path early for use throughout
-    final pathName = _extractPathName();
+    // Extract qualified module name from test path
+    final moduleName = ModuleIdentifier.getQualifiedModuleName(testPath);
 
     // NOTE: Cleanup disabled to retain reports for unified report linking
     // Reports are managed by run_all.dart orchestrator
@@ -1218,7 +1220,7 @@ class CoverageAnalyzer {
       report.writeln();
 
       final jsonPath =
-          'analyzer/reports/test_coverages/${pathName}_data@$simpleTimestamp.json';
+          'analyzer/reports/test_coverages/${moduleName}_data@$simpleTimestamp.json';
       report.writeln('- **JSON Report:** [`$jsonPath`]($jsonPath)');
       report.writeln('  - Machine-readable format for CI/CD integration');
 
@@ -1331,7 +1333,7 @@ class CoverageAnalyzer {
 
     // Write unified report
     final reportPath = await ReportUtils.writeUnifiedReport(
-      moduleName: pathName,
+      moduleName: moduleName,
       timestamp: simpleTimestamp,
       markdownContent: report.toString(),
       jsonData: jsonData,
@@ -1343,7 +1345,7 @@ class CoverageAnalyzer {
 
     // Clean up old coverage reports, keeping only the latest
     await ReportUtils.cleanOldReports(
-      pathName: pathName,
+      pathName: moduleName,
       prefixPatterns: ['report_coverage'],
       subdirectory: 'quality',
     );
@@ -1726,11 +1728,11 @@ class CoverageAnalyzer {
   /// Reports are now managed by run_all.dart orchestrator
   // Future<void> _cleanupOldReports() async {
   //   // Extract meaningful name from tested path
-  //   final pathName = _extractPathName();
+  //   final moduleName = ModuleIdentifier.getQualifiedModuleName(testPath);
   //
   //   // Clean old reports using unified naming
   //   await ReportUtils.cleanOldReports(
-  //     pathName: pathName,
+  //     pathName: moduleName,
   //     prefixPatterns: [
   //       'test_report_cov', // New unified format
   //       'tc', // Old coverage_tool format
@@ -1739,41 +1741,6 @@ class CoverageAnalyzer {
   //     verbose: true,
   //   );
   // }
-
-  String _extractPathName() {
-    // Extract module name from the TEST path for consistency with run_all.dart naming
-    // This ensures cleanup works properly across all report types
-    final path = testPath
-        .replaceAll(r'\', '/')
-        .replaceAll(RegExp(r'/$'), ''); // Remove trailing slash
-    final segments = path.split('/').where((s) => s.isNotEmpty).toList();
-
-    if (segments.isEmpty) {
-      return 'all_tests-fo';
-    }
-
-    var pathName = segments.last;
-    String suffix;
-
-    // Determine if it's a file or folder
-    if (pathName.endsWith('.dart')) {
-      // It's a file - remove .dart extension and add -fi suffix
-      pathName = pathName.substring(0, pathName.length - 5);
-      // Remove _test suffix if present
-      if (pathName.endsWith('_test')) {
-        pathName = pathName.substring(0, pathName.length - 5);
-      }
-      suffix = '-fi';
-    } else if (pathName == 'test') {
-      // Special case: if analyzing entire 'test' folder
-      return 'test-fo';
-    } else {
-      // It's a folder like 'src', 'models', 'ui'
-      suffix = '-fo';
-    }
-
-    return '$pathName$suffix';
-  }
 
   /// Export coverage data as JSON
   Future<void> exportJsonReport() async {
@@ -2047,41 +2014,8 @@ void main(List<String> args) async {
     if (nonFlagArgs.length > 1) {
       testPath = nonFlagArgs[1];
     } else {
-      // Auto-derive test path based on source path
-      String derivedTestPath;
-
-      if (firstArg.startsWith('lib/src/')) {
-        // For lib/src/X, map to test/X (remove the src/ part)
-        final moduleName = firstArg.substring('lib/src/'.length);
-        derivedTestPath = 'test/$moduleName';
-      } else if (firstArg.startsWith('lib/')) {
-        // For lib/X, map to test/X
-        derivedTestPath = firstArg.replaceFirst('lib/', 'test/');
-      } else if (firstArg.startsWith('test/')) {
-        // Already a test path
-        derivedTestPath = firstArg;
-      } else {
-        // For any other directory (bin/, scripts/, etc.), map to test/<directory>/
-        // e.g., bin/ → test/bin/, scripts/auth/ → test/scripts/auth/
-        derivedTestPath = 'test/$firstArg';
-      }
-
-      // Check if derived path exists
-      final derivedFile = File(derivedTestPath);
-      final derivedDir = Directory(derivedTestPath);
-      if (derivedFile.existsSync() || derivedDir.existsSync()) {
-        testPath = derivedTestPath;
-      } else {
-        // Try removing trailing slash and check again
-        final withoutSlash = derivedTestPath.replaceAll(RegExp(r'/$'), '');
-        if (Directory(withoutSlash).existsSync() ||
-            File(withoutSlash).existsSync()) {
-          testPath = withoutSlash;
-        } else {
-          // Default to test/ directory
-          testPath = 'test/';
-        }
-      }
+      // Auto-derive test path using PathResolver
+      testPath = PathResolver.inferTestPath(firstArg);
     }
   }
 
