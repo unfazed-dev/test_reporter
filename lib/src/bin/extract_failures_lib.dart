@@ -32,6 +32,7 @@ import 'dart:io';
 
 // CLI argument parsing
 import 'package:args/args.dart';
+import 'package:test_reporter/src/utils/module_identifier.dart';
 import 'package:test_reporter/src/utils/report_utils.dart';
 
 /// Represents a failed test with detailed information
@@ -724,9 +725,8 @@ class FailedTestExtractor {
       }
     }
 
-    // Extract module name from test path
-    final pathParts = testPath.split('/');
-    final moduleName = pathParts.length > 1 ? pathParts.last : 'tests';
+    // Extract qualified module name from test path
+    final moduleName = ModuleIdentifier.getQualifiedModuleName(testPath);
 
     // Format timestamp as HHMM_DDMMYY
     final simpleTimestamp =
@@ -735,7 +735,7 @@ class FailedTestExtractor {
 
     // Write unified report
     final reportPath = await ReportUtils.writeUnifiedReport(
-      moduleName: '$moduleName-fo',
+      moduleName: moduleName,
       timestamp: simpleTimestamp,
       markdownContent: markdown.toString(),
       jsonData: jsonData,
@@ -745,7 +745,7 @@ class FailedTestExtractor {
 
     // Clean old reports (keep only latest per module)
     await ReportUtils.cleanOldReports(
-      pathName: '$moduleName-fo',
+      pathName: moduleName,
       prefixPatterns: ['report_failures'],
       subdirectory: 'failures',
       verbose: _args['verbose'] as bool,
