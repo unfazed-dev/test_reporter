@@ -596,7 +596,8 @@ void main() {
         // Mock file existence by using actual project files
         // For unit test, we can test the logic without file system checks
         // by using paths we know exist
-        final sourcePath = orchestrator.detectSourcePath('lib/src/bin/analyze_tests_lib.dart');
+        final sourcePath =
+            orchestrator.detectSourcePath('lib/src/bin/analyze_tests_lib.dart');
 
         expect(sourcePath, equals('lib/src/bin/analyze_tests_lib.dart'));
       });
@@ -609,9 +610,12 @@ void main() {
         expect(sourcePath, equals('lib/src'));
       });
 
-      test('should default to lib/src when test path has no corresponding source', () {
+      test(
+          'should default to lib/src when test path has no corresponding source',
+          () {
         final orchestrator = TestOrchestrator(testPath: 'test/fixtures');
-        final sourcePath = orchestrator.detectSourcePath('test/fixtures/quick_slow_test.dart');
+        final sourcePath =
+            orchestrator.detectSourcePath('test/fixtures/quick_slow_test.dart');
 
         // test/fixtures/quick_slow_test.dart -> lib/fixtures/quick_slow.dart (doesn't exist)
         // Should fall back to lib/src
@@ -663,7 +667,8 @@ void main() {
       });
 
       test('should not add _test suffix if already present', () {
-        final orchestrator = TestOrchestrator(testPath: 'lib/src/foo_test.dart');
+        final orchestrator =
+            TestOrchestrator(testPath: 'lib/src/foo_test.dart');
         final testPath = orchestrator.detectTestPath('test/foo_test.dart');
 
         expect(testPath, equals('test/foo_test.dart'));

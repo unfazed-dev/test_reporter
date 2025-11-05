@@ -52,6 +52,9 @@ class TestOrchestrator {
     this.performance = false,
     this.verbose = false,
     this.parallel = false,
+    this.explicitModuleName,
+    this.testPathOverride,
+    this.sourcePathOverride,
   });
 
   final String testPath;
@@ -59,14 +62,18 @@ class TestOrchestrator {
   final bool performance;
   final bool verbose;
   final bool parallel;
+  final String? explicitModuleName;
+  final String? testPathOverride;
+  final String? sourcePathOverride;
 
   final Map<String, dynamic> results = {};
   final List<String> failures = [];
   final Map<String, String> reportPaths = {};
 
-  /// Extract module name from test path for report naming
+  /// Extract module name from test path for report naming (or use explicit override)
   String extractModuleName() {
-    return ModuleIdentifier.getQualifiedModuleName(testPath);
+    return explicitModuleName ??
+        ModuleIdentifier.getQualifiedModuleName(testPath);
   }
 
   /// Detect source path from test path for coverage analysis

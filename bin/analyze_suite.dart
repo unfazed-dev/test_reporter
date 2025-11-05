@@ -24,6 +24,18 @@ void main(List<String> arguments) async {
       help: 'Number of test runs for flaky detection',
       defaultsTo: '3',
     )
+    ..addOption(
+      'test-path',
+      help: 'Explicit test path override (v3.0)',
+    )
+    ..addOption(
+      'source-path',
+      help: 'Explicit source path override (v3.0)',
+    )
+    ..addOption(
+      'module-name',
+      help: 'Override module name for reports (v3.0)',
+    )
     ..addFlag(
       'performance',
       help: 'Enable performance profiling',
@@ -71,12 +83,39 @@ void main(List<String> arguments) async {
     testPath = args['path'] as String;
   }
 
+  // Validate test path exists
+  final testDir = Directory(testPath);
+  if (!testDir.existsSync()) {
+    print('❌ Error: Test path does not exist\n');
+    print('Specified path: $testPath');
+    print('  Status: ❌ does not exist');
+    print('');
+    print('💡 Usage Examples:');
+    print('  # Analyze all tests');
+    print('  dart run test_reporter:analyze_suite test/');
+    print('');
+    print('  # Analyze specific test directory');
+    print('  dart run test_reporter:analyze_suite test/integration/');
+    print('');
+    print('  # With explicit overrides');
+    print(
+        '  dart run test_reporter:analyze_suite test/ --test-path=test/ --source-path=lib/src/');
+    print('');
+    print('  # With module name override');
+    print(
+        '  dart run test_reporter:analyze_suite test/ --module-name=my-suite');
+    exit(2);
+  }
+
   final orchestrator = TestOrchestrator(
     testPath: testPath,
     runs: int.parse(args['runs'] as String),
     performance: args['performance'] as bool,
     verbose: args['verbose'] as bool,
     parallel: args['parallel'] as bool,
+    explicitModuleName: args['module-name'] as String?,
+    testPathOverride: args['test-path'] as String?,
+    sourcePathOverride: args['source-path'] as String?,
   );
 
   try {

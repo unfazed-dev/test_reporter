@@ -135,6 +135,10 @@ class FailedTestExtractor {
             'Output directory for reports (deprecated - now uses test_analyzer_reports/failed/)',
         defaultsTo: '',
       )
+      ..addOption(
+        'module-name',
+        help: 'Override module name for reports (v3.0)',
+      )
       ..addFlag(
         'verbose',
         abbr: 'v',
@@ -189,11 +193,40 @@ class FailedTestExtractor {
       exit(1);
     }
 
-    final testPath = testPaths.first;
-    if (!Directory(testPath).existsSync() && !File(testPath).existsSync()) {
-      print('❌ Error: Test path "$testPath" does not exist');
-      exit(1);
+    // Validate test paths exist
+    final invalidPaths = <String>[];
+    for (final testPath in testPaths) {
+      final file = File(testPath);
+      final dir = Directory(testPath);
+      if (!file.existsSync() && !dir.existsSync()) {
+        invalidPaths.add(testPath);
+      }
     }
+
+    if (invalidPaths.isNotEmpty) {
+      print('❌ Error: Invalid test paths detected\n');
+      print('The following paths do not exist:');
+      for (final path in invalidPaths) {
+        print('  ❌ $path');
+      }
+      print('');
+      print('💡 Usage Examples:');
+      print('  # Extract failures from all tests');
+      print('  dart run test_reporter:extract_failures test/');
+      print('');
+      print('  # Extract from specific directory');
+      print('  dart run test_reporter:extract_failures test/unit/');
+      print('');
+      print('  # List failures only (no rerun)');
+      print('  dart run test_reporter:extract_failures test/ --list-only');
+      print('');
+      print('  # With module name override');
+      print(
+          '  dart run test_reporter:extract_failures test/ --module-name=my-tests');
+      exit(2);
+    }
+
+    final testPath = testPaths.first;
 
     print('🔍 Failed Test Extractor - Analyzing test failures\n');
 
@@ -725,8 +758,10 @@ class FailedTestExtractor {
       }
     }
 
-    // Extract qualified module name from test path
-    final moduleName = ModuleIdentifier.getQualifiedModuleName(testPath);
+    // Extract qualified module name from test path (or use explicit override)
+    final explicitModuleName = _args['module-name'] as String?;
+    final moduleName =
+        explicitModuleName ?? ModuleIdentifier.getQualifiedModuleName(testPath);
 
     // Format timestamp as HHMM_DDMMYY
     final simpleTimestamp =

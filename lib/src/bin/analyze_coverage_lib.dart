@@ -83,6 +83,7 @@ class CoverageAnalyzer {
     this.excludePatterns = const [],
     CoverageThresholds? thresholds,
     this.baselineFile,
+    this.explicitModuleName,
   }) : thresholds = thresholds ?? CoverageThresholds();
   final String libPath;
   final String testPath;
@@ -98,6 +99,7 @@ class CoverageAnalyzer {
   final List<String> excludePatterns;
   final CoverageThresholds thresholds;
   final String? baselineFile;
+  final String? explicitModuleName;
 
   // Track if thresholds were violated
   bool thresholdViolation = false;
@@ -851,8 +853,9 @@ class CoverageAnalyzer {
         '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}_'
         '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
 
-    // Extract qualified module name from test path
-    final moduleName = ModuleIdentifier.getQualifiedModuleName(testPath);
+    // Extract qualified module name from test path (or use explicit override)
+    final moduleName =
+        explicitModuleName ?? ModuleIdentifier.getQualifiedModuleName(testPath);
 
     // NOTE: Cleanup disabled to retain reports for unified report linking
     // Reports are managed by run_all.dart orchestrator
@@ -1979,21 +1982,31 @@ void main(List<String> args) async {
   // Parse paths - allow any source directory (bin/, lib/, scripts/, etc.)
   String? libPath;
   String? testPath;
+  String? explicitModuleName;
 
   // Collect non-flag arguments
   final nonFlagArgs = <String>[];
   for (var i = 0; i < args.length; i++) {
-    if (args[i] == '--lib' && i + 1 < args.length) {
+    // Support both --lib and --source-path (aliases)
+    if ((args[i] == '--lib' || args[i] == '--source-path') &&
+        i + 1 < args.length) {
       libPath = args[i + 1];
       i++; // Skip the next arg since we consumed it
-    } else if (args[i] == '--test' && i + 1 < args.length) {
+    } else if ((args[i] == '--test' || args[i] == '--test-path') &&
+        i + 1 < args.length) {
       testPath = args[i + 1];
+      i++; // Skip the next arg since we consumed it
+    } else if (args[i] == '--module-name' && i + 1 < args.length) {
+      explicitModuleName = args[i + 1];
       i++; // Skip the next arg since we consumed it
     } else if (!args[i].startsWith('--')) {
       // Check if previous arg was a flag that takes a value
       final isPreviousFlag = i > 0 &&
           (args[i - 1] == '--lib' ||
+              args[i - 1] == '--source-path' ||
               args[i - 1] == '--test' ||
+              args[i - 1] == '--test-path' ||
+              args[i - 1] == '--module-name' ||
               args[i - 1] == '--exclude' ||
               args[i - 1] == '--baseline' ||
               args[i - 1].startsWith('--min-coverage') ||
@@ -2023,6 +2036,31 @@ void main(List<String> args) async {
   libPath ??= 'lib/src';
   testPath ??= 'test';
 
+  // Validate paths exist before proceeding
+  if (!PathResolver.validatePaths(testPath, libPath)) {
+    print('❌ Error: Invalid paths detected\n');
+    print('Resolved Paths:');
+    print('  📂 Source path: $libPath');
+    final libExists = Directory(libPath).existsSync();
+    print('     Status: ${libExists ? "✅ exists" : "❌ does not exist"}');
+    print('  📂 Test path: $testPath');
+    final testExists = Directory(testPath).existsSync();
+    print('     Status: ${testExists ? "✅ exists" : "❌ does not exist"}');
+    print('');
+    print('💡 Usage Examples:');
+    print('  # Analyze with auto-detected paths');
+    print('  dart run test_reporter:analyze_coverage test/');
+    print('');
+    print('  # Explicit paths');
+    print(
+        '  dart run test_reporter:analyze_coverage --source-path=lib/src --test-path=test/');
+    print('');
+    print('  # With module name override');
+    print(
+        '  dart run test_reporter:analyze_coverage test/ --module-name=my-module');
+    exit(2);
+  }
+
   // Print usage if no valid paths
   if (args.contains('--help') || args.contains('-h')) {
     print('Usage: dart coverage_tool.dart [options] [module_path]');
@@ -2033,6 +2071,11 @@ void main(List<String> args) async {
     print('  --fix                 Generate missing test cases automatically');
     print('  --no-report           Skip generating coverage report');
     print('  --help, -h            Show this help message');
+    print('');
+    print('Path Control (v3.0):');
+    print('  --source-path <path>  Explicit source path (alias for --lib)');
+    print('  --test-path <path>    Explicit test path (alias for --test)');
+    print('  --module-name <name>  Override module name for reports');
     print('');
     print('Advanced Options (v2.0):');
     print('  --branch              Include branch coverage analysis');
@@ -2106,6 +2149,7 @@ void main(List<String> args) async {
       failOnDecrease: failOnDecrease,
     ),
     baselineFile: baselineFile,
+    explicitModuleName: explicitModuleName,
   );
 
   try {

@@ -94,7 +94,8 @@ void main() {
 
       expect(
         context.baseFilename,
-        equals('auth-service-fo_analyze-coverage_quality@20251104-143500-test-id'),
+        equals(
+            'auth-service-fo_analyze-coverage_quality@20251104-143500-test-id'),
       );
     });
   });
@@ -117,7 +118,8 @@ void main() {
         context.timestamp.isAfter(before.subtract(Duration(seconds: 1))),
         isTrue,
       );
-      expect(context.timestamp.isBefore(after.add(Duration(seconds: 1))), isTrue);
+      expect(
+          context.timestamp.isBefore(after.add(Duration(seconds: 1))), isTrue);
     });
 
     test('should generate unique report IDs', () {
@@ -179,7 +181,8 @@ void main() {
 
       expect(
         ReportManager.generateFilename(context, 'md'),
-        equals('auth-service-fo_analyze-coverage_quality@20251104-143500-test-id.md'),
+        equals(
+            'auth-service-fo_analyze-coverage_quality@20251104-143500-test-id.md'),
       );
     });
 
@@ -194,7 +197,8 @@ void main() {
 
       expect(
         ReportManager.generateFilename(context, 'json'),
-        equals('auth-fo_analyze-tests_reliability@20251104-154500-test-id.json'),
+        equals(
+            'auth-fo_analyze-tests_reliability@20251104-154500-test-id.json'),
       );
     });
   });

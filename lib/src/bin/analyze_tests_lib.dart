@@ -80,6 +80,7 @@ class TestAnalyzer {
     this.dependencyAnalysis = false,
     this.mutationTesting = false,
     this.impactAnalysis = false,
+    this.explicitModuleName,
   });
   // Terminal colors
   static const String reset = '\x1B[0m';
@@ -122,6 +123,7 @@ class TestAnalyzer {
   final bool dependencyAnalysis;
   final bool mutationTesting;
   final bool impactAnalysis;
+  final String? explicitModuleName;
 
   Future<void> run() async {
     _printHeader();
@@ -1238,10 +1240,11 @@ class TestAnalyzer {
           '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}_'
           '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
 
-      // Extract qualified module name from test path
-      final moduleName = targetFiles.isNotEmpty
-          ? ModuleIdentifier.getQualifiedModuleName(targetFiles.first)
-          : 'all-tests-pr';
+      // Extract qualified module name from test path (or use explicit override)
+      final moduleName = explicitModuleName ??
+          (targetFiles.isNotEmpty
+              ? ModuleIdentifier.getQualifiedModuleName(targetFiles.first)
+              : 'all-tests-pr');
 
       // Build JSON export with all key metrics
       final jsonData = <String, dynamic>{
@@ -2332,10 +2335,11 @@ class TestAnalyzer {
 
   /// Clean up old reports - keeps only the latest report for each module
   Future<void> _cleanupOldReports() async {
-    // Extract qualified module name from test path
-    final moduleName = targetFiles.isNotEmpty
-        ? ModuleIdentifier.getQualifiedModuleName(targetFiles.first)
-        : 'all-tests-pr';
+    // Extract qualified module name from test path (or use explicit override)
+    final moduleName = explicitModuleName ??
+        (targetFiles.isNotEmpty
+            ? ModuleIdentifier.getQualifiedModuleName(targetFiles.first)
+            : 'all-tests-pr');
 
     // Clean old reports - keep only latest report per module
     if (verbose) {
@@ -2575,13 +2579,66 @@ void main(List<String> args) async {
     }
   }
 
+  // Parse explicit module name override
+  String? explicitModuleName;
+  for (var i = 0; i < args.length; i++) {
+    if (args[i] == '--module-name' && i + 1 < args.length) {
+      explicitModuleName = args[i + 1];
+      break;
+    }
+  }
+
   if (help) {
     _printUsage();
     return;
   }
 
-  // Get target files (non-flag arguments)
-  final targetFiles = args.where((arg) => !arg.startsWith('-')).toList();
+  // Get target files (non-flag arguments, excluding --module-name value)
+  final targetFiles = <String>[];
+  for (var i = 0; i < args.length; i++) {
+    if (!args[i].startsWith('-')) {
+      // Skip if previous arg was --module-name
+      if (i > 0 && args[i - 1] == '--module-name') {
+        continue;
+      }
+      targetFiles.add(args[i]);
+    }
+  }
+
+  // Validate target files/directories exist
+  if (targetFiles.isNotEmpty) {
+    final invalidPaths = <String>[];
+    for (final target in targetFiles) {
+      final file = File(target);
+      final dir = Directory(target);
+      if (!file.existsSync() && !dir.existsSync()) {
+        invalidPaths.add(target);
+      }
+    }
+
+    if (invalidPaths.isNotEmpty) {
+      print('❌ Error: Invalid test paths detected\n');
+      print('The following paths do not exist:');
+      for (final path in invalidPaths) {
+        print('  ❌ $path');
+      }
+      print('');
+      print('💡 Usage Examples:');
+      print('  # Analyze all tests');
+      print('  dart run test_reporter:analyze_tests');
+      print('');
+      print('  # Analyze specific directory');
+      print('  dart run test_reporter:analyze_tests test/unit');
+      print('');
+      print('  # Analyze specific file');
+      print('  dart run test_reporter:analyze_tests test/my_test.dart');
+      print('');
+      print('  # With module name override');
+      print(
+          '  dart run test_reporter:analyze_tests test/ --module-name=my-tests');
+      exit(2);
+    }
+  }
 
   final analyzer = TestAnalyzer(
     runCount: runCount,
@@ -2598,6 +2655,7 @@ void main(List<String> args) async {
     dependencyAnalysis: dependencyAnalysis,
     mutationTesting: mutationTesting,
     impactAnalysis: impactAnalysis,
+    explicitModuleName: explicitModuleName,
   );
 
   await analyzer.run();
@@ -2615,6 +2673,7 @@ Options:
   --performance, -p    Track and report test performance metrics
   --watch, -w          Watch for changes and re-run analysis
   --parallel           Run tests in parallel for faster execution
+  --module-name <name> Override module name for reports (v3.0)
   --dependencies, -d   Analyze test dependency graph
   --mutation, -m       Run mutation testing to verify test effectiveness
   --impact             Analyze test impact based on code changes
