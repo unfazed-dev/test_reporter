@@ -622,31 +622,8 @@ class TestOrchestrator {
 
       // Delete intermediate reports (coverage and tests)
       // The suite report already contains all their data in embedded JSON
-      if (verbose) print('\n🧹 Cleaning up intermediate reports...');
-
-      if (reportPaths.containsKey('coverage')) {
-        try {
-          final coverageFile = File(reportPaths['coverage']!);
-          if (await coverageFile.exists()) {
-            await coverageFile.delete();
-            if (verbose) print('  🗑️  Deleted intermediate coverage report');
-          }
-        } catch (e) {
-          if (verbose) print('  ⚠️  Could not delete coverage report: $e');
-        }
-      }
-
-      if (reportPaths.containsKey('analyzer')) {
-        try {
-          final testsFile = File(reportPaths['analyzer']!);
-          if (await testsFile.exists()) {
-            await testsFile.delete();
-            if (verbose) print('  🗑️  Deleted intermediate tests report');
-          }
-        } catch (e) {
-          if (verbose) print('  ⚠️  Could not delete tests report: $e');
-        }
-      }
+      // NOTE: We keep the detailed coverage and reliability reports
+      // The unified suite report is just a summary - users need the detailed reports
 
       // Check if there are failures to determine if we need a failed report
       final analysisData = results['test_analysis'] as Map<String, dynamic>?;
@@ -670,21 +647,9 @@ class TestOrchestrator {
           keepLatest:
               false, // Delete all failed reports when there are no failures
         );
-
-        // Delete the failures subdirectory if it's empty
-        final reportDir = await ReportUtils.getReportDirectory();
-        final failedDir = Directory(p.join(reportDir, 'failures'));
-        if (await failedDir.exists()) {
-          final isEmpty = await failedDir.list().isEmpty;
-          if (isEmpty) {
-            await failedDir.delete();
-            if (verbose) print('  🗑️  Removed empty failed directory');
-          }
-        }
       }
 
       // Clean up old suite and failures reports
-      // Note: coverage and tests reports are already deleted above
       if (verbose) print('\n🧹 Cleaning up old suite reports...');
       await ReportUtils.cleanOldReports(
         pathName: moduleName,
@@ -694,6 +659,11 @@ class TestOrchestrator {
         ],
         verbose: verbose,
       );
+
+      // Clean up ALL empty subdirectories
+      if (verbose) print('\n🧹 Cleaning up empty report directories...');
+      await _cleanupEmptyDirectories(verbose);
+
       if (verbose) print('  ✅ Cleanup complete');
     } catch (e) {
       print('  ⚠️  Could not save unified report: $e');
@@ -1053,5 +1023,29 @@ class TestOrchestrator {
     if (stability >= 85) return '🟡 Mostly Stable';
     if (stability >= 70) return '🟠 Unstable';
     return '🔴 Very Unstable';
+  }
+
+  /// Clean up all empty report subdirectories
+  ///
+  /// Checks reliability/, quality/, failures/, and suite/ subdirectories
+  /// and deletes them if they contain no reports
+  Future<void> _cleanupEmptyDirectories(bool verbose) async {
+    try {
+      final reportDir = await ReportUtils.getReportDirectory();
+      final subdirs = ['reliability', 'quality', 'failures', 'suite'];
+
+      for (final subdir in subdirs) {
+        final dir = Directory(p.join(reportDir, subdir));
+        if (await dir.exists()) {
+          final isEmpty = await dir.list().isEmpty;
+          if (isEmpty) {
+            await dir.delete();
+            if (verbose) print('  🗑️  Removed empty $subdir/ directory');
+          }
+        }
+      }
+    } catch (e) {
+      if (verbose) print('  ⚠️  Error cleaning up directories: $e');
+    }
   }
 }

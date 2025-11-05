@@ -697,25 +697,45 @@ class CoverageAnalyzer {
   Future<void> performManualAnalysis() async {
     print('  Performing manual coverage analysis...');
 
-    // Analyze source files
-    final sourceDir = Directory(libPath);
-    if (!sourceDir.existsSync()) return;
-
-    await for (final file in sourceDir.list(recursive: true)) {
-      if (file is File && file.path.endsWith('.dart')) {
+    // Analyze source files (handle both file and directory paths)
+    if (libPath.endsWith('.dart')) {
+      // Single file
+      final file = File(libPath);
+      if (file.existsSync()) {
         final analysis = await analyzeSourceFile(file);
         sourceFiles[file.path] = analysis;
       }
+    } else {
+      // Directory
+      final sourceDir = Directory(libPath);
+      if (sourceDir.existsSync()) {
+        await for (final file in sourceDir.list(recursive: true)) {
+          if (file is File && file.path.endsWith('.dart')) {
+            final analysis = await analyzeSourceFile(file);
+            sourceFiles[file.path] = analysis;
+          }
+        }
+      }
     }
 
-    // Analyze test files
-    final testDir = Directory(testPath);
-    if (!testDir.existsSync()) return;
-
-    await for (final file in testDir.list(recursive: true)) {
-      if (file is File && file.path.endsWith('_test.dart')) {
+    // Analyze test files (handle both file and directory paths)
+    if (testPath.endsWith('.dart')) {
+      // Single file
+      final file = File(testPath);
+      if (file.existsSync()) {
         final analysis = await analyzeTestFile(file);
         testFiles[file.path] = analysis;
+      }
+    } else {
+      // Directory
+      final testDir = Directory(testPath);
+      if (testDir.existsSync()) {
+        await for (final file in testDir.list(recursive: true)) {
+          if (file is File && file.path.endsWith('_test.dart')) {
+            final analysis = await analyzeTestFile(file);
+            testFiles[file.path] = analysis;
+          }
+        }
       }
     }
 
@@ -784,6 +804,11 @@ class CoverageAnalyzer {
   }
 
   bool isTestableLine(String line) {
+    // Exclude constant declarations (both 'const' and 'static const')
+    if (line.contains('const') && line.contains('=')) {
+      return false;
+    }
+
     // Lines that should be tested
     return line.contains('if') ||
         line.contains('for') ||
@@ -792,9 +817,7 @@ class CoverageAnalyzer {
         line.contains('throw') ||
         line.contains('catch') ||
         line.contains('switch') ||
-        line.contains('=') &&
-            !line.startsWith('final') &&
-            !line.startsWith('const') ||
+        line.contains('=') && !line.startsWith('final') ||
         RegExp(r'\w+\(.*\)').hasMatch(line);
   }
 
@@ -900,8 +923,9 @@ class CoverageAnalyzer {
       // coveredLines remains 0 since we haven't run actual coverage
     }
 
+    // If there are no testable lines (e.g., constants-only file), coverage is 100%
     final overallPercentage =
-        totalLines > 0 ? (coveredLines / totalLines * 100) : 0;
+        totalLines > 0 ? (coveredLines / totalLines * 100) : 100.0;
 
     // Executive Summary
     report.writeln('## 📈 Executive Summary');
@@ -2019,16 +2043,35 @@ void main(List<String> args) async {
 
   // Process non-flag arguments
   if (nonFlagArgs.isNotEmpty) {
-    // First argument is the source path (can be any directory)
+    // First argument can be either test or source path - use smart resolution
     final firstArg = nonFlagArgs[0];
-    libPath = firstArg;
 
-    // If there's a second argument, use it as test path
+    // If there's a second argument, use explicit paths
     if (nonFlagArgs.length > 1) {
-      testPath = nonFlagArgs[1];
+      final secondArg = nonFlagArgs[1];
+      // Assume first is source, second is test (original behavior)
+      libPath = firstArg;
+      testPath = secondArg;
     } else {
-      // Auto-derive test path using PathResolver
-      testPath = PathResolver.inferTestPath(firstArg);
+      // Auto-resolve using PathResolver - handles both test/ and lib/ inputs
+      try {
+        final resolved = PathResolver.resolvePaths(firstArg);
+        libPath = resolved.sourcePath;
+        testPath = resolved.testPath;
+      } catch (e) {
+        // If resolution fails, show error and usage
+        print('❌ Error: Could not resolve paths from "$firstArg"');
+        print('   Path must start with "test/" or "lib/"');
+        print('');
+        print('💡 Examples:');
+        print(
+            '   dart run bin/analyze_coverage.dart test/           # Analyzes lib/ coverage');
+        print(
+            '   dart run bin/analyze_coverage.dart test/auth/      # Analyzes lib/src/auth/ coverage');
+        print(
+            '   dart run bin/analyze_coverage.dart lib/src/auth/   # Analyzes lib/src/auth/ coverage');
+        exit(1);
+      }
     }
   }
 

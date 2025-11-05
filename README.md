@@ -5,6 +5,35 @@
 
 Comprehensive Flutter/Dart test reporting toolkit providing coverage analysis, flaky test detection, failure extraction, and unified reporting. Built for developers who want deep insights into their test suites.
 
+## What's New in v3.0
+
+**Major architectural improvements and enhanced features:**
+
+### Foundation Utilities
+- **PathResolver**: Automatic bidirectional path inference (test ↔ source)
+- **ModuleIdentifier**: Consistent qualified module naming (`module-fo/fi/pr`)
+- **ReportManager**: Unified report generation with automatic cleanup
+- **170 lines** of duplicate code removed across all tools
+
+### Enhanced CLI Experience
+- **Smart Path Detection**: Provide test OR source path - the other is automatically inferred
+- **Explicit Overrides**: `--test-path` and `--source-path` flags for manual control
+- **Module Naming**: `--module-name` flag to customize report names
+- **Input Validation**: Clear error messages with existence checks and helpful examples
+
+### Cross-Tool Features
+- **ReportRegistry**: Track and query reports across all tools
+- **Consistent Naming**: All reports follow `{module}-{fo|fi|pr}_{tool}_{type}@{timestamp}.{md|json}`
+- **Automatic Cleanup**: Old reports removed, keeping only latest per pattern
+
+### Breaking Changes
+- Report names now include qualifiers: `-fo` (folder), `-fi` (file), `-pr` (project)
+- Path inference uses new PathResolver (may differ in edge cases)
+
+See [CHANGELOG.md](CHANGELOG.md) for complete details.
+
+---
+
 ## Features
 
 ### >� Test Analyzer (`analyze_tests`)
@@ -63,7 +92,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  test_reporter: ^2.0.0
+  test_reporter: ^3.0.0
 ```
 
 Then run:
@@ -100,19 +129,25 @@ dart run test_reporter:analyze_tests --parallel --workers=8
 
 # Watch mode for continuous testing
 dart run test_reporter:analyze_tests --watch
+
+# Custom module name for reports
+dart run test_reporter:analyze_tests --module-name my-feature
 ```
 
 ### Analyze Test Coverage
 
 ```bash
-# Basic coverage analysis
-dart run test_reporter:analyze_coverage
+# Basic coverage analysis - provide test path, source auto-inferred
+dart run test_reporter:analyze_coverage test/
+
+# Or provide source path, test path auto-inferred
+dart run test_reporter:analyze_coverage lib/src/
 
 # With auto-fix generation for missing tests
 dart run test_reporter:analyze_coverage --fix
 
-# Analyze specific module
-dart run test_reporter:analyze_coverage lib/src/core
+# Analyze specific module with explicit paths
+dart run test_reporter:analyze_coverage test/auth --source-path lib/src/auth
 
 # Branch coverage with incremental analysis
 dart run test_reporter:analyze_coverage --branch --incremental
@@ -125,6 +160,9 @@ dart run test_reporter:analyze_coverage --exclude "*.g.dart" --exclude "*.freeze
 
 # Parallel execution with JSON export
 dart run test_reporter:analyze_coverage --parallel --json
+
+# Custom module name
+dart run test_reporter:analyze_coverage --module-name auth-service
 ```
 
 ### Extract Failed Tests
@@ -179,6 +217,8 @@ Options:
   --slow=N             Slow test threshold in seconds (default: 1.0)
   --workers=N          Max parallel workers (default: 4)
   --no-fixes           Disable fix suggestions
+  --module-name        Custom module name for reports
+  --test-path          Override test path (for path resolution)
   --help, -h           Show this help message
 ```
 
@@ -188,8 +228,11 @@ Options:
 Usage: dart coverage_tool.dart [options] [module_path]
 
 Basic Options:
-  --lib <path>          Path to source files (default: lib/src)
-  --test <path>         Path to test files (default: test)
+  --lib <path>          Path to source files (default: lib/src, alias: --source-path)
+  --test <path>         Path to test files (default: test, alias: --test-path)
+  --source-path         Alias for --lib (explicit source path override)
+  --test-path           Explicit test path override
+  --module-name         Custom module name for reports
   --fix                 Generate missing test cases automatically
   --no-report           Skip generating coverage report
   --help, -h            Show this help message
@@ -238,6 +281,9 @@ Options:
       --performance    Enable performance profiling
   -v, --verbose        Verbose output
       --parallel       Run tests in parallel
+      --module-name    Custom module name for reports
+      --test-path      Override test path (for path resolution)
+      --source-path    Override source path (for path resolution)
   -h, --help           Show this help message
 ```
 
@@ -257,12 +303,23 @@ tests_reports/
 
 Reports follow this pattern:
 ```
-{module_name}_{report_type}@HHMM_DDMMYY.{md|json}
+{module_name}-{qualifier}_{tool}_{type}@YYYYMMDD-HHMM.{md|json}
 ```
 
-Examples:
-- `auth_service-fo_coverage@1435_041125.md` (folder analysis)
-- `user_test-fi_analysis@0920_041125.json` (file analysis)
+**Qualifiers**:
+- `-fo`: Folder analysis (e.g., `test/auth/` → `auth-fo`)
+- `-fi`: File analysis (e.g., `test/auth_test.dart` → `auth-fi`)
+- `-pr`: Project-wide analysis (e.g., `test/` → `test-pr`)
+
+**Examples**:
+- `auth-fo_report_coverage@20251105-1435.md` (folder coverage analysis)
+- `auth-service-fi_report_tests@20251105-0920.json` (file test analysis)
+- `all-tests-pr_report_suite@20251105-1000.md` (project-wide suite report)
+
+**Module Name Generation**:
+- Automatically extracted from input path using ModuleIdentifier
+- Underscores converted to hyphens for consistency
+- Override with `--module-name` flag if needed
 
 ### Report Formats
 
@@ -276,6 +333,30 @@ Examples:
 - **Timestamped** - Each report includes generation timestamp
 
 ## Architecture
+
+### v3.0 Foundation Utilities
+
+All tools now use centralized utilities for consistency:
+
+**PathResolver** (`lib/src/utils/path_resolver.dart`):
+- Automatic bidirectional path inference (test ↔ source)
+- Validates path existence
+- Handles edge cases (Windows vs Unix paths, nested directories)
+
+**ModuleIdentifier** (`lib/src/utils/module_identifier.dart`):
+- Consistent qualified module naming
+- Generates `-fo` (folder), `-fi` (file), `-pr` (project) suffixes
+- Parses qualified names back to components
+
+**ReportManager** (`lib/src/utils/report_manager.dart`):
+- Unified report generation (markdown + JSON)
+- Automatic cleanup of old reports
+- Configurable keep count (default: keep latest 1)
+
+**ReportRegistry** (`lib/src/utils/report_registry.dart`):
+- Cross-tool report discovery
+- Query reports by toolName, reportType, or moduleName
+- Session-wide report tracking
 
 ### Entry Point Pattern
 

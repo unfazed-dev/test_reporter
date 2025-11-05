@@ -72,11 +72,11 @@ class ModuleIdentifier {
   static String extractModuleName(String path) {
     final normalized = _normalizePath(path);
 
-    // Handle special cases: root directories
-    if (normalized == _testPrefix) {
+    // Handle special cases: root directories (with or without trailing slash)
+    if (normalized == _testPrefix || normalized == 'test') {
       return 'all_tests';
     }
-    if (normalized == _libPrefix) {
+    if (normalized == _libPrefix || normalized == 'lib') {
       return 'all_sources';
     }
 
@@ -92,24 +92,30 @@ class ModuleIdentifier {
       }
     }
 
-    // Handle files: strip _test.dart or .dart suffix
-    if (relativePath.endsWith(_testSuffix)) {
-      return relativePath.substring(
-          0, relativePath.length - _testSuffix.length);
-    }
-    if (relativePath.endsWith(_dartExtension)) {
-      return relativePath.substring(
-          0, relativePath.length - _dartExtension.length);
+    // Handle files: extract filename and strip _test.dart or .dart suffix
+    if (relativePath.endsWith(_testSuffix) || relativePath.endsWith(_dartExtension)) {
+      // Get just the filename (last segment)
+      final segments = relativePath.split('/').where((s) => s.isNotEmpty).toList();
+      final filename = segments.isEmpty ? relativePath : segments.last;
+
+      // Strip suffix
+      if (filename.endsWith(_testSuffix)) {
+        return filename.substring(0, filename.length - _testSuffix.length);
+      }
+      if (filename.endsWith(_dartExtension)) {
+        return filename.substring(0, filename.length - _dartExtension.length);
+      }
+      return filename;
     }
 
-    // Handle directories: strip trailing slash and take first segment
+    // Handle directories: strip trailing slash and take last segment
     if (relativePath.endsWith('/')) {
       relativePath = relativePath.substring(0, relativePath.length - 1);
     }
 
-    // Extract first path segment (handle nested paths)
-    final segments = relativePath.split('/');
-    return segments.first;
+    // Extract last path segment (most specific directory name)
+    final segments = relativePath.split('/').where((s) => s.isNotEmpty).toList();
+    return segments.isEmpty ? 'unknown' : segments.last;
   }
 
   /// Generate qualified module name with type suffix
@@ -216,8 +222,9 @@ class ModuleIdentifier {
   static PathType _detectPathType(String path) {
     final normalized = _normalizePath(path);
 
-    // Check for project root
-    if (normalized == _testPrefix || normalized == _libPrefix) {
+    // Check for project root (with or without trailing slash)
+    if (normalized == _testPrefix || normalized == 'test' ||
+        normalized == _libPrefix || normalized == 'lib') {
       return PathType.project;
     }
 

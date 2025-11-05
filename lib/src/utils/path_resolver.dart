@@ -56,12 +56,12 @@ enum PathCategory {
 /// );
 /// ```
 class PathResolver {
-  /// Infer source path from test path
+  /// Infer source path from test path with smart search
   ///
   /// Examples:
   /// - test/ → lib/
-  /// - test/auth/ → lib/src/auth/
-  /// - test/auth_test.dart → lib/src/auth.dart
+  /// - test/auth/ → lib/src/auth/ (searches lib tree)
+  /// - test/unit/utils/constants_test.dart → lib/src/utils/constants.dart (searches lib tree)
   ///
   /// Returns null if inference fails
   static String? inferSourcePath(String testPath) {
@@ -81,8 +81,22 @@ class PathResolver {
     // Remove test/ prefix
     final relativePath = normalized.substring(_testPrefix.length);
 
-    // Handle file: test/auth_test.dart → lib/src/auth.dart
+    // Handle file: search lib/ tree for matching source file
     if (relativePath.endsWith(_testSuffix)) {
+      final fileName = relativePath.split('/').last;
+      final sourceFileName = fileName.substring(
+            0,
+            fileName.length - _testSuffix.length,
+          ) +
+          _dartExtension;
+
+      // Try smart search first
+      final foundPath = _findFileInLibTree(sourceFileName);
+      if (foundPath != null) {
+        return foundPath;
+      }
+
+      // Fallback to simple mapping
       final baseName = relativePath.substring(
         0,
         relativePath.length - _testSuffix.length,
@@ -90,16 +104,74 @@ class PathResolver {
       return '$_libPrefix$_srcPrefix$baseName$_dartExtension';
     }
 
-    // Handle directory: test/auth/ → lib/src/auth/
+    // Handle directory: search lib/ tree for matching directory
+    final lastSegment =
+        relativePath.split('/').where((s) => s.isNotEmpty).lastOrNull;
+    if (lastSegment != null) {
+      final foundPath = _findDirectoryInLibTree(lastSegment);
+      if (foundPath != null) {
+        return foundPath;
+      }
+    }
+
+    // Fallback to simple mapping: test/auth/ → lib/src/auth/
     return '$_libPrefix$_srcPrefix$relativePath';
   }
 
-  /// Infer test path from source path
+  /// Search lib/ tree for a file by name
+  static String? _findFileInLibTree(String fileName) {
+    final libDir = Directory(_libPrefix);
+    if (!libDir.existsSync()) {
+      return null;
+    }
+
+    try {
+      final files = libDir.listSync(recursive: true, followLinks: false);
+      for (final entity in files) {
+        if (entity is File && entity.path.endsWith('/$fileName')) {
+          return _normalizePath(entity.path);
+        }
+      }
+    } catch (_) {
+      // Ignore filesystem errors
+      return null;
+    }
+
+    return null;
+  }
+
+  /// Search lib/ tree for a directory by name
+  static String? _findDirectoryInLibTree(String dirName) {
+    final libDir = Directory(_libPrefix);
+    if (!libDir.existsSync()) {
+      return null;
+    }
+
+    try {
+      final entities = libDir.listSync(recursive: true, followLinks: false);
+      for (final entity in entities) {
+        if (entity is Directory) {
+          final segments = _normalizePath(entity.path).split('/');
+          if (segments.last == dirName) {
+            // Return with trailing slash
+            return '${_normalizePath(entity.path)}/';
+          }
+        }
+      }
+    } catch (_) {
+      // Ignore filesystem errors
+      return null;
+    }
+
+    return null;
+  }
+
+  /// Infer test path from source path with smart search
   ///
   /// Examples:
   /// - lib/ → test/
-  /// - lib/src/auth/ → test/auth/
-  /// - lib/auth.dart → test/auth_test.dart
+  /// - lib/src/auth/ → test/auth/ (searches test tree)
+  /// - lib/src/models/failure_types.dart → test/unit/models/failure_types_test.dart (searches test tree)
   ///
   /// Returns null if inference fails
   static String? inferTestPath(String sourcePath) {
@@ -124,29 +196,105 @@ class PathResolver {
       relativePath = relativePath.substring(_srcPrefix.length);
     }
 
-    // Handle file: lib/src/auth.dart → test/auth_test.dart
+    // Handle file: search test/ tree for matching test file
     if (relativePath.endsWith(_dartExtension)) {
       final baseName = relativePath.substring(
         0,
         relativePath.length - _dartExtension.length,
       );
+      final testFileName = '$baseName$_testSuffix';
+
+      // Try smart search first
+      final foundPath = _findFileInTestTree(testFileName);
+      if (foundPath != null) {
+        return foundPath;
+      }
+
+      // Fallback to simple mapping
       return '$_testPrefix$baseName$_testSuffix';
     }
 
-    // Handle directory: lib/src/auth/ → test/auth/
+    // Handle directory: search test/ tree for matching directory
+    final lastSegment =
+        relativePath.split('/').where((s) => s.isNotEmpty).lastOrNull;
+    if (lastSegment != null) {
+      final foundPath = _findDirectoryInTestTree(lastSegment);
+      if (foundPath != null) {
+        return foundPath;
+      }
+    }
+
+    // Fallback to simple mapping: lib/src/auth/ → test/auth/
     return '$_testPrefix$relativePath';
   }
 
+  /// Search test/ tree for a file by name
+  static String? _findFileInTestTree(String fileName) {
+    final testDir = Directory(_testPrefix);
+    if (!testDir.existsSync()) {
+      return null;
+    }
+
+    try {
+      final files = testDir.listSync(recursive: true, followLinks: false);
+      for (final entity in files) {
+        if (entity is File && entity.path.endsWith('/$fileName')) {
+          return _normalizePath(entity.path);
+        }
+      }
+    } catch (_) {
+      // Ignore filesystem errors
+      return null;
+    }
+
+    return null;
+  }
+
+  /// Search test/ tree for a directory by name
+  static String? _findDirectoryInTestTree(String dirName) {
+    final testDir = Directory(_testPrefix);
+    if (!testDir.existsSync()) {
+      return null;
+    }
+
+    try {
+      final entities = testDir.listSync(recursive: true, followLinks: false);
+      for (final entity in entities) {
+        if (entity is Directory) {
+          final segments = _normalizePath(entity.path).split('/');
+          if (segments.last == dirName) {
+            // Return with trailing slash
+            return '${_normalizePath(entity.path)}/';
+          }
+        }
+      }
+    } catch (_) {
+      // Ignore filesystem errors
+      return null;
+    }
+
+    return null;
+  }
+
   /// Validate that paths exist on filesystem
+  ///
+  /// Handles both files (.dart) and directories
   static bool validatePaths(String? testPath, String? sourcePath) {
     if (testPath == null || sourcePath == null) {
       return false;
     }
 
-    final testDir = Directory(testPath);
-    final sourceDir = Directory(sourcePath);
+    // Check test path (file or directory)
+    final testExists = testPath.endsWith(_dartExtension)
+        ? File(testPath).existsSync()
+        : Directory(testPath).existsSync();
 
-    return testDir.existsSync() && sourceDir.existsSync();
+    // Check source path (file or directory)
+    final sourceExists = sourcePath.endsWith(_dartExtension)
+        ? File(sourcePath).existsSync()
+        : Directory(sourcePath).existsSync();
+
+    return testExists && sourceExists;
   }
 
   /// Smart resolution - accepts either path, returns both

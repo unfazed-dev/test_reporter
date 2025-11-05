@@ -108,12 +108,12 @@ void main() {
 
       test('should handle test root path', () {
         final orchestrator = TestOrchestrator(testPath: 'test');
-        expect(orchestrator.extractModuleName(), equals('test-fo'));
+        expect(orchestrator.extractModuleName(), equals('all-tests-pr'));
       });
 
       test('should handle test root path with trailing slash', () {
         final orchestrator = TestOrchestrator(testPath: 'test/');
-        expect(orchestrator.extractModuleName(), equals('test-fo'));
+        expect(orchestrator.extractModuleName(), equals('all-tests-pr'));
       });
 
       test('should extract file name without _test suffix', () {

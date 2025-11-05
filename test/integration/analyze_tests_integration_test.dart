@@ -19,7 +19,8 @@ void main() {
 
   setUp(() {
     // Use fixtures directory for integration tests
-    reportsDir = Directory('tests_reports/tests');
+    // v3.0: analyze_tests now writes to reliability/ subdirectory
+    reportsDir = Directory('tests_reports/reliability');
   });
 
   tearDown(() async {
@@ -33,6 +34,7 @@ void main() {
                 file.path.contains('failing-fi') ||
                 file.path.contains('flaky-fi') ||
                 file.path.contains('slow-fi') ||
+                file.path.contains('quick-slow-fi') ||
                 file.path.contains('quick_slow-fi'))) {
           try {
             await file.delete();
@@ -40,6 +42,16 @@ void main() {
             // Ignore deletion errors
           }
         }
+      }
+
+      // Delete the reliability/ directory if it's now empty
+      try {
+        final remainingFiles = await reportsDir.list().toList();
+        if (remainingFiles.isEmpty) {
+          await reportsDir.delete();
+        }
+      } catch (_) {
+        // Ignore deletion errors (directory may contain other reports)
       }
     }
   });

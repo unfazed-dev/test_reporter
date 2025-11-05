@@ -83,9 +83,12 @@ void main(List<String> arguments) async {
     testPath = args['path'] as String;
   }
 
-  // Validate test path exists
-  final testDir = Directory(testPath);
-  if (!testDir.existsSync()) {
+  // Validate test path exists (handle both files and directories)
+  final pathExists = testPath.endsWith('.dart')
+      ? File(testPath).existsSync()
+      : Directory(testPath).existsSync();
+
+  if (!pathExists) {
     print('❌ Error: Test path does not exist\n');
     print('Specified path: $testPath');
     print('  Status: ❌ does not exist');
@@ -96,6 +99,10 @@ void main(List<String> arguments) async {
     print('');
     print('  # Analyze specific test directory');
     print('  dart run test_reporter:analyze_suite test/integration/');
+    print('');
+    print('  # Analyze specific test file');
+    print(
+        '  dart run test_reporter:analyze_suite test/unit/models/failure_types_test.dart');
     print('');
     print('  # With explicit overrides');
     print(

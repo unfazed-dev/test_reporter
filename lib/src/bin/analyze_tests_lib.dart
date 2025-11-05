@@ -1391,10 +1391,14 @@ class TestAnalyzer {
 
       print('$green✅ Report saved to: $reportPath$reset');
 
-      // Generate failed report if there are failures or flaky tests
-      if (consistentFailures.isNotEmpty || flakyTests.isNotEmpty) {
-        await _saveFailedReport(timestamp, moduleName, jsonData);
-      }
+      // REMOVED: Failed report generation (v3.0 fix - namespace collision)
+      // The failures/ subdirectory is exclusively for extract_failures tool
+      // analyze_tests now only writes to reliability/ subdirectory
+      // Ref: https://github.com/unfazed-dev/test_reporter/issues/XXX
+      //
+      // if (consistentFailures.isNotEmpty || flakyTests.isNotEmpty) {
+      //   await _saveFailedReport(timestamp, moduleName, jsonData);
+      // }
 
       // Clean up old reports AFTER generating new ones
       await _cleanupOldReports();
@@ -1406,140 +1410,17 @@ class TestAnalyzer {
     }
   }
 
-  Future<void> _saveFailedReport(
-    String timestamp,
-    String pathName,
-    Map<String, dynamic> analyzerData,
-  ) async {
-    print('$cyan📝 Generating failed test report...$reset');
-
-    final markdown = StringBuffer();
-    markdown.writeln('# 🔴 Failed Test Report');
-    markdown.writeln();
-    markdown.writeln('**Generated:** ${DateTime.now().toLocal()}');
-    markdown.writeln(
-        '**Test Path:** `${targetFiles.isNotEmpty ? targetFiles.first : 'all tests'}`');
-    markdown.writeln('**Source:** Test Analyzer');
-    markdown.writeln('**Analysis Runs:** $runCount');
-    markdown.writeln();
-
-    markdown.writeln('## 📊 Summary');
-    markdown.writeln();
-    markdown.writeln('| Metric | Value |');
-    markdown.writeln('|--------|-------|');
-    markdown.writeln('| Total Tests | ${testRuns.length} |');
-    markdown.writeln(
-        '| Passed Consistently | ${testRuns.length - consistentFailures.length - flakyTests.length} |');
-    markdown
-        .writeln('| Consistent Failures | ❌ ${consistentFailures.length} |');
-    markdown.writeln('| Flaky Tests | ⚠️ ${flakyTests.length} |');
-    markdown.writeln(
-        '| Pass Rate | ${(testRuns.isNotEmpty ? ((testRuns.length - consistentFailures.length - flakyTests.length) / testRuns.length * 100) : 0).toStringAsFixed(1)}% |');
-    markdown.writeln();
-
-    // Add consistent failures section
-    if (consistentFailures.isNotEmpty) {
-      markdown.writeln('## ❌ Consistent Failures');
-      markdown.writeln('*Tests that failed all $runCount runs*');
-      markdown.writeln();
-
-      for (final testId in consistentFailures) {
-        final parts = testId.split('::');
-        final fileName = parts.isNotEmpty ? parts[0] : 'Unknown';
-        final testName = parts.length > 1 ? parts[1] : 'Unknown';
-        final pattern = patterns[testId];
-
-        markdown.writeln('### $testName');
-        markdown.writeln('**File:** `$fileName`');
-
-        if (pattern != null) {
-          markdown
-              .writeln('**Type:** ${pattern.type.toString().split('.').last}');
-          markdown.writeln('**Category:** ${pattern.category}');
-          if (pattern.suggestion != null && pattern.suggestion!.isNotEmpty) {
-            markdown.writeln();
-            markdown.writeln('**Suggested Fix:**');
-            markdown.writeln('```');
-            markdown.writeln(pattern.suggestion);
-            markdown.writeln('```');
-          }
-        }
-        markdown.writeln();
-      }
-    }
-
-    // Add flaky tests section
-    if (flakyTests.isNotEmpty) {
-      markdown.writeln('## ⚡ Flaky Tests');
-      markdown.writeln('*Tests with intermittent failures*');
-      markdown.writeln();
-
-      for (final testId in flakyTests) {
-        final parts = testId.split('::');
-        final fileName = parts.isNotEmpty ? parts[0] : 'Unknown';
-        final testName = parts.length > 1 ? parts[1] : 'Unknown';
-        final run = testRuns[testId]!;
-        final successCount = run.results.values.where((r) => r).length;
-        final successRate = successCount / runCount * 100;
-
-        markdown.writeln('### $testName');
-        markdown.writeln('**File:** `$fileName`');
-        markdown
-            .writeln('**Success Rate:** ${successRate.toStringAsFixed(1)}%');
-        markdown.writeln('**Run Results:**');
-
-        for (final entry in run.results.entries) {
-          final status = entry.value ? '✅' : '❌';
-          markdown.writeln('- Run ${entry.key}: $status');
-        }
-        markdown.writeln();
-      }
-    }
-
-    // Add recommendations
-    markdown.writeln('## 💡 Recommendations');
-    markdown.writeln();
-    if (consistentFailures.isNotEmpty) {
-      markdown.writeln(
-          '1. **🔴 Critical:** Fix ${consistentFailures.length} consistently failing tests immediately');
-    }
-    if (flakyTests.isNotEmpty) {
-      markdown.writeln(
-          '${consistentFailures.isNotEmpty ? '2' : '1'}. **⚠️ Important:** Investigate and stabilize ${flakyTests.length} flaky tests');
-    }
-    markdown.writeln();
-    markdown.writeln(
-        'For detailed analysis and stack traces, see the full analyzer report.');
-
-    // Build JSON data
-    final jsonData = {
-      'metadata': {
-        'tool': 'test_analyzer',
-        'version': '2.0',
-        'generated': DateTime.now().toIso8601String(),
-        'test_path': targetFiles.isNotEmpty ? targetFiles.first : 'all tests',
-        'analysis_runs': runCount,
-      },
-      'summary': analyzerData['summary'],
-      'consistent_failures': analyzerData['consistent_failures'],
-      'flaky_tests': analyzerData['flaky_tests'],
-    };
-
-    try {
-      final failedReportPath = await ReportUtils.writeUnifiedReport(
-        moduleName: pathName,
-        timestamp: timestamp,
-        markdownContent: markdown.toString(),
-        jsonData: jsonData,
-        suffix: 'failures',
-        verbose: verbose,
-      );
-
-      print('$green✅ Failed test report saved to: $failedReportPath$reset');
-    } catch (e) {
-      print('$yellow⚠️ Could not save failed report: $e$reset');
-    }
-  }
+  // REMOVED: _saveFailedReport method (v3.0 fix - namespace collision)
+  //
+  // This method previously generated reports in tests_reports/failures/ which
+  // conflicts with extract_failures tool. The analyze_tests tool now only writes
+  // to tests_reports/reliability/ subdirectory.
+  //
+  // If you need a failed-tests-only report, use extract_failures tool instead:
+  //   dart run test_reporter:extract_failures test/ --save-results
+  //
+  // The full reliability report still contains all failure information in the
+  // "Consistent Failures" and "Flaky Tests" sections.
 
   void _printReportHeader() {
     print('\n$green${"═" * 70}$reset');
@@ -2356,15 +2237,9 @@ class TestAnalyzer {
       verbose: verbose,
     );
 
-    // Clean failure reports in failures/ subdirectory
-    await ReportUtils.cleanOldReports(
-      pathName: moduleName,
-      prefixPatterns: [
-        'report_failures', // Failed test reports
-      ],
-      subdirectory: 'failures',
-      verbose: verbose,
-    );
+    // REMOVED: failures/ subdirectory cleanup (v3.0 fix - namespace collision)
+    // The failures/ subdirectory is exclusively owned by extract_failures tool.
+    // analyze_tests no longer writes to or cleans up failures/ subdirectory.
   }
 
   /// Watch mode for continuous testing

@@ -24,6 +24,62 @@ This directory contains comprehensive documentation for AI-assisted development 
 
 ---
 
+## 🆕 v3.0 Foundation Utilities
+
+**New in v3.0**: Four centralized utilities power all tools with consistent behavior.
+
+### PathResolver (`lib/src/utils/path_resolver.dart`)
+**Purpose**: Automatic bidirectional path inference (test ↔ source)
+
+**Key Methods**:
+- `inferSourcePath(String testPath)` - Infer source path from test path
+- `inferTestPath(String sourcePath)` - Infer test path from source path
+- `resolvePaths(String inputPath)` - Smart resolution with validation
+- `validatePaths(String testPath, String sourcePath)` - Existence checks
+
+**When to use**: Whenever you need to map between test and source paths
+
+### ModuleIdentifier (`lib/src/utils/module_identifier.dart`)
+**Purpose**: Consistent qualified module naming
+
+**Key Methods**:
+- `extractModuleName(String path)` - Extract base module name from path
+- `getQualifiedModuleName(String path)` - Get qualified name with suffix (`module-fo/fi/pr`)
+- `parseQualifiedName(String qualified)` - Parse back to components
+- `isValidModuleName(String name)` - Validate module name format
+
+**Qualifiers**:
+- `-fo`: Folder analysis
+- `-fi`: File analysis
+- `-pr`: Project-wide analysis
+
+**When to use**: When generating or parsing module names for reports
+
+### ReportManager (`lib/src/utils/report_manager.dart`)
+**Purpose**: Unified report generation with automatic cleanup
+
+**Key Methods**:
+- `startReport(...)` - Create ReportContext for new report
+- `writeReport(...)` - Write markdown + JSON atomically, auto-cleanup
+- `findLatestReport(...)` - Query reports by criteria
+- `cleanupReports(...)` - Manual cleanup with keep count
+- `extractJsonFromReport(String markdownPath)` - Parse embedded JSON
+
+**When to use**: All report generation and management operations
+
+### ReportRegistry (`lib/src/utils/report_registry.dart`)
+**Purpose**: Cross-tool report discovery and tracking
+
+**Key Methods**:
+- `register(...)` - Register a generated report
+- `getReports(...)` - Query reports with filters
+- `printSummary()` - Display all registered reports
+- `clear()` - Clear the registry
+
+**When to use**: When you need to track or query reports across multiple tool runs
+
+---
+
 ## 📂 Directory Structure
 
 ```
@@ -49,6 +105,9 @@ This directory contains comprehensive documentation for AI-assisted development 
 │   ├── failure_type_template.dart
 │   ├── record_type_template.dart
 │   └── report_format_template.md
+├── plans/                               # Implementation plans
+│   ├── v3-re-engineering-plan.md
+│   └── v3-implementation-tracker.md
 └── archives/                            # Conversation archives
     └── conversations/                   # Archived AI conversations
 ```
@@ -88,11 +147,14 @@ This directory contains comprehensive documentation for AI-assisted development 
 
 **Contains**:
 - Report directory structure (tests_reports/)
-- Naming conventions (-fo/-fi suffixes)
-- ReportUtils API and cleanup logic
+- Naming conventions (-fo/-fi/-pr suffixes)
+- ReportManager API and cleanup logic (v3.0+)
+- ReportRegistry for cross-tool discovery (v3.0+)
 - Markdown + JSON generation patterns
 
 **Token estimate**: ~8-10K tokens
+
+**Note**: v3.0 introduced ReportManager and ReportRegistry. See above section for details.
 
 ---
 
