@@ -31,6 +31,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:test_reporter/src/utils/checklist_utils.dart';
 import 'package:test_reporter/src/utils/module_identifier.dart';
 import 'package:test_reporter/src/utils/path_resolver.dart';
 import 'package:test_reporter/src/utils/report_utils.dart';
@@ -1105,21 +1106,25 @@ class CoverageAnalyzer {
     }
     report.writeln();
 
+    // Group uncovered lines by file (used by multiple sections)
+    final uncoveredByFile = <String, List<int>>{};
+    for (final lineStr in uncoveredLines) {
+      final parts = lineStr.split(':');
+      if (parts.length >= 2) {
+        final file = parts[0];
+        final lineNum = int.tryParse(parts[1]);
+        if (lineNum != null) {
+          uncoveredByFile.putIfAbsent(file, () => []).add(lineNum);
+        }
+      }
+    }
+
     // Detailed uncovered lines section
     if (uncoveredLines.isNotEmpty) {
       report.writeln('## 🔍 Uncovered Lines Detail');
       report.writeln();
       report.writeln('Below are the specific lines that need test coverage:');
       report.writeln();
-
-      // Group uncovered lines by file
-      final uncoveredByFile = <String, List<int>>{};
-      for (final lineStr in uncoveredLines) {
-        final parts = lineStr.split(':');
-        final file = parts[0];
-        final lineNum = int.parse(parts[1]);
-        uncoveredByFile.putIfAbsent(file, () => []).add(lineNum);
-      }
 
       for (final file in uncoveredByFile.keys) {
         final fileName = file.split('/').last;
@@ -1240,6 +1245,12 @@ class CoverageAnalyzer {
       '3. **Run specific tests:** `flutter test $testPath`',
     );
     report.writeln();
+
+    // Actionable Checklist Section
+    if (uncoveredLines.isNotEmpty) {
+      report.writeln(_generateCoverageChecklist(uncoveredByFile, libPath));
+      report.writeln();
+    }
 
     // Additional Resources
     if (exportJson) {
@@ -1402,6 +1413,98 @@ class CoverageAnalyzer {
   String _truncate(String str, int maxLength) {
     if (str.length <= maxLength) return str;
     return '${str.substring(0, maxLength - 3)}...';
+  }
+
+  /// Generate actionable checklist for coverage improvements
+  String _generateCoverageChecklist(
+    Map<String, List<int>> uncoveredByFile,
+    String libPath,
+  ) {
+    final buffer = StringBuffer();
+    buffer.writeln('## ✅ Coverage Action Items');
+    buffer.writeln();
+    buffer.writeln(
+      'Use these actionable checklists to systematically improve test coverage:',
+    );
+    buffer.writeln();
+
+    final sections = <ChecklistSection>[];
+    var totalItems = 0;
+
+    // Generate checklist items for each file
+    for (final entry in uncoveredByFile.entries) {
+      final filePath = entry.key;
+      final fileName = filePath.split('/').last;
+      final uncoveredLines = entry.value..sort();
+
+      // Group consecutive lines into test cases
+      final testCases = groupLinesIntoTestCases(filePath, uncoveredLines);
+
+      final items = <ChecklistItem>[];
+      for (final testCase in testCases) {
+        final testFilePath = suggestTestFile(filePath);
+
+        items.add(
+          ChecklistItem(
+            text: 'Add tests for ${testCase.description}',
+            subItems: [
+              ChecklistItem(text: 'Open `$testFilePath`'),
+              ChecklistItem(text: 'Write test cases covering the logic'),
+              ChecklistItem(text: 'Run: `dart test $testFilePath`'),
+            ],
+            tip: testCase.suggestion ??
+                'Focus on edge cases and error conditions',
+          ),
+        );
+        totalItems++;
+      }
+
+      if (items.isNotEmpty) {
+        sections.add(
+          ChecklistSection(
+            title: '`$fileName`',
+            subtitle: '${items.length} test case(s) needed',
+            items: items,
+            priority: ChecklistPriority.important,
+          ),
+        );
+      }
+    }
+
+    // Sort sections by file name for consistency
+    sections.sort((a, b) => a.title.compareTo(b.title));
+
+    // Render sections
+    for (final section in sections) {
+      buffer.writeln(section.toMarkdown());
+      buffer.writeln();
+    }
+
+    // Quick commands section
+    buffer.writeln('### 🚀 Quick Commands');
+    buffer.writeln();
+    buffer.writeln('```bash');
+    buffer.writeln('# Run all tests');
+    buffer.writeln('dart test');
+    buffer.writeln();
+    buffer.writeln('# Run tests with coverage');
+    buffer.writeln('dart test --coverage=coverage');
+    buffer.writeln();
+    buffer.writeln('# Generate coverage report');
+    buffer.writeln('dart run test_reporter:analyze_coverage $libPath');
+    buffer.writeln('```');
+    buffer.writeln();
+
+    // Progress tracking
+    buffer.writeln('### 📊 Progress Tracking');
+    buffer.writeln();
+    buffer.writeln('- [ ] **0 of $totalItems** test groups complete');
+    buffer.writeln(
+      '- [ ] Mark items above as you complete them to track progress',
+    );
+    buffer.writeln();
+
+    return buffer.toString();
   }
 
   Future<void> generateMissingTests() async {
