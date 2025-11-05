@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:test/test.dart';
 import 'package:test_reporter/src/utils/path_resolver.dart';
 
