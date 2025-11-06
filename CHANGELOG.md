@@ -5,6 +5,113 @@ All notable changes to the test_reporter package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2025-11-06
+
+**Feature Release**: Interactive actionable checklists in all reports.
+
+---
+
+### Added
+
+#### Actionable Checklists
+
+**ChecklistUtils** (`lib/src/utils/checklist_utils.dart`):
+- `ChecklistItem`: Represents individual checklist tasks with sub-items, tips, and commands
+- `ChecklistSection`: Groups checklist items with titles, subtitles, and priority levels
+- `ChecklistPriority`: Enum for critical, important, and optional priorities
+- Helper functions:
+  - `formatLineRangeDescription()`: Converts line numbers to human-readable descriptions
+  - `suggestTestFile()`: Infers test file paths from source file paths
+  - `groupLinesIntoTestCases()`: Groups consecutive uncovered lines into logical test cases
+  - `prioritizeItems()`: Sorts checklist items by severity
+- 31 comprehensive unit tests (100% passing)
+- Exported in main library: `package:test_reporter/test_reporter.dart`
+
+**Coverage Analyzer Checklists** (`analyze_coverage_lib.dart`):
+- `## ✅ Coverage Action Items` section in all coverage reports
+- Checklist of files needing test coverage with:
+  - Grouped consecutive lines as logical test cases
+  - Suggested test file paths with directory inference
+  - Step-by-step sub-items (open file, write tests, run tests)
+  - Tips for edge cases and error conditions
+  - Quick commands section with copy-pasteable bash commands
+  - Progress tracking footer showing completion status
+- CLI flags: `--no-checklist` (disable) and `--minimal-checklist` (compact format)
+
+**Test Reliability Checklists** (`analyze_tests_lib.dart`):
+- `## ✅ Test Reliability Action Items` section in all test analysis reports
+- 3-tier priority system:
+  - 🔴 **Priority 1: Fix Failing Tests** - Critical issues blocking CI/CD
+    - Failure type identification (Null Error, Timeout, Assertion, etc.)
+    - Targeted fix suggestions based on failure patterns
+    - Verification commands per failing test
+  - 🟠 **Priority 2: Stabilize Flaky Tests** - Important reliability improvements
+    - Reliability percentage (e.g., "66.7% reliable")
+    - Common cause checklist (race conditions, shared state, async issues)
+    - Stability verification command (run 10x in loop)
+  - 🟡 **Priority 3: Optimize Slow Tests** - Optional performance improvements
+    - Average duration display
+    - Optimization strategy checklist (mocking, scope reduction, parallel execution)
+- Per-priority progress tracking
+- Quick commands section for batch operations
+- CLI flags: `--no-checklist` (disable) and `--minimal-checklist` (compact format)
+
+**Failure Triage Checklists** (`extract_failures_lib.dart`):
+- `## ✅ Failure Triage Workflow` section in all failure extraction reports
+- 3-step workflow per failing test:
+  - **Step 1: Identify root cause** with truncated error snippet (200 char max)
+  - **Step 2: Apply fix** with code modification reminder
+  - **Step 3: Verify fix** with copy-pasteable test command
+- Grouped by file for batch processing
+- Progress tracking showing triaged percentage
+- Quick commands section with batch rerun commands per file
+- CLI flags: `--checklist` (default: true) and `--minimal-checklist` (compact format)
+
+**Master Workflow Checklists** (`analyze_suite_lib.dart`):
+- `## ✅ Recommended Workflow` section in unified suite reports
+- 3-phase strategic approach:
+  - **Phase 1: Critical Issues** (🔴) - Failing tests + low coverage (< 80%)
+  - **Phase 2: Stability** (🟠) - Flaky test stabilization
+  - **Phase 3: Optimization** (🟡) - Slow test performance improvements
+- Combines data from coverage and test analysis
+- Per-phase progress tracking
+- Links to detailed reports for drill-down
+- Master progress counter across all phases
+- CLI flags: `--checklist` (default: true) and `--minimal-checklist` (compact format)
+
+**CLI Flag Support** (All 4 tools):
+- `--no-checklist`: Completely disables checklist generation in reports
+- `--minimal-checklist`: Generates compact single-line checklists without sub-items or tips
+- Flags propagate through suite orchestrator to child analyzers
+- Default behavior: Full detailed checklists enabled
+
+---
+
+### Changed
+
+- **Report Format**: All markdown reports now include actionable checklist sections by default
+- **Header Documentation**: Added checklist flags to usage help text in all 4 CLI tools
+- **Token Usage**: Added ~50 lines per analyzer for checklist generation methods
+
+---
+
+### Documentation
+
+- Updated `.agent/knowledge/report_system.md` with comprehensive checklist documentation
+  - Overview of checklist feature across all 4 analyzers
+  - CLI flag reference table
+  - Full mode vs minimal mode comparison
+  - Example checklists for each analyzer type
+  - Implementation details with code examples
+  - Best practices and GitHub integration workflow
+- Updated `.agent/templates/report_format_template.md` with checklist section template
+  - Checklist markdown template structure
+  - Best practices for checklist design
+  - Implementation guide using ChecklistUtils
+- Updated documentation index in `.agent/README.md` (not modified in this release)
+
+---
+
 ## [3.0.0] - 2025-11-05
 
 **Major Version**: Complete architectural re-engineering with enhanced CLI and cross-tool features.

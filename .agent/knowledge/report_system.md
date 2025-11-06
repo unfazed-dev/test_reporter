@@ -637,9 +637,252 @@ rm -rf tests_reports/*
 
 ---
 
+## Actionable Checklists
+
+**Since**: v2.1.0 (November 2025)
+**Feature**: Interactive GitHub-flavored markdown checklists in all reports
+
+### Overview
+
+All 4 analyzers generate actionable checklists using GitHub-flavored markdown:
+- **Coverage Analyzer**: Checklist of files needing tests with line ranges
+- **Test Analyzer**: 3-tier priority checklists (🔴 failing, 🟠 flaky, 🟡 slow)
+- **Failure Extractor**: 3-step triage workflow per failing test
+- **Suite Orchestrator**: Master workflow combining all action items
+
+### CLI Flags
+
+**Available on all 4 tools**:
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--no-checklist` | Disable checklist sections entirely | Checklists enabled |
+| `--minimal-checklist` | Generate compact checklist format | Full detailed format |
+
+**Examples**:
+
+```bash
+# Default: Full detailed checklists
+dart run test_reporter:analyze_coverage lib/src
+
+# Disable checklists entirely
+dart run test_reporter:analyze_tests test/ --no-checklist
+
+# Minimal compact checklists
+dart run test_reporter:extract_failures test/ --minimal-checklist
+
+# Suite orchestrator with minimal checklists
+dart run test_reporter:analyze_suite test/ --minimal-checklist
+```
+
+### Checklist Format
+
+**Full Mode** (default):
+- Detailed sub-items with steps
+- Tips and suggestions
+- Verification commands
+- Progress tracking
+
+**Minimal Mode** (`--minimal-checklist`):
+- Compact single-line items
+- File grouping
+- Quick command section only
+- No sub-items or tips
+
+**Example - Coverage Report Checklist** (full mode):
+
+```markdown
+## ✅ Coverage Action Items
+
+### `auth_service.dart`
+
+- [ ] Add tests for lines 45-67 (authenticate method)
+  - [ ] Open `test/unit/services/auth_service_test.dart`
+  - [ ] Write test cases covering the logic
+  - [ ] Run: `dart test test/unit/services/auth_service_test.dart`
+  - 💡 Tip: Focus on edge cases and error conditions
+
+### 🚀 Quick Commands
+
+\`\`\`bash
+# Run all tests
+dart test
+
+# Run tests with coverage
+dart test --coverage=coverage
+
+# Generate coverage report
+dart run test_reporter:analyze_coverage lib/src
+\`\`\`
+
+### 📊 Progress Tracking
+
+- [ ] **0 of 3** test groups complete
+- [ ] Mark items above as you complete them to track progress
+```
+
+**Example - Test Reliability Checklist** (full mode):
+
+```markdown
+## ✅ Test Reliability Action Items
+
+### 🔴 Priority 1: Fix Failing Tests
+
+- [ ] Fix: `authenticates user with valid credentials`
+  - File: `test/unit/auth/auth_service_test.dart`
+  - Failure Type: Null Error
+  - 💡 Fix: Check for null before accessing properties
+  - Verify: `dart test test/unit/auth/auth_service_test.dart --name="authenticates user"`
+
+**Progress: 0 of 2 failing tests fixed**
+
+### 🟠 Priority 2: Stabilize Flaky Tests
+
+- [ ] Stabilize: `loads user profile` (66.7% reliable)
+  - File: `test/integration/profile_test.dart`
+  - Common causes:
+    - [ ] Race conditions or timing issues
+    - [ ] Shared mutable state between tests
+    - [ ] External dependencies (network, file system)
+    - [ ] Improper async/await handling
+  - Verify stability: `for i in {1..10}; do dart test ... || break; done`
+
+**Progress: 0 of 1 flaky tests stabilized**
+
+### 🚀 Quick Commands
+
+\`\`\`bash
+# Run all tests multiple times to verify fixes
+dart test --runs=3
+
+# Run specific test file
+dart test test/unit/auth/auth_service_test.dart
+\`\`\`
+```
+
+**Example - Failure Triage Checklist** (full mode):
+
+```markdown
+## ✅ Failure Triage Workflow
+
+### File: `test/integration/auth_test.dart`
+
+- [ ] **Fix: login with valid credentials**
+  - [ ] **Step 1: Identify root cause**
+    - Error: `NoSuchMethodError: The getter 'token' was called on null`
+  - [ ] **Step 2: Apply fix**
+    - Modify test or implementation code
+  - [ ] **Step 3: Verify fix**
+    - Run: `dart test test/integration/auth_test.dart --name="login with valid credentials"`
+
+**Progress:** 0 of 4 failures triaged (0.0%)
+
+### 🚀 Quick Commands
+
+\`\`\`bash
+# Rerun all failed tests
+dart test test/integration/auth_test.dart
+dart test test/unit/services/user_test.dart
+\`\`\`
+```
+
+**Example - Master Workflow Checklist** (full mode):
+
+```markdown
+## ✅ Recommended Workflow
+
+Follow this 3-phase approach to improve your test suite:
+
+### 🔴 Phase 1: Critical Issues
+
+- [ ] Fix 2 failing tests
+  - 💡 Tip: These tests fail consistently. Priority: High
+  - Command: `dart test --name="<test_name>"`
+
+- [ ] Increase test coverage by 12.3%
+  - 💡 Tip: Current: 67.7%, Target: 80%
+  - Command: `dart run test_reporter:analyze_coverage lib/src --fix`
+
+**Progress:** 0 of 2 critical issues resolved
+
+### 🟠 Phase 2: Stability
+
+- [ ] Stabilize 1 flaky test
+  - 💡 Tip: These tests pass sometimes and fail other times
+  - Command: `dart run test_reporter:analyze_tests test/ --runs=10`
+
+**Progress:** 0 of 1 stability issues resolved
+
+### 🟡 Phase 3: Optimization
+
+- [ ] Optimize 3 slow tests
+  - 💡 Tip: These tests exceed 1.0s threshold
+  - Command: `dart test --name="<test_name>"`
+
+**Progress:** 0 of 3 optimization tasks complete
+```
+
+### Implementation Details
+
+**Checklist Utilities** (`lib/src/utils/checklist_utils.dart`):
+
+```dart
+// Core classes for checklist generation
+class ChecklistItem {
+  final String text;
+  final List<ChecklistItem> subItems;
+  final String? tip;
+  final String? command;
+
+  String toMarkdown();
+}
+
+enum ChecklistPriority { critical, important, optional }
+
+class ChecklistSection {
+  final String title;
+  final String? subtitle;
+  final List<ChecklistItem> items;
+  final ChecklistPriority priority;
+
+  String toMarkdown();
+}
+
+// Helper functions
+String formatLineRangeDescription(String filePath, List<int> lines);
+String suggestTestFile(String sourcePath);
+List<TestCase> groupLinesIntoTestCases(String filePath, List<int> lines);
+```
+
+### Best Practices
+
+1. **Interactive Tracking**: Check off items as you complete them in VS Code or GitHub
+2. **Progress Monitoring**: Update progress counters to track completion
+3. **Command Execution**: Copy-paste commands directly from checklists
+4. **Priority Order**: Follow the priority indicators (🔴 → 🟠 → 🟡)
+5. **Minimal Mode**: Use `--minimal-checklist` for quick overviews or CI/CD
+
+### GitHub Integration
+
+Checklists work seamlessly with GitHub:
+- ✅ Interactive checkboxes in PR descriptions
+- ✅ Clickable checkboxes in issues
+- ✅ Copy-paste directly from reports
+- ✅ Track completion percentage visually
+
+**Example workflow**:
+1. Run analyzer: `dart run test_reporter:analyze_suite test/`
+2. Open report: `tests_reports/suite/all-fo_suite@1435_041125.md`
+3. Copy checklist section
+4. Paste into GitHub issue or PR description
+5. Team members check off items as they complete tasks
+
+---
+
 This report system enables:
 - ✅ Consistent naming across all tools
 - ✅ Automatic cleanup of old reports
 - ✅ Both human and machine-readable formats
 - ✅ Organized subdirectory structure
+- ✅ Interactive actionable checklists (v2.1.0+)
 - ✅ CI/CD integration readiness

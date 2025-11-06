@@ -80,6 +80,8 @@ class TestAnalyzer {
     this.dependencyAnalysis = false,
     this.mutationTesting = false,
     this.impactAnalysis = false,
+    this.enableChecklist = true,
+    this.minimalChecklist = false,
     this.explicitModuleName,
   });
   // Terminal colors
@@ -123,6 +125,8 @@ class TestAnalyzer {
   final bool dependencyAnalysis;
   final bool mutationTesting;
   final bool impactAnalysis;
+  final bool enableChecklist;
+  final bool minimalChecklist;
   final String? explicitModuleName;
 
   Future<void> run() async {
@@ -1226,7 +1230,14 @@ class TestAnalyzer {
     report.writeln();
 
     // ✅ Test Reliability Action Items Section
-    _generateReliabilityChecklist(report, consistentFailures, flakyTests);
+    if (enableChecklist) {
+      _generateReliabilityChecklist(
+        report,
+        consistentFailures,
+        flakyTests,
+        minimal: minimalChecklist,
+      );
+    }
 
     // Footer
     report.writeln('---');
@@ -2308,10 +2319,47 @@ class TestAnalyzer {
   void _generateReliabilityChecklist(
     StringBuffer report,
     List<String> consistentFailures,
-    List<String> flakyTests,
-  ) {
+    List<String> flakyTests, {
+    bool minimal = false,
+  }) {
     report.writeln('## ✅ Test Reliability Action Items');
     report.writeln();
+
+    if (minimal) {
+      // Minimal mode: compact checklist
+      report.writeln('Quick action items to improve test reliability:');
+      report.writeln();
+
+      if (consistentFailures.isNotEmpty) {
+        report.writeln('**🔴 Critical - Fix failing tests:**');
+        for (final testId in consistentFailures) {
+          final parts = testId.split('::');
+          final testName = parts.length > 1 ? parts[1] : testId;
+          report.writeln('- [ ] Fix: `$testName`');
+        }
+        report.writeln();
+      }
+
+      if (flakyTests.isNotEmpty) {
+        report.writeln('**🟠 Important - Stabilize flaky tests:**');
+        for (final testId in flakyTests) {
+          final parts = testId.split('::');
+          final testName = parts.length > 1 ? parts[1] : testId;
+          final testRun = testRuns[testId];
+          final passCount = testRun?.results.values.where((r) => r).length ?? 0;
+          final reliability = (passCount / runCount * 100).toStringAsFixed(1);
+          report
+              .writeln('- [ ] Stabilize: `$testName` ($reliability% reliable)');
+        }
+        report.writeln();
+      }
+
+      report.writeln('**Quick Command**: `dart test --runs=$runCount`');
+      report.writeln();
+      return;
+    }
+
+    // Full mode: detailed checklist
     report.writeln(
       'This section provides a prioritized checklist to improve test reliability. '
       'Check off items as you complete them.',
@@ -2592,6 +2640,8 @@ void main(List<String> args) async {
       args.contains('--dependencies') || args.contains('-d');
   final mutationTesting = args.contains('--mutation') || args.contains('-m');
   final impactAnalysis = args.contains('--impact');
+  final enableChecklist = !args.contains('--no-checklist');
+  final minimalChecklist = args.contains('--minimal-checklist');
 
   // Parse run count
   var runCount = 3;
@@ -2693,6 +2743,8 @@ void main(List<String> args) async {
     dependencyAnalysis: dependencyAnalysis,
     mutationTesting: mutationTesting,
     impactAnalysis: impactAnalysis,
+    enableChecklist: enableChecklist,
+    minimalChecklist: minimalChecklist,
     explicitModuleName: explicitModuleName,
   );
 
@@ -2719,6 +2771,8 @@ Options:
   --slow=N             Slow test threshold in seconds (default: 1.0)
   --workers=N          Max parallel workers (default: 4)
   --no-fixes           Disable fix suggestions
+  --no-checklist       Disable actionable checklists (default: enabled)
+  --minimal-checklist  Generate compact checklist format
   --help, -h           Show this help message
 
 Arguments:

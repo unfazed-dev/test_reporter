@@ -168,6 +168,16 @@ class FailedTestExtractor {
         'max-failures',
         help: 'Maximum number of failures to extract (0 = unlimited)',
         defaultsTo: '0',
+      )
+      ..addFlag(
+        'checklist',
+        help: 'Include actionable checklists in reports (default: enabled)',
+        defaultsTo: true,
+      )
+      ..addFlag(
+        'minimal-checklist',
+        help: 'Generate compact checklist format',
+        negatable: false,
       );
   }
 
@@ -758,7 +768,16 @@ class FailedTestExtractor {
       }
 
       // Add triage workflow checklist
-      markdown.writeln(_generateTriageChecklist(results));
+      final enableChecklist = _args['checklist'] as bool;
+      final minimalChecklist = _args['minimal-checklist'] as bool;
+      if (enableChecklist) {
+        markdown.writeln(
+          _generateTriageChecklist(
+            results,
+            minimal: minimalChecklist,
+          ),
+        );
+      }
     }
 
     // Extract qualified module name from test path (or use explicit override)
@@ -793,14 +812,14 @@ class FailedTestExtractor {
   }
 
   /// Generate triage workflow checklist for failed tests
-  String _generateTriageChecklist(TestResults results) {
+  String _generateTriageChecklist(
+    TestResults results, {
+    bool minimal = false,
+  }) {
     final buffer = StringBuffer();
 
     buffer.writeln();
     buffer.writeln('## ✅ Failure Triage Workflow');
-    buffer.writeln();
-    buffer.writeln(
-        'Follow this checklist to systematically fix each failing test:');
     buffer.writeln();
 
     // Group failures by file
@@ -808,6 +827,32 @@ class FailedTestExtractor {
     for (final test in results.failedTests) {
       groupedTests.putIfAbsent(test.filePath, () => []).add(test);
     }
+
+    if (minimal) {
+      // Minimal mode: compact checklist
+      buffer.writeln('Quick action items to fix failing tests:');
+      buffer.writeln();
+
+      for (final entry in groupedTests.entries) {
+        final filePath = entry.key;
+        final tests = entry.value;
+
+        buffer.writeln('**File: `$filePath`**');
+        for (final test in tests) {
+          buffer.writeln('- [ ] Fix: ${test.name}');
+        }
+        buffer.writeln();
+      }
+
+      buffer.writeln('**Quick Command**: `dart test`');
+      buffer.writeln();
+      return buffer.toString();
+    }
+
+    // Full mode: detailed 3-step workflow
+    buffer.writeln(
+        'Follow this checklist to systematically fix each failing test:');
+    buffer.writeln();
 
     for (final entry in groupedTests.entries) {
       final filePath = entry.key;

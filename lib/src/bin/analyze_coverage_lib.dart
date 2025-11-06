@@ -25,6 +25,8 @@
 ///   --exclude <pattern> Exclude files matching pattern
 ///   --baseline <file>  Compare against baseline coverage
 ///   --impact           Analyze test impact mapping
+///   --no-checklist     Disable actionable checklists (default: enabled)
+///   --minimal-checklist Generate compact checklist format
 
 import 'dart:async';
 import 'dart:convert';
@@ -81,6 +83,8 @@ class CoverageAnalyzer {
     this.parallel = false,
     this.exportJson = false,
     this.testImpactAnalysis = false,
+    this.enableChecklist = true,
+    this.minimalChecklist = false,
     this.excludePatterns = const [],
     CoverageThresholds? thresholds,
     this.baselineFile,
@@ -97,6 +101,8 @@ class CoverageAnalyzer {
   final bool parallel;
   final bool exportJson;
   final bool testImpactAnalysis;
+  final bool enableChecklist;
+  final bool minimalChecklist;
   final List<String> excludePatterns;
   final CoverageThresholds thresholds;
   final String? baselineFile;
@@ -1247,8 +1253,14 @@ class CoverageAnalyzer {
     report.writeln();
 
     // Actionable Checklist Section
-    if (uncoveredLines.isNotEmpty) {
-      report.writeln(_generateCoverageChecklist(uncoveredByFile, libPath));
+    if (enableChecklist && uncoveredLines.isNotEmpty) {
+      report.writeln(
+        _generateCoverageChecklist(
+          uncoveredByFile,
+          libPath,
+          minimal: minimalChecklist,
+        ),
+      );
       report.writeln();
     }
 
@@ -1418,11 +1430,32 @@ class CoverageAnalyzer {
   /// Generate actionable checklist for coverage improvements
   String _generateCoverageChecklist(
     Map<String, List<int>> uncoveredByFile,
-    String libPath,
-  ) {
+    String libPath, {
+    bool minimal = false,
+  }) {
     final buffer = StringBuffer();
     buffer.writeln('## ✅ Coverage Action Items');
     buffer.writeln();
+
+    if (minimal) {
+      // Minimal mode: compact checklist
+      buffer.writeln('Quick action items to improve coverage:');
+      buffer.writeln();
+
+      for (final entry in uncoveredByFile.entries) {
+        final filePath = entry.key;
+        final fileName = filePath.split('/').last;
+        final testFilePath = suggestTestFile(filePath);
+        buffer.writeln('- [ ] Add tests for `$fileName` → `$testFilePath`');
+      }
+
+      buffer.writeln();
+      buffer.writeln('**Quick Command**: `dart test --coverage=coverage`');
+      buffer.writeln();
+      return buffer.toString();
+    }
+
+    // Full mode: detailed checklist
     buffer.writeln(
       'Use these actionable checklists to systematically improve test coverage:',
     );
@@ -2068,6 +2101,8 @@ void main(List<String> args) async {
   final parallel = args.contains('--parallel');
   final exportJson = args.contains('--json');
   final testImpactAnalysis = args.contains('--impact');
+  final enableChecklist = !args.contains('--no-checklist');
+  final minimalChecklist = args.contains('--minimal-checklist');
 
   // Parse exclude patterns
   final excludePatterns = <String>[];
@@ -2288,6 +2323,8 @@ void main(List<String> args) async {
     parallel: parallel,
     exportJson: exportJson,
     testImpactAnalysis: testImpactAnalysis,
+    enableChecklist: enableChecklist,
+    minimalChecklist: minimalChecklist,
     excludePatterns: excludePatterns,
     thresholds: CoverageThresholds(
       minimum: minCoverage,

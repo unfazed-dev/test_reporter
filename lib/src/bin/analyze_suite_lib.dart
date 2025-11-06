@@ -53,6 +53,8 @@ class TestOrchestrator {
     this.performance = false,
     this.verbose = false,
     this.parallel = false,
+    this.enableChecklist = true,
+    this.minimalChecklist = false,
     this.explicitModuleName,
     this.testPathOverride,
     this.sourcePathOverride,
@@ -63,6 +65,8 @@ class TestOrchestrator {
   final bool performance;
   final bool verbose;
   final bool parallel;
+  final bool enableChecklist;
+  final bool minimalChecklist;
   final String? explicitModuleName;
   final String? testPathOverride;
   final String? sourcePathOverride;
@@ -131,6 +135,12 @@ class TestOrchestrator {
       if (verbose) {
         args.add('--verbose');
         print('  [DEBUG] Running analyze_coverage on: $sourcePath');
+      }
+
+      if (!enableChecklist) {
+        args.add('--no-checklist');
+      } else if (minimalChecklist) {
+        args.add('--minimal-checklist');
       }
 
       final process = await Process.start('dart', args);
@@ -229,6 +239,12 @@ class TestOrchestrator {
         print('  [DEBUG] Running analyze_tests on: $actualTestPath');
       }
       if (parallel) args.add('--parallel');
+
+      if (!enableChecklist) {
+        args.add('--no-checklist');
+      } else if (minimalChecklist) {
+        args.add('--minimal-checklist');
+      }
 
       final process = await Process.start('dart', args);
       final output = <String>[];
@@ -495,7 +511,9 @@ class TestOrchestrator {
     }
 
     // Master Workflow Checklist
-    report.writeln(_generateMasterWorkflow());
+    if (enableChecklist) {
+      report.writeln(_generateMasterWorkflow(minimal: minimalChecklist));
+    }
 
     // Detailed Metrics Breakdown
     report.writeln('## 📈 Detailed Metrics');
@@ -1035,12 +1053,10 @@ class TestOrchestrator {
   /// - Phase 1: Critical Issues (failing tests, low coverage)
   /// - Phase 2: Stability Issues (flaky tests)
   /// - Phase 3: Optimization (slow tests)
-  String _generateMasterWorkflow() {
+  String _generateMasterWorkflow({bool minimal = false}) {
     final buffer = StringBuffer();
 
     buffer.writeln('## ✅ Recommended Workflow');
-    buffer.writeln();
-    buffer.writeln('Follow this 3-phase approach to improve your test suite:');
     buffer.writeln();
 
     // Extract data from results
@@ -1056,6 +1072,39 @@ class TestOrchestrator {
     final slowTests = (testSummary?['slow_tests'] as int?) ?? 0;
     final overallCoverage =
         toDouble(coverageSummary?['overall_coverage']) ?? 100.0;
+
+    if (minimal) {
+      // Minimal mode: compact checklist
+      buffer.writeln('Quick action items to improve test suite:');
+      buffer.writeln();
+
+      if (consistentFailures > 0) {
+        buffer.writeln(
+            '- [ ] 🔴 Fix $consistentFailures failing test${consistentFailures == 1 ? '' : 's'}');
+      }
+      if (overallCoverage < 80) {
+        buffer.writeln(
+            '- [ ] 🔴 Increase coverage to 80% (current: ${overallCoverage.toStringAsFixed(1)}%)');
+      }
+      if (flakyTests > 0) {
+        buffer.writeln(
+            '- [ ] 🟠 Stabilize $flakyTests flaky test${flakyTests == 1 ? '' : 's'}');
+      }
+      if (slowTests > 0) {
+        buffer.writeln(
+            '- [ ] 🟡 Optimize $slowTests slow test${slowTests == 1 ? '' : 's'}');
+      }
+
+      buffer.writeln();
+      buffer.writeln(
+          '**Quick Command**: `dart run test_reporter:analyze_suite test/`');
+      buffer.writeln();
+      return buffer.toString();
+    }
+
+    // Full mode: detailed 3-phase workflow
+    buffer.writeln('Follow this 3-phase approach to improve your test suite:');
+    buffer.writeln();
 
     // Phase 1: Critical Issues
     final phase1Items = <ChecklistItem>[];

@@ -5,6 +5,27 @@
 
 Comprehensive Flutter/Dart test reporting toolkit providing coverage analysis, flaky test detection, failure extraction, and unified reporting. Built for developers who want deep insights into their test suites.
 
+## What's New in v3.1
+
+**Interactive Actionable Checklists** in all reports!
+
+### ✅ Actionable Checklists
+- **GitHub-flavored markdown checklists** in all 4 analyzer reports
+- **Interactive checkboxes** for tracking progress in VS Code and GitHub issues/PRs
+- **3-tier priority system** for test reliability (🔴 critical, 🟠 important, 🟡 optional)
+- **Copy-pasteable commands** for each action item
+- **Progress tracking** with completion percentages
+- **CLI flags**: `--no-checklist` (disable) or `--minimal-checklist` (compact format)
+
+### ChecklistUtils Library
+- New utility classes for creating interactive checklists
+- Exported in `package:test_reporter/test_reporter.dart`
+- 31 comprehensive unit tests (100% passing)
+
+See examples below in each tool section and [CHANGELOG.md](CHANGELOG.md) for details.
+
+---
+
 ## What's New in v3.0
 
 **Major architectural improvements and enhanced features:**
@@ -43,6 +64,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete details.
 - **Interactive Debugging** - Deep dive into specific test failures with source viewing
 - **Parallel Execution** - Run tests in parallel with configurable worker pool
 - **Watch Mode** - Continuous testing with auto re-run on file changes
+- **Actionable Checklists** - 3-tier priority checklists (🔴 failing, 🟠 flaky, 🟡 slow)
 
 ### =� Coverage Analyzer (`analyze_coverage`)
 - **Line & Branch Coverage** - Comprehensive coverage analysis
@@ -52,6 +74,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete details.
 - **Mutation Testing** - Verify test effectiveness by simulating code mutations
 - **Parallel Execution** - Speed up analysis with parallel test runs
 - **JSON Export** - Machine-readable coverage reports
+- **Actionable Checklists** - File-by-file test coverage action items
 
 ### = Failure Extractor (`extract_failures`)
 - **Failed Test Detection** - Parses JSON reporter output to identify failures
@@ -59,12 +82,14 @@ See [CHANGELOG.md](CHANGELOG.md) for complete details.
 - **Batch Processing** - Groups failed tests by file for efficient re-execution
 - **Watch Mode** - Continuously monitor and rerun failed tests on file changes
 - **Detailed Reporting** - Comprehensive failure analysis and statistics
+- **Actionable Checklists** - 3-step triage workflow per failing test
 
 ### <� Suite Analyzer (`analyze_suite`)
 - **Unified Orchestrator** - Runs all analysis tools in sequence
 - **Combined Reports** - Single comprehensive report with all insights
 - **Configurable Runs** - Set number of test runs for flaky detection
 - **Performance Profiling** - Enable performance analysis across all tools
+- **Actionable Checklists** - Master 3-phase workflow combining all action items
 - **Verbose Output** - Detailed logging for debugging
 
 ## Installation

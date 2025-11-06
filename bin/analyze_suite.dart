@@ -53,6 +53,16 @@ void main(List<String> arguments) async {
       negatable: false,
     )
     ..addFlag(
+      'checklist',
+      help: 'Include actionable checklists in reports (default: enabled)',
+      defaultsTo: true,
+    )
+    ..addFlag(
+      'minimal-checklist',
+      help: 'Generate compact checklist format',
+      negatable: false,
+    )
+    ..addFlag(
       'help',
       abbr: 'h',
       help: 'Show this help message',
@@ -120,6 +130,8 @@ void main(List<String> arguments) async {
     performance: args['performance'] as bool,
     verbose: args['verbose'] as bool,
     parallel: args['parallel'] as bool,
+    enableChecklist: args['checklist'] as bool,
+    minimalChecklist: args['minimal-checklist'] as bool,
     explicitModuleName: args['module-name'] as String?,
     testPathOverride: args['test-path'] as String?,
     sourcePathOverride: args['source-path'] as String?,

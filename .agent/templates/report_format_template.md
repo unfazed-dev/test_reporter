@@ -266,6 +266,88 @@ For machine-readable format, include a JSON file with this structure:
 
 ---
 
+## ✅ Actionable Checklists (v2.1.0+)
+
+**Include interactive checklists for user actions** - see `report_system.md` for full documentation.
+
+### Checklist Section Template
+
+```markdown
+## ✅ [Tool Name] Action Items
+
+[Brief description of checklist purpose and how to use it]
+
+### [Section Title]
+
+- [ ] [Main action item]
+  - [ ] [Sub-step 1]
+  - [ ] [Sub-step 2]
+  - [ ] [Sub-step 3]
+  - 💡 Tip: [Helpful tip or suggestion]
+  - Command: `[copy-pasteable command]`
+
+- [ ] [Another action item]
+  - [Sub-steps...]
+
+**Progress:** 0 of [N] items complete ([X]%)
+
+### 🚀 Quick Commands
+
+\`\`\`bash
+# [Command description]
+[command here]
+
+# [Another command description]
+[another command]
+\`\`\`
+
+### 📊 Progress Tracking
+
+- [ ] **0 of [N] [category]** complete
+- [ ] Mark items above as you complete them to track progress
+```
+
+### Checklist Best Practices
+
+1. **Use GitHub-flavored markdown** (`- [ ]` for checkboxes)
+2. **Group logically** by file, priority, or phase
+3. **Include verification commands** for each action
+4. **Add progress tracking** with counters
+5. **Use emojis** for visual priority (🔴 critical, 🟠 important, 🟡 optional)
+6. **Provide tips** (💡) for complex items
+7. **Enable opt-out** via `--no-checklist` flag
+8. **Support minimal mode** via `--minimal-checklist` flag
+
+### Implementation with Checklist Utils
+
+```dart
+import 'package:test_reporter/src/utils/checklist_utils.dart';
+
+// Create checklist items
+final item = ChecklistItem(
+  text: 'Fix failing test in auth_service',
+  subItems: [
+    ChecklistItem(text: 'Identify root cause'),
+    ChecklistItem(text: 'Apply fix'),
+    ChecklistItem(text: 'Run: `dart test test/auth_service_test.dart`'),
+  ],
+  tip: 'Check for null references in authentication logic',
+);
+
+// Create checklist section
+final section = ChecklistSection(
+  title: '### 🔴 Priority 1: Critical Issues',
+  subtitle: 'Address these issues first',
+  items: [item],
+  priority: ChecklistPriority.critical,
+);
+
+// Render to markdown
+final markdown = section.toMarkdown();
+```
+
+---
+
 ## Customization Notes
 
 1. **Sections**: Add/remove sections based on your analyzer's needs
@@ -274,3 +356,4 @@ For machine-readable format, include a JSON file with this structure:
 4. **JSON Structure**: Mirror markdown structure for consistency
 5. **Timestamps**: Use ISO 8601 format for JSON, human-readable for markdown
 6. **Links**: Include clickable links to files (e.g., `file.dart:42`)
+7. **Checklists**: Include actionable checklists with CLI flag support (v2.1.0+)
