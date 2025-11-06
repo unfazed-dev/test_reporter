@@ -32,6 +32,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
+import 'package:test_reporter/src/utils/checklist_utils.dart';
 import 'package:test_reporter/src/utils/module_identifier.dart';
 import 'package:test_reporter/src/utils/path_resolver.dart';
 import 'package:test_reporter/src/utils/report_utils.dart';
@@ -492,6 +493,9 @@ class TestOrchestrator {
           '✅ No actions required. Continue maintaining current quality standards.');
       report.writeln();
     }
+
+    // Master Workflow Checklist
+    report.writeln(_generateMasterWorkflow());
 
     // Detailed Metrics Breakdown
     report.writeln('## 📈 Detailed Metrics');
@@ -1023,6 +1027,146 @@ class TestOrchestrator {
     if (stability >= 85) return '🟡 Mostly Stable';
     if (stability >= 70) return '🟠 Unstable';
     return '🔴 Very Unstable';
+  }
+
+  /// Generate master workflow checklist combining all action items
+  ///
+  /// Creates a 3-phase workflow:
+  /// - Phase 1: Critical Issues (failing tests, low coverage)
+  /// - Phase 2: Stability Issues (flaky tests)
+  /// - Phase 3: Optimization (slow tests)
+  String _generateMasterWorkflow() {
+    final buffer = StringBuffer();
+
+    buffer.writeln('## ✅ Recommended Workflow');
+    buffer.writeln();
+    buffer.writeln('Follow this 3-phase approach to improve your test suite:');
+    buffer.writeln();
+
+    // Extract data from results
+    final coverageData = results['coverage'] as Map<String, dynamic>?;
+    final testData = results['test_analysis'] as Map<String, dynamic>?;
+
+    final coverageSummary = coverageData?['summary'] as Map<String, dynamic>?;
+    final testSummary = testData?['summary'] as Map<String, dynamic>?;
+
+    final consistentFailures =
+        (testSummary?['consistent_failures'] as int?) ?? 0;
+    final flakyTests = (testSummary?['flaky_tests'] as int?) ?? 0;
+    final slowTests = (testSummary?['slow_tests'] as int?) ?? 0;
+    final overallCoverage =
+        toDouble(coverageSummary?['overall_coverage']) ?? 100.0;
+
+    // Phase 1: Critical Issues
+    final phase1Items = <ChecklistItem>[];
+
+    if (consistentFailures > 0) {
+      phase1Items.add(ChecklistItem(
+        text:
+            'Fix $consistentFailures failing test${consistentFailures == 1 ? '' : 's'}',
+        tip: 'These tests fail consistently. Priority: High',
+        command: 'dart test --name="<test_name>"',
+      ));
+    }
+
+    if (overallCoverage < 80) {
+      final missingCoverage = (80 - overallCoverage).toStringAsFixed(1);
+      phase1Items.add(ChecklistItem(
+        text: 'Increase test coverage by $missingCoverage%',
+        tip: 'Current: ${overallCoverage.toStringAsFixed(1)}%, Target: 80%',
+        command: 'dart run test_reporter:analyze_coverage lib/src --fix',
+      ));
+    }
+
+    if (phase1Items.isNotEmpty) {
+      final phase1 = ChecklistSection(
+        title: '### 🔴 Phase 1: Critical Issues',
+        subtitle:
+            'Address these issues first - they directly impact functionality',
+        items: phase1Items,
+        priority: ChecklistPriority.critical,
+      );
+      buffer.writeln(phase1.toMarkdown());
+      buffer.writeln(
+          '**Progress:** 0 of ${phase1Items.length} critical issues resolved');
+      buffer.writeln();
+    }
+
+    // Phase 2: Stability Issues
+    final phase2Items = <ChecklistItem>[];
+
+    if (flakyTests > 0) {
+      phase2Items.add(ChecklistItem(
+        text: 'Stabilize $flakyTests flaky test${flakyTests == 1 ? '' : 's'}',
+        tip: 'These tests pass sometimes and fail other times',
+        command: 'dart run test_reporter:analyze_tests test/ --runs=10',
+      ));
+    }
+
+    if (phase2Items.isNotEmpty) {
+      final phase2 = ChecklistSection(
+        title: '### 🟠 Phase 2: Stability',
+        subtitle: 'Improve test reliability and consistency',
+        items: phase2Items,
+        priority: ChecklistPriority.important,
+      );
+      buffer.writeln(phase2.toMarkdown());
+      buffer.writeln(
+          '**Progress:** 0 of ${phase2Items.length} stability issues resolved');
+      buffer.writeln();
+    }
+
+    // Phase 3: Optimization
+    final phase3Items = <ChecklistItem>[];
+
+    if (slowTests > 0) {
+      phase3Items.add(ChecklistItem(
+        text: 'Optimize $slowTests slow test${slowTests == 1 ? '' : 's'}',
+        tip: 'Improve test execution time for faster feedback',
+        command: 'dart run test_reporter:analyze_tests test/ --performance',
+      ));
+    }
+
+    if (phase3Items.isNotEmpty) {
+      final phase3 = ChecklistSection(
+        title: '### 🟡 Phase 3: Optimization',
+        subtitle: 'Enhance performance and developer experience',
+        items: phase3Items,
+        priority: ChecklistPriority.optional,
+      );
+      buffer.writeln(phase3.toMarkdown());
+      buffer.writeln(
+          '**Progress:** 0 of ${phase3Items.length} optimizations completed');
+      buffer.writeln();
+    }
+
+    // Overall progress tracker
+    final totalItems =
+        phase1Items.length + phase2Items.length + phase3Items.length;
+    if (totalItems > 0) {
+      buffer.writeln('---');
+      buffer.writeln();
+      buffer.writeln(
+          '**Overall Progress:** 0 of $totalItems items completed (0.0%)');
+      buffer.writeln();
+
+      // Links to detailed reports
+      buffer.writeln('**📄 Detailed Reports:**');
+      if (reportPaths['coverage'] != null) {
+        buffer.writeln('- Coverage: `${reportPaths['coverage']}`');
+      }
+      if (reportPaths['analyzer'] != null) {
+        buffer.writeln('- Test Reliability: `${reportPaths['analyzer']}`');
+      }
+      buffer.writeln();
+    } else {
+      buffer.writeln('**🎉 All clear!** No action items at this time.');
+      buffer.writeln();
+      buffer.writeln('Continue maintaining your excellent test suite quality.');
+      buffer.writeln();
+    }
+
+    return buffer.toString();
   }
 
   /// Clean up all empty report subdirectories
