@@ -93,9 +93,11 @@ class ModuleIdentifier {
     }
 
     // Handle files: extract filename and strip _test.dart or .dart suffix
-    if (relativePath.endsWith(_testSuffix) || relativePath.endsWith(_dartExtension)) {
+    if (relativePath.endsWith(_testSuffix) ||
+        relativePath.endsWith(_dartExtension)) {
       // Get just the filename (last segment)
-      final segments = relativePath.split('/').where((s) => s.isNotEmpty).toList();
+      final segments =
+          relativePath.split('/').where((s) => s.isNotEmpty).toList();
       final filename = segments.isEmpty ? relativePath : segments.last;
 
       // Strip suffix
@@ -114,7 +116,8 @@ class ModuleIdentifier {
     }
 
     // Extract last path segment (most specific directory name)
-    final segments = relativePath.split('/').where((s) => s.isNotEmpty).toList();
+    final segments =
+        relativePath.split('/').where((s) => s.isNotEmpty).toList();
     return segments.isEmpty ? 'unknown' : segments.last;
   }
 
@@ -223,8 +226,10 @@ class ModuleIdentifier {
     final normalized = _normalizePath(path);
 
     // Check for project root (with or without trailing slash)
-    if (normalized == _testPrefix || normalized == 'test' ||
-        normalized == _libPrefix || normalized == 'lib') {
+    if (normalized == _testPrefix ||
+        normalized == 'test' ||
+        normalized == _libPrefix ||
+        normalized == 'lib') {
       return PathType.project;
     }
 

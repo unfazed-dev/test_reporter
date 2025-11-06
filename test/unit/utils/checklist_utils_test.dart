@@ -255,11 +255,13 @@ void main() {
           [15, 16, 20, 21, 25],
         );
 
-        expect(description, anyOf([
-          contains('15-16'),
-          contains('20-21'),
-          contains('25'),
-        ]));
+        expect(
+            description,
+            anyOf([
+              contains('15-16'),
+              contains('20-21'),
+              contains('25'),
+            ]));
       });
 
       test('should detect error handling pattern', () {

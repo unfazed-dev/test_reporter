@@ -756,6 +756,9 @@ class FailedTestExtractor {
           markdown.writeln();
         }
       }
+
+      // Add triage workflow checklist
+      markdown.writeln(_generateTriageChecklist(results));
     }
 
     // Extract qualified module name from test path (or use explicit override)
@@ -787,6 +790,81 @@ class FailedTestExtractor {
     );
 
     print('💾 Results saved to: $reportPath');
+  }
+
+  /// Generate triage workflow checklist for failed tests
+  String _generateTriageChecklist(TestResults results) {
+    final buffer = StringBuffer();
+
+    buffer.writeln();
+    buffer.writeln('## ✅ Failure Triage Workflow');
+    buffer.writeln();
+    buffer.writeln(
+        'Follow this checklist to systematically fix each failing test:');
+    buffer.writeln();
+
+    // Group failures by file
+    final groupedTests = <String, List<FailedTest>>{};
+    for (final test in results.failedTests) {
+      groupedTests.putIfAbsent(test.filePath, () => []).add(test);
+    }
+
+    for (final entry in groupedTests.entries) {
+      final filePath = entry.key;
+      final tests = entry.value;
+
+      buffer.writeln('### File: `$filePath`');
+      buffer.writeln();
+
+      for (final test in tests) {
+        // Main checkbox for the test
+        buffer.writeln('- [ ] **Fix: ${test.name}**');
+
+        // Step 1: Identify root cause
+        buffer.writeln('  - [ ] **Step 1: Identify root cause**');
+
+        // Add truncated error if available
+        if (test.error != null) {
+          final truncatedError = _truncateError(test.error!);
+          buffer.writeln('    - Error: `$truncatedError`');
+        }
+
+        // Step 2: Apply fix
+        buffer.writeln('  - [ ] **Step 2: Apply fix**');
+        buffer.writeln('    - Modify test or implementation code');
+
+        // Step 3: Verify
+        buffer.writeln('  - [ ] **Step 3: Verify fix**');
+        buffer
+            .writeln('    - Run: `dart test $filePath --name="${test.name}"`');
+
+        buffer.writeln();
+      }
+    }
+
+    // Progress tracking
+    buffer.writeln(
+        '**Progress:** 0 of ${results.failedCount} failures triaged (0.0%)');
+    buffer.writeln();
+
+    // Quick commands section
+    buffer.writeln('### 🚀 Quick Commands');
+    buffer.writeln();
+    buffer.writeln('```bash');
+    buffer.writeln('# Rerun all failed tests');
+    for (final entry in groupedTests.entries) {
+      buffer.writeln('dart test ${entry.key}');
+    }
+    buffer.writeln('```');
+    buffer.writeln();
+
+    return buffer.toString();
+  }
+
+  /// Truncate error message to reasonable length
+  String _truncateError(String error, {int maxLength = 200}) {
+    if (error.length <= maxLength) return error;
+    return '${error.substring(0, maxLength)}...';
   }
 
   /// Watch directory for file changes

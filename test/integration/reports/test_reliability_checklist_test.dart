@@ -56,7 +56,8 @@ void main() {
           .where((f) => f.path.endsWith('.md'))
           .toList();
 
-      expect(reports, isNotEmpty, reason: 'Should generate at least one report');
+      expect(reports, isNotEmpty,
+          reason: 'Should generate at least one report');
 
       reportPath = reports.last.path;
       final reportContent = File(reportPath).readAsStringSync();
@@ -140,7 +141,8 @@ void main() {
 
       // Verify Priority 2 section can exist (may not exist if no flaky tests detected)
       // At minimum, the report should support this section structure
-      final hasReliabilitySection = reportContent.contains('✅ Test Reliability Action Items');
+      final hasReliabilitySection =
+          reportContent.contains('✅ Test Reliability Action Items');
       expect(hasReliabilitySection, isTrue);
     });
 
@@ -175,7 +177,8 @@ void main() {
       final reportContent = File(reports.last.path).readAsStringSync();
 
       // Verify Priority 3 section exists or is supported
-      final hasReliabilitySection = reportContent.contains('✅ Test Reliability Action Items');
+      final hasReliabilitySection =
+          reportContent.contains('✅ Test Reliability Action Items');
       expect(hasReliabilitySection, isTrue);
     });
 
