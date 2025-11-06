@@ -1,6 +1,6 @@
 name: test_reporter
 description: Comprehensive Flutter/Dart test reporting toolkit with coverage analysis, flaky test detection, failure extraction, and unified reporting
-version: 2.0.0
+version: 3.1.0
 repository: https://github.com/unfazed-dev/test_reporter
 issue_tracker: https://github.com/unfazed-dev/test_reporter/issues
 
