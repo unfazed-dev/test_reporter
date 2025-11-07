@@ -1399,6 +1399,13 @@ class CoverageAnalyzer {
       prefixPatterns: ['report_coverage'],
       subdirectory: 'quality',
     );
+
+    // Clean up coverage/ directory after report generation
+    final coverageDir = Directory('coverage');
+    if (await coverageDir.exists()) {
+      await coverageDir.delete(recursive: true);
+      print('  🧹 Deleted coverage/ directory');
+    }
   }
 
   String _formatLineRanges(List<int> lines) {

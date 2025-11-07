@@ -692,8 +692,27 @@ class TestOrchestrator {
 
       // Delete intermediate reports (coverage and tests)
       // The suite report already contains all their data in embedded JSON
-      // NOTE: We keep the detailed coverage and reliability reports
-      // The unified suite report is just a summary - users need the detailed reports
+      if (verbose) print('\n🧹 Deleting intermediate reports...');
+
+      // Delete coverage report if exists
+      if (reportPaths.containsKey('coverage')) {
+        final coveragePath = reportPaths['coverage']!;
+        final coverageFile = File(coveragePath);
+        if (await coverageFile.exists()) {
+          await coverageFile.delete();
+          if (verbose) print('  ✅ Deleted: $coveragePath');
+        }
+      }
+
+      // Delete test reliability report if exists
+      if (reportPaths.containsKey('analyzer')) {
+        final analyzerPath = reportPaths['analyzer']!;
+        final analyzerFile = File(analyzerPath);
+        if (await analyzerFile.exists()) {
+          await analyzerFile.delete();
+          if (verbose) print('  ✅ Deleted: $analyzerPath');
+        }
+      }
 
       // Check if there are failures to determine if we need a failed report
       final analysisData = results['test_analysis'] as Map<String, dynamic>?;
