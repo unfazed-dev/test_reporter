@@ -322,7 +322,7 @@ class TestAnalyzer {
 
     final result = await Process.run(
       isFlutterProject ? 'flutter' : 'dart',
-      ['test', '--reporter=json', testFile],
+      ['test', '--reporter=json', '--run-skipped', testFile],
       runInShell: Platform.isWindows,
     );
 

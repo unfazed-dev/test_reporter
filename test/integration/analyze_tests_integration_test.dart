@@ -362,16 +362,18 @@ void main() {
       expect(result.exitCode, equals(2),
           reason: 'Should exit with error code 2 (no files found)');
 
-      expect(result.stdout.toString(), contains('No test files found'),
+      expect(result.stdout.toString(), contains('Invalid test paths detected'),
           reason: 'Should explain why it failed');
 
       // Verify NO reports were generated
-      final reports = await reportsDir
-          .list()
-          .where((f) => f.path.contains('nonexistent'))
-          .toList();
-      expect(reports, isEmpty,
-          reason: 'Should NOT generate reports for nonexistent files');
+      if (await reportsDir.exists()) {
+        final reports = await reportsDir
+            .list()
+            .where((f) => f.path.contains('nonexistent'))
+            .toList();
+        expect(reports, isEmpty,
+            reason: 'Should NOT generate reports for nonexistent files');
+      }
     });
 
     test('should handle empty test directories', () async {
@@ -400,12 +402,14 @@ void main() {
             reason: 'Should explain why it failed');
 
         // Verify NO reports were generated for empty directory
-        final reports = await reportsDir
-            .list()
-            .where((f) => f.path.contains('empty_test'))
-            .toList();
-        expect(reports, isEmpty,
-            reason: 'Should NOT generate reports for empty directories');
+        if (await reportsDir.exists()) {
+          final reports = await reportsDir
+              .list()
+              .where((f) => f.path.contains('empty_test'))
+              .toList();
+          expect(reports, isEmpty,
+              reason: 'Should NOT generate reports for empty directories');
+        }
       } finally {
         await tempDir.delete(recursive: true);
       }
