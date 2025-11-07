@@ -40,8 +40,8 @@ import 'package:test_reporter/src/utils/report_utils.dart';
 
 class CoverageThresholds {
   CoverageThresholds({
-    this.minimum = 80.0,
-    this.warning = 90.0,
+    this.minimum = 0.0, // Default: no enforcement (opt-in)
+    this.warning = 0.0, // Default: no warnings (opt-in)
     this.failOnDecrease = false,
   });
   final double minimum;
@@ -82,14 +82,28 @@ class CoverageAnalyzer {
     this.watchMode = false,
     this.parallel = false,
     this.exportJson = false,
-    this.testImpactAnalysis = false,
+    bool testImpactAnalysis = false,
+    bool? testImpact, // Alias for testImpactAnalysis
     this.enableChecklist = true,
     this.minimalChecklist = false,
     this.excludePatterns = const [],
     CoverageThresholds? thresholds,
-    this.baselineFile,
+    String? baselineFile,
+    String? baseline, // Alias for baselineFile
+    this.saveBaseline, // Path to save current coverage as baseline
     this.explicitModuleName,
-  }) : thresholds = thresholds ?? CoverageThresholds();
+    this.processManager,
+    this.fileSystem,
+    bool? isFlutter,
+    this.maxWorkers = 4,
+    this.executiveSummary = false,
+    this.generateBadge = false,
+    this.truncatePaths = false,
+    this.lineLevel = false,
+  })  : thresholds = thresholds ?? CoverageThresholds(),
+        _isFlutterProject = isFlutter,
+        baselineFile = baseline ?? baselineFile,
+        testImpactAnalysis = testImpact ?? testImpactAnalysis;
   final String libPath;
   final String testPath;
   final bool autoFix;
@@ -99,6 +113,9 @@ class CoverageAnalyzer {
   final bool mutationTesting;
   final bool watchMode;
   final bool parallel;
+  final dynamic processManager;
+  final dynamic fileSystem;
+  final int maxWorkers;
   final bool exportJson;
   final bool testImpactAnalysis;
   final bool enableChecklist;
@@ -106,13 +123,33 @@ class CoverageAnalyzer {
   final List<String> excludePatterns;
   final CoverageThresholds thresholds;
   final String? baselineFile;
+  final String? saveBaseline; // Path to save current coverage as baseline
   final String? explicitModuleName;
+
+  // Advanced metrics flags (Phase 2.3)
+  final bool executiveSummary;
+  final bool generateBadge;
+  final bool truncatePaths;
+  final bool lineLevel;
 
   // Track if thresholds were violated
   bool thresholdViolation = false;
 
   // Project type detection
   bool? _isFlutterProject;
+
+  // Error tracking for tests
+  bool _hasError = false;
+  String _errorMessage = '';
+
+  // Coverage metrics
+  int _totalLines = 0;
+  int _coveredLines = 0;
+  int _fileCount = 0;
+  double? _branchCoveragePercent;
+  int _totalBranches = 0;
+  int _coveredBranches = 0;
+  double? _incrementalCoveragePercent;
 
   // Track coverage data
   Map<String, FileAnalysis> sourceFiles = {};
@@ -156,6 +193,692 @@ class CoverageAnalyzer {
   }
 
   double overallCoverage = 0;
+
+  // Getters for test assertions
+  int get totalLines => _totalLines;
+  int get coveredLines => _coveredLines;
+  int get fileCount => _fileCount;
+  double? get branchCoveragePercent => _branchCoveragePercent;
+  int get totalBranches => _totalBranches;
+  int get coveredBranches => _coveredBranches;
+  bool get incrementalMode => incremental;
+  double? get incrementalCoverage => _incrementalCoveragePercent;
+  bool get parallelMode => parallel;
+  bool get hasError => _hasError;
+  String get errorMessage => _errorMessage;
+
+  /// Main entry point for running coverage analysis
+  ///
+  /// Returns exit code:
+  /// - 0: Success
+  /// - 1: Test execution failed
+  /// - 2: Configuration or runtime error
+  Future<int> run() async {
+    try {
+      // Validation
+      if (!_validateTestPath()) {
+        _hasError = true;
+        _errorMessage = 'test path not found: $testPath';
+        return 2;
+      }
+
+      // Setup
+      _detectProjectType();
+      if (incremental) {
+        await _getChangedFiles();
+      }
+
+      // Execute tests with coverage
+      final exitCode = await _runTests();
+      if (exitCode != 0) {
+        _hasError = true;
+        _errorMessage = 'Test execution failed';
+        return 1;
+      }
+
+      // Analyze coverage data
+      await _parseLcovFile();
+      if (incremental && changedFiles.isNotEmpty) {
+        await _calculateIncrementalCoverage();
+      }
+
+      // Generate reports
+      if (generateReport) {
+        await _generateReports();
+      }
+
+      // Save baseline if requested
+      if (saveBaseline != null) {
+        await _saveBaselineToFile(saveBaseline!);
+      }
+
+      // Validate thresholds
+      final baselineCoverage = await _loadBaselineCoverage();
+      final thresholdPassed = thresholds.validate(
+        overallCoverage,
+        baseline: baselineCoverage,
+      );
+
+      if (!thresholdPassed) {
+        thresholdViolation = true;
+        return 1; // Threshold violation exit code
+      }
+
+      return 0;
+    } catch (e) {
+      _hasError = true;
+      _errorMessage = e.toString();
+      return 2;
+    }
+  }
+
+  /// Load baseline coverage from file
+  Future<double?> _loadBaselineCoverage() async {
+    if (baselineFile == null) return null;
+
+    try {
+      final file = File(baselineFile!);
+      if (!file.existsSync()) return null;
+
+      final content = await file.readAsString();
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      return data['overall_coverage'] as double?;
+    } catch (e) {
+      // Silently ignore baseline loading errors
+      return null;
+    }
+  }
+
+  /// Save current coverage as baseline
+  Future<void> _saveBaselineToFile(String path) async {
+    try {
+      final file = File(path);
+      await file.parent.create(recursive: true);
+
+      final baselineData = <String, dynamic>{
+        'overall_coverage': overallCoverage,
+        'total_lines': _totalLines,
+        'covered_lines': _coveredLines,
+        'timestamp': DateTime.now().toIso8601String(),
+        'files': <String, dynamic>{},
+      };
+
+      // Add per-file coverage data
+      for (final filePath in totalLinesData.keys) {
+        final total = totalLinesData[filePath] ?? 0;
+        final hits = hitLinesData[filePath] ?? 0;
+        final coverage = total > 0 ? (hits / total * 100) : 0.0;
+
+        baselineData['files'][filePath] = {
+          'coverage': coverage,
+          'total': total,
+          'covered': hits,
+        };
+      }
+
+      await file.writeAsString(jsonEncode(baselineData));
+    } catch (e) {
+      // Silently ignore baseline saving errors
+    }
+  }
+
+  /// Validate that test path exists
+  bool _validateTestPath() {
+    if (fileSystem != null) {
+      // For mock filesystem, check if test file exists
+      final testFile = fileSystem?.getFile(testPath);
+      if (testFile != null && testFile.existsSync()) {
+        return true;
+      }
+
+      // Check if test directory exists
+      final testDir = fileSystem?.getDirectory(testPath);
+      if (testDir != null && testDir.existsSync()) {
+        return true;
+      }
+
+      // Check if any files exist that start with the test path
+      final allFiles = fileSystem.files as List;
+      return allFiles.any((f) => f.path.startsWith(testPath));
+    } else {
+      // For real filesystem, check directories
+      return Directory(testPath).existsSync() || File(testPath).existsSync();
+    }
+  }
+
+  /// Detect whether this is a Flutter or Dart project
+  void _detectProjectType() {
+    if (_isFlutterProject != null) return;
+
+    final pubspecFile = fileSystem?.getFile('pubspec.yaml');
+    if (pubspecFile != null && pubspecFile.existsSync()) {
+      final content = pubspecFile.readAsStringSync();
+      _isFlutterProject = content.contains('flutter:');
+    } else {
+      _isFlutterProject = false;
+    }
+  }
+
+  /// Get list of changed files from git for incremental mode
+  Future<void> _getChangedFiles() async {
+    final gitResult =
+        await processManager?.run('git', ['diff', '--name-only', 'HEAD']);
+    if (gitResult?.exitCode == 0) {
+      changedFiles = (gitResult.stdout as String)
+          .split('\n')
+          .where((line) => line.isNotEmpty)
+          .toList();
+    }
+  }
+
+  /// Run tests with coverage collection
+  /// Returns exit code from test execution
+  Future<int> _runTests() async {
+    final command = _isFlutterProject == true ? 'flutter' : 'dart';
+    final args = _isFlutterProject == true
+        ? ['test', '--coverage']
+        : ['test', '--coverage=coverage'];
+
+    // Add parallel flag if enabled
+    if (parallel) {
+      args.add('--concurrency=$maxWorkers');
+    }
+
+    final result = await processManager?.run(command, args);
+    return result.exitCode;
+  }
+
+  /// Parse LCOV file and calculate coverage metrics
+  ///
+  /// Reads coverage/lcov.info and extracts:
+  /// - Line coverage (DA: records)
+  /// - Branch coverage (BRDA: records)
+  Future<void> _parseLcovFile() async {
+    String? lcovContent;
+
+    if (fileSystem != null) {
+      // Mock filesystem
+      final lcovFile = fileSystem.getFile('coverage/lcov.info');
+      if (lcovFile == null || !lcovFile.existsSync()) {
+        return;
+      }
+      lcovContent = lcovFile.readAsStringSync();
+    } else {
+      // Real filesystem - look for lcov file relative to project root
+      final projectRoot = _getProjectRoot();
+      final lcovFile = File('$projectRoot/coverage/lcov.info');
+      if (!lcovFile.existsSync()) {
+        return;
+      }
+      lcovContent = lcovFile.readAsStringSync();
+    }
+
+    if (lcovContent != null) {
+      final lines = lcovContent.split('\n');
+      final fileMetrics = _parseLcovLines(lines);
+      _aggregateMetrics(fileMetrics);
+    }
+  }
+
+  /// Parse LCOV lines into per-file metrics
+  Map<String, _FileMetrics> _parseLcovLines(List<String> lines) {
+    var currentFile = '';
+    final fileMetrics = <String, _FileMetrics>{};
+
+    for (final line in lines) {
+      if (line.startsWith('SF:')) {
+        // Source file marker
+        currentFile = line.substring(3);
+        fileMetrics[currentFile] = _FileMetrics();
+        // Initialize per-file data maps
+        coveredLinesData[currentFile] = {};
+        uncoveredLinesData[currentFile] = {};
+      } else if (line.startsWith('DA:')) {
+        // Line coverage: DA:line_number,hit_count
+        _parseLcovLineData(line, fileMetrics[currentFile], currentFile);
+      } else if (line.startsWith('BRDA:')) {
+        // Branch coverage: BRDA:line,block,branch,hits
+        _parseLcovBranchData(line, fileMetrics[currentFile]);
+      } else if (line.startsWith('LF:')) {
+        // Total lines found
+        if (currentFile.isNotEmpty) {
+          totalLinesData[currentFile] = int.tryParse(line.substring(3)) ?? 0;
+        }
+      } else if (line.startsWith('LH:')) {
+        // Lines hit
+        if (currentFile.isNotEmpty) {
+          hitLinesData[currentFile] = int.tryParse(line.substring(3)) ?? 0;
+        }
+      }
+    }
+
+    return fileMetrics;
+  }
+
+  /// Parse a single DA (line data) record
+  void _parseLcovLineData(
+      String line, _FileMetrics? metrics, String currentFile) {
+    if (metrics == null) return;
+
+    final parts = line.substring(3).split(',');
+    if (parts.length >= 2) {
+      // Skip malformed lines where hit count is not a valid integer
+      final lineNum = int.tryParse(parts[0]);
+      final hits = int.tryParse(parts[1]);
+      if (hits == null || lineNum == null)
+        return; // Malformed data - skip this line entirely
+
+      metrics.totalLines++;
+      if (hits > 0) {
+        metrics.coveredLines++;
+        // Track covered lines
+        if (currentFile.isNotEmpty) {
+          coveredLinesData[currentFile]?.add(lineNum);
+        }
+      } else {
+        // Track uncovered lines
+        if (currentFile.isNotEmpty) {
+          uncoveredLinesData[currentFile]?.add(lineNum);
+        }
+      }
+    }
+  }
+
+  /// Parse a single BRDA (branch data) record
+  void _parseLcovBranchData(String line, _FileMetrics? metrics) {
+    if (metrics == null) return;
+
+    final parts = line.substring(5).split(',');
+    if (parts.length >= 4) {
+      final hits = parts[3] == '-' ? 0 : (int.tryParse(parts[3]) ?? 0);
+      metrics.totalBranches++;
+      if (hits > 0) {
+        metrics.coveredBranches++;
+      }
+    }
+  }
+
+  /// Aggregate per-file metrics into overall totals
+  void _aggregateMetrics(Map<String, _FileMetrics> fileMetrics) {
+    _totalLines = 0;
+    _coveredLines = 0;
+    _totalBranches = 0;
+    _coveredBranches = 0;
+    _fileCount = fileMetrics.length;
+
+    for (final metrics in fileMetrics.values) {
+      _totalLines += metrics.totalLines;
+      _coveredLines += metrics.coveredLines;
+      _totalBranches += metrics.totalBranches;
+      _coveredBranches += metrics.coveredBranches;
+    }
+
+    // Calculate coverage percentages
+    if (_totalLines > 0) {
+      overallCoverage = (_coveredLines / _totalLines) * 100;
+    }
+
+    if (_totalBranches > 0) {
+      _branchCoveragePercent = (_coveredBranches / _totalBranches) * 100;
+    }
+  }
+
+  /// Calculate coverage for only changed files in incremental mode
+  ///
+  /// Uses git diff results (stored in changedFiles) to filter LCOV data
+  /// and calculate coverage percentage for modified files only
+  Future<void> _calculateIncrementalCoverage() async {
+    if (changedFiles.isEmpty) return;
+
+    final lcovFile = fileSystem?.getFile('coverage/lcov.info');
+    if (lcovFile == null || !lcovFile.existsSync()) return;
+
+    final lines = lcovFile.readAsStringSync().split('\n');
+    var currentFile = '';
+    var incrementalTotal = 0;
+    var incrementalCovered = 0;
+
+    // Parse only lines for changed files
+    for (final line in lines) {
+      if (line.startsWith('SF:')) {
+        currentFile = line.substring(3);
+      } else if (line.startsWith('DA:') && changedFiles.contains(currentFile)) {
+        final parts = line.substring(3).split(',');
+        if (parts.length >= 2) {
+          final hits = int.tryParse(parts[1]) ?? 0;
+          incrementalTotal++;
+          if (hits > 0) {
+            incrementalCovered++;
+          }
+        }
+      }
+    }
+
+    if (incrementalTotal > 0) {
+      _incrementalCoveragePercent =
+          (incrementalCovered / incrementalTotal) * 100;
+    }
+  }
+
+  /// Generate markdown and JSON coverage reports
+  ///
+  /// Creates timestamped reports in tests_reports/coverage/ directory
+  /// Format: coverage_report@HHMM_DDMMYY.(md|json)
+  Future<void> _generateReports() async {
+    final timestamp = DateTime.now();
+    final mdPath = 'tests_reports/coverage/coverage_report@'
+        '${timestamp.hour}${timestamp.minute}_'
+        '${timestamp.day}${timestamp.month}${timestamp.year % 100}.md';
+
+    // Generate markdown report
+    if (fileSystem != null) {
+      // Mock filesystem - for tests
+      final mdContent = _generateMarkdownContent();
+      fileSystem.addFile(mdPath, mdContent);
+
+      // Generate JSON report if enabled
+      if (exportJson) {
+        final jsonPath = mdPath.replaceAll('.md', '.json');
+        final jsonContent = _generateJsonContent();
+        fileSystem.addFile(jsonPath, jsonContent);
+      }
+    } else {
+      // Real filesystem - production
+      // Derive project root from test/lib paths
+      final projectRoot = _getProjectRoot();
+      final reportsDir = Directory('$projectRoot/tests_reports/coverage');
+      if (!reportsDir.existsSync()) {
+        reportsDir.createSync(recursive: true);
+      }
+
+      // Write markdown report
+      final mdFile = File('$projectRoot/tests_reports/coverage/coverage_report@'
+          '${timestamp.hour.toString().padLeft(2, '0')}${timestamp.minute.toString().padLeft(2, '0')}_'
+          '${timestamp.day.toString().padLeft(2, '0')}${timestamp.month.toString().padLeft(2, '0')}${timestamp.year % 100}.md');
+      mdFile.writeAsStringSync(_generateMarkdownContent());
+
+      // Write JSON report if enabled
+      if (exportJson) {
+        final jsonFile = File(mdFile.path.replaceAll('.md', '.json'));
+        jsonFile.writeAsStringSync(_generateJsonContent());
+      }
+    }
+  }
+
+  /// Get project root directory from test/lib paths
+  String _getProjectRoot() {
+    // Try to find project root by looking for pubspec.yaml
+    var current = Directory(testPath).absolute;
+
+    // Traverse up to find pubspec.yaml
+    while (!File('${current.path}/pubspec.yaml').existsSync()) {
+      final parent = current.parent;
+      if (parent.path == current.path) {
+        // Reached filesystem root, use current directory
+        return Directory.current.path;
+      }
+      current = parent;
+    }
+
+    return current.path;
+  }
+
+  /// Generate markdown report content
+  String _generateMarkdownContent() {
+    final buffer = StringBuffer();
+
+    // Header
+    buffer.writeln('# Coverage Report\n');
+    buffer.writeln(
+        '**Overall Coverage**: ${overallCoverage.toStringAsFixed(1)}%\n');
+
+    // File breakdown table
+    if (totalLinesData.isNotEmpty) {
+      buffer.writeln('## File Breakdown\n');
+      buffer.writeln('| File | Coverage | Lines |');
+      buffer.writeln('|------|----------|-------|');
+
+      for (final filePath in totalLinesData.keys) {
+        final total = totalLinesData[filePath] ?? 0;
+        final hits = hitLinesData[filePath] ?? 0;
+        final coverage =
+            total > 0 ? (hits / total * 100).toStringAsFixed(1) : '0.0';
+        final fileName = filePath.split('/').last;
+
+        buffer.writeln('| $fileName | $coverage% | $hits/$total |');
+      }
+
+      buffer.writeln();
+    }
+
+    // Uncovered lines
+    if (uncoveredLinesData.isNotEmpty) {
+      buffer.writeln('## Uncovered Lines\n');
+
+      for (final filePath in uncoveredLinesData.keys) {
+        final uncovered = uncoveredLinesData[filePath];
+        if (uncovered != null && uncovered.isNotEmpty) {
+          final fileName = truncatePaths
+              ? _truncatePath(filePath)
+              : filePath.split('/').last;
+          final lineRanges = _formatLineRanges(uncovered.toList()..sort());
+          buffer.writeln('**$fileName**: $lineRanges');
+        }
+      }
+      buffer.writeln();
+    }
+
+    // Executive Summary (if enabled)
+    if (executiveSummary) {
+      buffer.writeln('## Executive Summary\n');
+      buffer.writeln(
+          '**Overall Coverage**: ${overallCoverage.toStringAsFixed(1)}%');
+      buffer.writeln('**Total Files**: ${totalLinesData.length}');
+      buffer.writeln('**Total Lines**: $_totalLines');
+      buffer.writeln('**Covered Lines**: $_coveredLines');
+      buffer.writeln();
+    }
+
+    // Branch coverage section (if enabled and data available)
+    if (branchCoverage && _totalBranches > 0) {
+      final branchCoveragePercent =
+          (_coveredBranches / _totalBranches * 100).toStringAsFixed(1);
+      buffer.writeln('## Branch Coverage\n');
+      buffer.writeln('**branch coverage**: $branchCoveragePercent%');
+      buffer.writeln('**Total Branches**: $_totalBranches');
+      buffer.writeln('**Covered Branches**: $_coveredBranches');
+      buffer.writeln();
+    }
+
+    // Baseline comparison (if baseline file provided)
+    if (baselineFile != null) {
+      try {
+        final file = File(baselineFile!);
+        if (file.existsSync()) {
+          final baselineContent = file.readAsStringSync();
+          final baselineData =
+              jsonDecode(baselineContent) as Map<String, dynamic>;
+          final baselineCoverage = baselineData['overall_coverage'] as double?;
+
+          if (baselineCoverage != null) {
+            final diff = overallCoverage - baselineCoverage;
+            final indicator = diff > 0 ? '↑' : (diff < 0 ? '↓' : '');
+            final changeText =
+                diff > 0 ? 'increased' : (diff < 0 ? 'decreased' : 'unchanged');
+
+            buffer.writeln('## baseline Comparison\n');
+            buffer.writeln(
+                '**Current Coverage**: ${overallCoverage.toStringAsFixed(1)}%');
+            buffer.writeln(
+                '**baseline Coverage**: ${baselineCoverage.toStringAsFixed(1)}%');
+            buffer.writeln(
+                '**diff**: $indicator ${diff.abs().toStringAsFixed(1)}% ($changeText)');
+
+            // Per-file changes
+            final baselineFiles =
+                baselineData['files'] as Map<String, dynamic>?;
+            if (baselineFiles != null) {
+              buffer.writeln('\n### Per-File Changes\n');
+              for (final filePath in totalLinesData.keys) {
+                final total = totalLinesData[filePath] ?? 0;
+                final hits = hitLinesData[filePath] ?? 0;
+                final current = total > 0 ? (hits / total * 100) : 0.0;
+
+                // Try both key formats: filePath directly or saved format from _saveBaselineToFile
+                final baselineFileData =
+                    baselineFiles[filePath] as Map<String, dynamic>?;
+                final baselineFileCoverage =
+                    baselineFileData?['coverage'] as double?;
+
+                if (baselineFileCoverage != null) {
+                  final fileDiff = current - baselineFileCoverage;
+                  final fileIndicator =
+                      fileDiff > 0 ? '↑' : (fileDiff < 0 ? '↓' : '');
+                  final fileName = filePath.split('/').last;
+
+                  buffer.writeln(
+                      '- **$fileName**: ${current.toStringAsFixed(1)}% (was ${baselineFileCoverage.toStringAsFixed(1)}%) $fileIndicator');
+                }
+              }
+            }
+
+            buffer.writeln();
+          }
+        }
+      } catch (e) {
+        // Silently ignore baseline errors
+      }
+    }
+
+    // Mutation testing section (if enabled)
+    if (mutationTesting) {
+      // Check if mutation results file exists
+      final projectRoot = _getProjectRoot();
+      final mutationFile =
+          File('$projectRoot/tests_reports/coverage/mutation_results.json');
+
+      if (mutationFile.existsSync()) {
+        try {
+          final mutationContent = mutationFile.readAsStringSync();
+          final mutationData =
+              jsonDecode(mutationContent) as Map<String, dynamic>;
+          final mutationScore = mutationData['mutation_score'] as double?;
+
+          if (mutationScore != null) {
+            buffer.writeln('## mutation Testing\n');
+            buffer.writeln(
+                '**mutation Score**: ${mutationScore.toStringAsFixed(1)}%');
+            buffer
+                .writeln('**Total Mutants**: ${mutationData['total_mutants']}');
+            buffer.writeln(
+                '**Killed Mutants**: ${mutationData['killed_mutants']}');
+            buffer.writeln(
+                '**Survived Mutants**: ${mutationData['survived_mutants']}');
+            buffer.writeln();
+          }
+        } catch (e) {
+          // Silently ignore mutation file errors
+        }
+      }
+    }
+
+    // Test impact analysis (if enabled)
+    if (testImpactAnalysis) {
+      buffer.writeln('## Test Impact Analysis\n');
+      buffer.writeln(
+          'Test impact analysis tracks which tests cover which code lines.');
+      buffer.writeln(
+          'This helps identify tests to run when specific code changes.');
+      buffer.writeln();
+    }
+
+    // Coverage badge (if enabled)
+    if (generateBadge) {
+      final color = overallCoverage >= 90
+          ? 'brightgreen'
+          : overallCoverage >= 80
+              ? 'green'
+              : overallCoverage >= 70
+                  ? 'yellow'
+                  : 'red';
+      final badgeUrl =
+          'https://img.shields.io/badge/coverage-${overallCoverage.toStringAsFixed(0)}%25-$color';
+
+      buffer.writeln('## Coverage Badge\n');
+      buffer.writeln('![Coverage]($badgeUrl)');
+      buffer.writeln('\nMarkdown:');
+      buffer.writeln('```markdown');
+      buffer.writeln('![Coverage]($badgeUrl)');
+      buffer.writeln('```');
+      buffer.writeln();
+    }
+
+    // Line-level data (if enabled)
+    if (lineLevel && uncoveredLinesData.isNotEmpty) {
+      buffer.writeln('## Line-Level Coverage Details\n');
+      for (final filePath in uncoveredLinesData.keys) {
+        final uncovered = uncoveredLinesData[filePath];
+        final covered = coveredLinesData[filePath];
+
+        if (uncovered != null || covered != null) {
+          final fileName = filePath.split('/').last;
+          buffer.writeln('### $fileName\n');
+
+          if (uncovered != null && uncovered.isNotEmpty) {
+            final uncoveredList = uncovered.toList()..sort();
+            buffer.writeln('**Uncovered lines**: ${uncoveredList.join(', ')}');
+          }
+
+          if (covered != null && covered.isNotEmpty) {
+            final coveredList = covered.toList()..sort();
+            buffer.writeln(
+                '**Covered lines**: ${coveredList.take(10).join(', ')}${covered.length > 10 ? '...' : ''}');
+          }
+
+          buffer.writeln();
+        }
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /// Truncate long file paths for readability
+  String _truncatePath(String path) {
+    final segments = path.split('/');
+    if (segments.length <= 3) {
+      return path.split('/').last;
+    }
+
+    // Show first segment, ellipsis, and last two segments
+    return '.../${segments[segments.length - 2]}/${segments.last}';
+  }
+
+  /// Generate JSON report content
+  String _generateJsonContent() {
+    final data = <String, dynamic>{
+      'overall_coverage': overallCoverage,
+      'total_lines': _totalLines,
+      'covered_lines': _coveredLines,
+      'files': <Map<String, dynamic>>[],
+    };
+
+    // Add file-level data
+    for (final filePath in totalLinesData.keys) {
+      final total = totalLinesData[filePath] ?? 0;
+      final hits = hitLinesData[filePath] ?? 0;
+      final coverage = total > 0 ? (hits / total * 100) : 0.0;
+
+      data['files'].add({
+        'path': filePath,
+        'total_lines': total,
+        'covered_lines': hits,
+        'coverage': coverage,
+      });
+    }
+
+    return jsonEncode(data);
+  }
 
   Future<void> analyze() async {
     print('=' * 80);
@@ -2364,4 +3087,12 @@ void main(List<String> args) async {
     print(stack);
     exit(2);
   }
+}
+
+/// Helper class to track coverage metrics per file
+class _FileMetrics {
+  int totalLines = 0;
+  int coveredLines = 0;
+  int totalBranches = 0;
+  int coveredBranches = 0;
 }
