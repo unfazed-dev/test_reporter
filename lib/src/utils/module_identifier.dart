@@ -138,14 +138,8 @@ class ModuleIdentifier {
       throw ArgumentError('Module name cannot be empty');
     }
 
-    // Convert to lowercase
-    var normalized = baseName.toLowerCase();
-
-    // Only replace underscores with hyphens for project type
-    // Folder and file types preserve underscores
-    if (type == PathType.project) {
-      normalized = normalized.replaceAll('_', '-');
-    }
+    // Convert to lowercase and replace underscores with hyphens
+    final normalized = baseName.toLowerCase().replaceAll('_', '-');
 
     // Add appropriate suffix
     final suffix = switch (type) {

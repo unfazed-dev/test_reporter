@@ -150,12 +150,12 @@ void main() {
 
       test('should return default for empty path', () {
         final orchestrator = TestOrchestrator(testPath: '');
-        expect(orchestrator.extractModuleName(), equals('all_tests-fo'));
+        expect(orchestrator.extractModuleName(), equals('all-tests-fo'));
       });
 
       test('should return default for root-only path', () {
         final orchestrator = TestOrchestrator(testPath: '/');
-        expect(orchestrator.extractModuleName(), equals('all_tests-fo'));
+        expect(orchestrator.extractModuleName(), equals('all-tests-fo'));
       });
     });
 
