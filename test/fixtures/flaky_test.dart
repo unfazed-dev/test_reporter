@@ -12,6 +12,7 @@
 /// dart test test/fixtures/flaky_test.dart
 /// dart run test_reporter:analyze_tests test/fixtures/flaky_test.dart --runs=10
 /// ```
+@Tags(['fixture'])
 import 'dart:math';
 
 import 'package:test/test.dart';

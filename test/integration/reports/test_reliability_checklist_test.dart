@@ -1,25 +1,45 @@
+@Tags(['integration'])
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:test_reporter/src/bin/analyze_tests_lib.dart';
+import 'package:test_reporter/src/utils/report_manager.dart';
 
 /// Integration tests for test reliability report checklist generation
 ///
 /// These tests verify that analyze_tests generates actionable checklists
 /// with priority-based sections (failing/flaky/slow tests).
+///
+/// NOTE: These tests use a temp directory for reports to avoid polluting tests_reports/
+/// Run with: dart test --tags integration
 void main() {
   group('Test Reliability Report Checklist Integration', () {
     late Directory tempDir;
+    late Directory tempReportsDir;
     late String reportPath;
 
-    setUp(() {
+    setUp(() async {
       // Create temp directory for test outputs
       tempDir = Directory.systemTemp.createTempSync('test_reliability_test_');
+
+      // Create temp directory for reports (so we don't pollute real reports/)
+      tempReportsDir = await Directory.systemTemp.createTemp('test_reports_');
+
+      // Override ReportManager to use temp directory
+      ReportManager.overrideReportsRoot(tempReportsDir.path);
     });
 
-    tearDown(() {
-      // Cleanup
+    tearDown(() async {
+      // Reset ReportManager to use default directory
+      ReportManager.overrideReportsRoot('tests_reports');
+
+      // Cleanup temp test directory
       if (tempDir.existsSync()) {
         tempDir.deleteSync(recursive: true);
+      }
+
+      // Cleanup temp reports directory
+      if (await tempReportsDir.exists()) {
+        await tempReportsDir.delete(recursive: true);
       }
     });
 
@@ -40,7 +60,7 @@ void main() {
 }
 ''');
 
-      // Run analyzer on the test file
+      // Run analyzer on the test file (reports will go to temp dir via ReportManager override)
       final analyzer = TestAnalyzer(
         targetFiles: [testFile.path],
         runCount: 2,
@@ -49,8 +69,8 @@ void main() {
 
       await analyzer.run();
 
-      // Get the generated report
-      final reports = Directory('tests_reports/reliability')
+      // Get the generated report from temp directory
+      final reports = Directory('${tempReportsDir.path}/reliability')
           .listSync()
           .whereType<File>()
           .where((f) => f.path.endsWith('.md'))
@@ -90,7 +110,7 @@ void main() {
 
       await analyzer.run();
 
-      final reports = Directory('tests_reports/reliability')
+      final reports = Directory('${tempReportsDir.path}/reliability')
           .listSync()
           .whereType<File>()
           .where((f) => f.path.endsWith('.md'))
@@ -131,7 +151,7 @@ void main() {
 
       await analyzer.run();
 
-      final reports = Directory('tests_reports/reliability')
+      final reports = Directory('${tempReportsDir.path}/reliability')
           .listSync()
           .whereType<File>()
           .where((f) => f.path.endsWith('.md'))
@@ -168,7 +188,7 @@ void main() {
 
       await analyzer.run();
 
-      final reports = Directory('tests_reports/reliability')
+      final reports = Directory('${tempReportsDir.path}/reliability')
           .listSync()
           .whereType<File>()
           .where((f) => f.path.endsWith('.md'))
@@ -204,7 +224,7 @@ void main() {
 
       await analyzer.run();
 
-      final reports = Directory('tests_reports/reliability')
+      final reports = Directory('${tempReportsDir.path}/reliability')
           .listSync()
           .whereType<File>()
           .where((f) => f.path.endsWith('.md'))
@@ -240,7 +260,7 @@ void main() {
 
       await analyzer.run();
 
-      final reports = Directory('tests_reports/reliability')
+      final reports = Directory('${tempReportsDir.path}/reliability')
           .listSync()
           .whereType<File>()
           .where((f) => f.path.endsWith('.md'))
@@ -284,7 +304,7 @@ void main() {
 
       await analyzer.run();
 
-      final reports = Directory('tests_reports/reliability')
+      final reports = Directory('${tempReportsDir.path}/reliability')
           .listSync()
           .whereType<File>()
           .where((f) => f.path.endsWith('.md'))

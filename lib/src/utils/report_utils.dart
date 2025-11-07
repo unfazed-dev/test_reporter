@@ -1,14 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
+import 'package:test_reporter/src/utils/report_manager.dart';
 
 /// Report file management utilities
 class ReportUtils {
   /// Get the report directory path for the current project
   /// Creates 'tests_reports/' in project root if it doesn't exist
+  /// Respects ReportManager.overrideReportsRoot() for testing
   static Future<String> getReportDirectory() async {
     final currentDir = Directory.current;
-    final reportDir = Directory(p.join(currentDir.path, 'tests_reports'));
+    final reportsRoot = ReportManager.reportsRoot;
+    final reportDir = Directory(p.join(currentDir.path, reportsRoot));
 
     if (!await reportDir.exists()) {
       await reportDir.create(recursive: true);

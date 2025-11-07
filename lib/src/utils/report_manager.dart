@@ -94,6 +94,9 @@ class ReportManager {
   /// Get the actual reports root (respects test override)
   static String get _actualReportsRoot => _testReportsRoot ?? _reportsRoot;
 
+  /// Get the reports root directory path (public - for ReportUtils)
+  static String get reportsRoot => _actualReportsRoot;
+
   /// Start a report generation context
   ///
   /// Returns context for tracking this report through lifecycle

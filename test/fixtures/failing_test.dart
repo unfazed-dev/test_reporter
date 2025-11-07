@@ -13,6 +13,7 @@
 /// dart run test_reporter:analyze_tests test/fixtures/failing_test.dart --runs=5
 /// dart run test_reporter:extract_failures test/fixtures/
 /// ```
+@Tags(['fixture'])
 import 'package:test/test.dart';
 
 void main() {

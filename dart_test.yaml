@@ -1,0 +1,17 @@
+# Test configuration for test_reporter package
+# Dart test package configuration: https://github.com/dart-lang/test/blob/master/pkgs/test/doc/configuration.md
+
+# Tags configuration
+tags:
+  # Fixture tests - intentionally failing tests for testing the analyzer tools
+  # These should be excluded from normal test runs
+  fixture:
+    skip: "Fixture tests are intentionally failing - run explicitly when testing analyzers"
+
+  # Integration tests - generate real reports in tests_reports/
+  # Skip by default to avoid polluting reports directory
+  integration:
+    skip: "Integration tests generate real reports - run explicitly with --tags integration"
+
+# Test reporter defaults
+reporter: expanded

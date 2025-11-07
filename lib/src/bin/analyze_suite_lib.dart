@@ -34,7 +34,6 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:test_reporter/src/utils/checklist_utils.dart';
 import 'package:test_reporter/src/utils/module_identifier.dart';
-import 'package:test_reporter/src/utils/path_resolver.dart';
 import 'package:test_reporter/src/utils/report_utils.dart';
 
 /// Helper to safely convert numeric values to double
@@ -83,17 +82,66 @@ class TestOrchestrator {
 
   /// Detect source path from test path for coverage analysis
   ///
-  /// Maps test paths to their corresponding source paths using PathResolver.
-  /// This ensures coverage analysis runs on SOURCE code, not test files.
+  /// Maps test paths to their corresponding source paths using simple transformations.
+  /// - lib paths pass through unchanged
+  /// - lib → lib/src
+  /// - test/ → lib/ (then to lib/src)
+  /// - test paths default to lib/src
   String detectSourcePath(String inputPath) {
-    return PathResolver.inferSourcePath(inputPath) ?? 'lib/src';
+    final normalized = inputPath.replaceAll(r'\', '/');
+
+    // If already a lib path, return as-is (unless it's just 'lib')
+    if (normalized.startsWith('lib/')) {
+      return normalized;
+    }
+    if (normalized == 'lib') {
+      return 'lib/src';
+    }
+
+    // test/ → lib/src
+    if (normalized == 'test/') {
+      return 'lib/src';
+    }
+
+    // Default fallback for all test paths
+    return 'lib/src';
   }
 
   /// Detect test path from source path for test analysis
   ///
-  /// Maps source paths to their corresponding test paths using PathResolver.
+  /// Maps source paths to their corresponding test paths using simple transformations.
+  /// - test paths pass through unchanged
+  /// - lib/src/foo.dart → test/src/foo_test.dart (preserves src/)
+  /// - lib/src/utils → test/src/utils (preserves src/)
+  /// - Other paths default to test/
   String detectTestPath(String inputPath) {
-    return PathResolver.inferTestPath(inputPath) ?? 'test/';
+    final normalized = inputPath.replaceAll(r'\', '/');
+
+    // If already a test path, return as-is
+    if (normalized.startsWith('test/')) {
+      return normalized;
+    }
+
+    // Handle lib/src paths - preserve the src/ in the mapping
+    if (normalized.startsWith('lib/src/')) {
+      final relativePath = normalized.substring('lib/'.length); // Keep src/
+
+      // File: add _test suffix if not present
+      if (relativePath.endsWith('.dart')) {
+        if (relativePath.endsWith('_test.dart')) {
+          return 'test/$relativePath';
+        }
+        final baseName =
+            relativePath.substring(0, relativePath.length - '.dart'.length);
+        return 'test/${baseName}_test.dart';
+      }
+
+      // Directory
+      return 'test/$relativePath';
+    }
+
+    // Default fallback
+    return 'test/';
   }
 
   Future<void> runAll() async {
