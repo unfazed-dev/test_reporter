@@ -64,13 +64,96 @@ import 'dart:math' as math;
 import 'package:test_reporter/src/utils/module_identifier.dart';
 import 'package:test_reporter/src/utils/report_utils.dart';
 
+/// Enum representing different types of test failure patterns
+enum FailurePatternType {
+  assertion,
+  nullError,
+  timeout,
+  rangeError,
+  typeError,
+  fileSystemError,
+  networkError,
+  unknown,
+}
+
+/// Result of failure pattern detection
+class FailureDetectionResult {
+  FailureDetectionResult({
+    required this.type,
+    required this.errorMessage,
+    this.stackTrace,
+    this.details = const {},
+  });
+
+  final FailurePatternType type;
+  final String errorMessage;
+  final String? stackTrace;
+  final Map<String, String> details;
+}
+
+/// Tracks occurrences of a specific failure pattern
+class FailurePattern {
+  FailurePattern({
+    required this.type,
+    String? category,
+    this.count = 1,
+    List<String>? testNames,
+    this.errorMessage,
+    this.stackTrace,
+    this.suggestion,
+    Map<String, String>? details,
+  })  : category = category ?? _deriveCategoryFromType(type),
+        testNames = testNames ?? [],
+        details = details ?? {};
+
+  final FailurePatternType type;
+  final String category;
+  int count;
+  final List<String> testNames;
+  final String? errorMessage;
+  final String? stackTrace;
+  final String? suggestion;
+  final Map<String, String> details;
+
+  void incrementCount() {
+    count++;
+  }
+
+  void addTestName(String name) {
+    if (!testNames.contains(name)) {
+      testNames.add(name);
+    }
+  }
+
+  static String _deriveCategoryFromType(FailurePatternType type) {
+    switch (type) {
+      case FailurePatternType.assertion:
+        return 'Assertion Failure';
+      case FailurePatternType.nullError:
+        return 'Null Error';
+      case FailurePatternType.timeout:
+        return 'Timeout';
+      case FailurePatternType.rangeError:
+        return 'Range Error';
+      case FailurePatternType.typeError:
+        return 'Type Error';
+      case FailurePatternType.fileSystemError:
+        return 'File System Error';
+      case FailurePatternType.networkError:
+        return 'Network Error';
+      case FailurePatternType.unknown:
+        return 'Unknown Error';
+    }
+  }
+}
+
 class TestAnalyzer {
   TestAnalyzer({
     this.runCount = 3,
     this.verbose = false,
     this.interactive = false,
     this.performanceMode = false,
-    this.watch = false,
+    bool? watchMode,
     this.generateFixes = true,
     this.generateReport = true,
     this.slowTestThreshold = 1.0, // seconds
@@ -83,7 +166,7 @@ class TestAnalyzer {
     this.enableChecklist = true,
     this.minimalChecklist = false,
     this.explicitModuleName,
-  });
+  }) : watch = watchMode ?? false;
   // Terminal colors
   static const String reset = '\x1B[0m';
   static const String red = '\x1B[31m';
@@ -128,6 +211,245 @@ class TestAnalyzer {
   final bool enableChecklist;
   final bool minimalChecklist;
   final String? explicitModuleName;
+
+  // Pattern registry for tracking failure patterns by type
+  final Map<FailurePatternType, FailurePattern> _patternRegistry = {};
+
+  // Watch mode tracking
+  final List<String> _changedFiles = [];
+
+  // Getter for watchMode (alias for watch)
+  bool get watchMode => watch;
+
+  /// Detects failure type from test output string
+  FailureDetectionResult detectFailureType(String output) {
+    final lowerOutput = output.toLowerCase();
+    FailurePatternType type = FailurePatternType.unknown;
+    String errorMessage = '';
+    String? stackTrace;
+    Map<String, String> details = {};
+
+    // Extract stack trace
+    final stackTraceMatch = RegExp(r'#\d+.*?\n', multiLine: true);
+    final stackMatches = stackTraceMatch.allMatches(output);
+    if (stackMatches.isNotEmpty) {
+      stackTrace = stackMatches.map((m) => m.group(0)).join();
+    }
+
+    // Check for specific exception types first (before generic patterns)
+    final firstLine = output.split('\n').first;
+
+    // Detect range errors
+    if (lowerOutput.contains('rangeerror')) {
+      type = FailurePatternType.rangeError;
+      // Match pattern like "range 0..2: 5" - capture the number after the colon
+      final indexMatch =
+          RegExp(r'range\s+\d+\.\.\d+:\s*(\d+)').firstMatch(output);
+      errorMessage = firstLine;
+      if (indexMatch != null) {
+        details['index'] = indexMatch.group(1)!;
+      }
+    }
+    // Detect file system errors
+    else if (lowerOutput.contains('filesystemexception') ||
+        lowerOutput.contains('cannot open file')) {
+      type = FailurePatternType.fileSystemError;
+      final pathMatch = RegExp(r"path\s*=\s*'([^']+)'").firstMatch(output);
+      errorMessage = firstLine;
+      if (pathMatch != null) {
+        details['path'] = pathMatch.group(1)!;
+      }
+    }
+    // Detect network errors
+    else if (lowerOutput.contains('socketexception')) {
+      type = FailurePatternType.networkError;
+      final urlMatch =
+          RegExp(r"'([^']+\.(com|org|net|io))'").firstMatch(output);
+      errorMessage = firstLine;
+      if (urlMatch != null) {
+        details['url'] = urlMatch.group(1)!;
+      }
+    }
+    // Detect null errors
+    else if (lowerOutput.contains('nosuchmethoderror') &&
+        lowerOutput.contains('null')) {
+      type = FailurePatternType.nullError;
+      final varMatch = RegExp(r"'(\w+)' was called on null").firstMatch(output);
+      errorMessage = firstLine;
+      if (varMatch != null) {
+        details['variableName'] = varMatch.group(1)!;
+      }
+      final locationMatch = RegExp(r'at (\S+\.dart:\d+)').firstMatch(output);
+      if (locationMatch != null) {
+        details['location'] = locationMatch.group(1)!;
+      }
+    }
+    // Detect timeout failures
+    else if (lowerOutput.contains('timeout') ||
+        lowerOutput.contains('timed out')) {
+      type = FailurePatternType.timeout;
+      final durationMatch = RegExp(r'(\d+)\s*seconds?').firstMatch(output);
+      errorMessage = output.split('\n').firstWhere(
+          (line) => line.toLowerCase().contains('timeout'),
+          orElse: () => firstLine);
+      if (durationMatch != null) {
+        details['duration'] = durationMatch.group(1)!;
+      }
+    }
+    // Detect type errors
+    else if (lowerOutput.contains('type') &&
+        (lowerOutput.contains('subtype') || lowerOutput.contains('cast'))) {
+      type = FailurePatternType.typeError;
+      final typeMatch =
+          RegExp(r"type '(\w+)' is not a subtype.*?'(\w+)'").firstMatch(output);
+      errorMessage = firstLine;
+      if (typeMatch != null) {
+        details['actualType'] = typeMatch.group(1)!;
+        details['expectedType'] = typeMatch.group(2)!;
+      }
+    }
+    // Detect assertion failures (check last to avoid false positives)
+    else if ((lowerOutput.contains('expected:') &&
+            lowerOutput.contains('actual:')) ||
+        (lowerOutput.contains('expected user'))) {
+      type = FailurePatternType.assertion;
+      final expectedMatch =
+          RegExp(r'Expected[:\s]+([^\n]+)', caseSensitive: false)
+              .firstMatch(output);
+      final actualMatch = RegExp(r'Actual[:\s]+([^\n]+)', caseSensitive: false)
+          .firstMatch(output);
+      errorMessage = output.split('\n').firstWhere(
+          (line) => line.contains('Expected'),
+          orElse: () => firstLine);
+      if (expectedMatch != null)
+        details['expected'] = expectedMatch.group(1)?.trim() ?? '';
+      if (actualMatch != null)
+        details['actual'] = actualMatch.group(1)?.trim() ?? '';
+    }
+    // Unknown error - use first line
+    else {
+      type = FailurePatternType.unknown;
+      errorMessage = firstLine;
+    }
+
+    return FailureDetectionResult(
+      type: type,
+      errorMessage: errorMessage,
+      stackTrace: stackTrace,
+      details: details,
+    );
+  }
+
+  /// Adds a detected failure to the pattern registry
+  void addDetectedFailure({
+    required FailurePatternType type,
+    required String testName,
+    required String errorMessage,
+  }) {
+    if (_patternRegistry.containsKey(type)) {
+      _patternRegistry[type]!.incrementCount();
+      _patternRegistry[type]!.addTestName(testName);
+    } else {
+      final category = _getCategoryForType(type);
+      _patternRegistry[type] = FailurePattern(
+        type: type,
+        category: category,
+        count: 1,
+        testNames: [testName],
+        errorMessage: errorMessage,
+      );
+    }
+  }
+
+  /// Gets all detected patterns
+  List<FailurePattern> get detectedPatterns => _patternRegistry.values.toList();
+
+  /// Gets patterns ranked by frequency (most common first)
+  List<FailurePattern> getRankedPatterns() {
+    final patternsList = _patternRegistry.values.toList();
+    patternsList.sort((a, b) => b.count.compareTo(a.count));
+    return patternsList;
+  }
+
+  /// Generates smart suggestion for a failure pattern
+  String generateSuggestion(FailurePattern pattern) {
+    switch (pattern.type) {
+      case FailurePatternType.assertion:
+        return 'Verify the test assertions and ensure expected values match actual behavior';
+
+      case FailurePatternType.nullError:
+        final varName = pattern.details['variableName'] ?? 'variable';
+        final location = pattern.details['location'] ?? '';
+        var suggestion =
+            'Add null checks for $varName before accessing properties';
+        if (location.isNotEmpty) {
+          suggestion += ' at $location';
+        }
+        if (varName.isNotEmpty) {
+          suggestion += '\n\nConsider:\n';
+          suggestion += 'if ($varName != null) { ... }\n';
+          suggestion += 'or use: $varName?.property\n';
+          suggestion += 'or use: $varName ?? defaultValue';
+        }
+        return suggestion;
+
+      case FailurePatternType.timeout:
+        final duration = pattern.details['duration'] ?? 'timeout';
+        return 'Test timed out. Consider:\n'
+            '- Increasing timeout duration with Timeout($duration + buffer)\n'
+            '- Optimizing slow operations\n'
+            '- Mocking expensive external calls';
+
+      case FailurePatternType.rangeError:
+        return 'Check array/list bounds before accessing elements:\n'
+            '- Verify collection length\n'
+            '- Add bounds checking: if (index < list.length) { ... }';
+
+      case FailurePatternType.typeError:
+        final expectedType = pattern.details['expectedType'] ?? 'Expected';
+        final actualType = pattern.details['actualType'] ?? 'Actual';
+        return 'Type mismatch: $actualType is not compatible with $expectedType\n'
+            '- Add type conversion: value.toString(), int.parse(), etc.\n'
+            '- Check generic type parameters\n'
+            '- Use type-safe casting with as or is';
+
+      case FailurePatternType.fileSystemError:
+        return 'File system error. Ensure:\n'
+            '- Test files and resources exist\n'
+            '- Paths are correct and accessible\n'
+            '- Proper file permissions are set';
+
+      case FailurePatternType.networkError:
+        return 'Network error detected. Consider:\n'
+            '- Mocking network calls in tests\n'
+            '- Using test fixtures instead of real API calls\n'
+            '- Checking if test server is running';
+
+      case FailurePatternType.unknown:
+        return 'Unable to determine specific fix. Review error message and stack trace';
+    }
+  }
+
+  String _getCategoryForType(FailurePatternType type) {
+    switch (type) {
+      case FailurePatternType.assertion:
+        return 'Assertion Failure';
+      case FailurePatternType.nullError:
+        return 'Null Error';
+      case FailurePatternType.timeout:
+        return 'Timeout';
+      case FailurePatternType.rangeError:
+        return 'Range Error';
+      case FailurePatternType.typeError:
+        return 'Type Error';
+      case FailurePatternType.fileSystemError:
+        return 'File System Error';
+      case FailurePatternType.networkError:
+        return 'Network Error';
+      case FailurePatternType.unknown:
+        return 'Unknown Error';
+    }
+  }
 
   Future<void> run() async {
     _printHeader();
@@ -522,12 +844,12 @@ class TestAnalyzer {
     final error = failure.error.toLowerCase();
 
     // Advanced pattern detection
-    FailureType? type;
+    FailurePatternType? type;
     String? category;
     String? suggestion;
 
     if (error.contains('assertion') || error.contains('expect')) {
-      type = FailureType.assertion;
+      type = FailurePatternType.assertion;
       category = 'Assertion Failure';
 
       // Extract expected vs actual values
@@ -543,7 +865,7 @@ class TestAnalyzer {
             'Expected: ${expectedMatch.group(1)?.trim()}\nActual: ${actualMatch.group(1)?.trim()}';
       }
     } else if (error.contains('null') || error.contains('nosuchmethoderror')) {
-      type = FailureType.nullError;
+      type = FailurePatternType.nullError;
       category = 'Null Reference Error';
 
       // Extract the property/method that was null
@@ -554,11 +876,11 @@ class TestAnalyzer {
             'Add null check for ${propertyMatch.group(1)} or ensure proper initialization';
       }
     } else if (error.contains('timeout')) {
-      type = FailureType.timeout;
+      type = FailurePatternType.timeout;
       category = 'Timeout';
       suggestion = 'Increase timeout duration or optimize test performance';
     } else if (error.contains('rangeError') || error.contains('index')) {
-      type = FailureType.rangeError;
+      type = FailurePatternType.rangeError;
       category = 'Range/Index Error';
 
       // Extract index information
@@ -568,20 +890,20 @@ class TestAnalyzer {
             'Check array bounds before accessing index ${indexMatch.group(1)}';
       }
     } else if (error.contains('type') || error.contains('cast')) {
-      type = FailureType.typeError;
+      type = FailurePatternType.typeError;
       category = 'Type Error';
       suggestion = 'Verify type conversions and generic type parameters';
     } else if (error.contains('file') || error.contains('io')) {
-      type = FailureType.ioError;
+      type = FailurePatternType.fileSystemError;
       category = 'I/O Error';
       suggestion =
           'Ensure test files/resources exist and have proper permissions';
     } else if (error.contains('network') || error.contains('socket')) {
-      type = FailureType.networkError;
+      type = FailurePatternType.networkError;
       category = 'Network Error';
       suggestion = 'Mock network calls or ensure test server is running';
     } else {
-      type = FailureType.unknown;
+      type = FailurePatternType.unknown;
       category = 'Unknown Error';
     }
 
@@ -775,6 +1097,320 @@ class TestAnalyzer {
     }
 
     return report.toString();
+  }
+
+  /// Get slow tests that exceed the threshold
+  List<TestPerformance> getSlowTests() {
+    return performance.values
+        .where((perf) => perf.averageDuration > slowTestThreshold)
+        .toList();
+  }
+
+  /// Generate performance report
+  String generatePerformanceReport() {
+    final report = StringBuffer();
+    report.writeln('# Performance Report');
+    report.writeln();
+
+    if (performance.isEmpty) {
+      report.writeln('No performance data available.');
+      return report.toString();
+    }
+
+    report.writeln('## Performance Summary');
+    report.writeln();
+
+    // Sort by average duration (slowest first)
+    final sortedTests = performance.values.toList()
+      ..sort((a, b) => b.averageDuration.compareTo(a.averageDuration));
+
+    for (final perf in sortedTests) {
+      report.writeln('### ${perf.testName}');
+      report.writeln(
+          '- **Average Duration**: ${perf.averageDuration.toStringAsFixed(2)}s');
+      report.writeln(
+          '- **Min Duration**: ${perf.minDuration.toStringAsFixed(2)}s');
+      report.writeln(
+          '- **Max Duration**: ${perf.maxDuration.toStringAsFixed(2)}s');
+      report.writeln();
+    }
+
+    return report.toString();
+  }
+
+  /// Get timing breakdown for a specific test
+  Map<String, double> getTimingBreakdown(String testId) {
+    final perf = performance[testId];
+    if (perf == null) return {};
+
+    return {
+      'average': perf.averageDuration,
+      'min': perf.minDuration,
+      'max': perf.maxDuration,
+      'stdDev': perf.standardDeviation,
+    };
+  }
+
+  /// Identify performance bottlenecks (tests above the given percentile)
+  List<TestPerformance> identifyBottlenecks({required int percentile}) {
+    if (performance.isEmpty) return [];
+
+    // Sort all tests by average duration
+    final sorted = performance.values.toList()
+      ..sort((a, b) => a.averageDuration.compareTo(b.averageDuration));
+
+    // Calculate index for the percentile
+    final index = ((percentile / 100) * sorted.length).floor();
+    if (index >= sorted.length) return [];
+
+    // Return tests above the percentile threshold
+    final threshold = sorted[index].averageDuration;
+    return sorted.where((perf) => perf.averageDuration >= threshold).toList();
+  }
+
+  /// Generate markdown report with test results
+  String generateMarkdownReport() {
+    final report = StringBuffer();
+    report.writeln('# Test Analysis Report');
+    report.writeln();
+
+    // Summary
+    report.writeln('## Summary');
+    final totalTests = testRuns.length;
+    final passingTests = testRuns.values.where((t) => t.passRate == 1.0).length;
+    report.writeln('- Total Tests: $totalTests');
+    report.writeln('- Passing: $passingTests');
+    report.writeln();
+
+    // Test list
+    report.writeln('## Tests');
+    for (final testRun in testRuns.values) {
+      report.writeln('- **${testRun.testName}** (${testRun.testFile})');
+    }
+    report.writeln();
+
+    // Flaky tests section
+    final flakyTestsList = testRuns.values.where((t) => t.isFlaky).toList();
+    if (flakyTestsList.isNotEmpty) {
+      report.writeln('## Flaky Tests');
+      for (final test in flakyTestsList) {
+        report.writeln('- ${test.testName}');
+      }
+      report.writeln();
+    }
+
+    // Failure patterns section
+    if (_patternRegistry.isNotEmpty) {
+      report.writeln('## Failure Patterns');
+      for (final pattern in _patternRegistry.values) {
+        report
+            .writeln('- **${pattern.category}**: ${pattern.count} occurrences');
+      }
+      report.writeln();
+    }
+
+    // Performance section
+    if (performanceMode && performance.isNotEmpty) {
+      report.writeln('## Performance Metrics');
+      for (final perf in performance.values) {
+        report.writeln(
+            '- **${perf.testName}**: ${perf.averageDuration.toStringAsFixed(2)}s avg');
+      }
+      report.writeln();
+    }
+
+    return report.toString();
+  }
+
+  /// Generate JSON report with test results
+  String generateJsonReport() {
+    final totalTests = testRuns.length;
+    final passingTests = testRuns.values.where((t) => t.passRate == 1.0).length;
+    final flakyTests = testRuns.values.where((t) => t.isFlaky).length;
+
+    // Simple JSON encoding (minimal implementation)
+    final json = StringBuffer();
+    json.writeln('{');
+    json.writeln('  "summary": {');
+    json.writeln('    "totalTests": $totalTests,');
+    json.writeln('    "passingTests": $passingTests,');
+    json.writeln('    "flakyTests": $flakyTests');
+    json.writeln('  },');
+    json.writeln('  "tests": [');
+
+    final testList = testRuns.values.toList();
+    for (var i = 0; i < testList.length; i++) {
+      final test = testList[i];
+      json.write('    {');
+      json.write('"testName": "${test.testName}", ');
+      json.write('"testFile": "${test.testFile}", ');
+      json.write('"passRate": ${test.passRate}, ');
+      json.write('"isFlaky": ${test.isFlaky}');
+      json.write('}');
+      if (i < testList.length - 1) json.write(',');
+      json.writeln();
+    }
+    json.writeln('  ]');
+    json.writeln('}');
+
+    return json.toString();
+  }
+
+  /// Generate failures report in markdown format
+  String generateFailuresReport() {
+    final report = StringBuffer();
+    report.writeln('# Test Failures Report');
+    report.writeln();
+
+    // Consistent failures
+    if (consistentFailures.isNotEmpty) {
+      report.writeln('## Consistent Failures');
+      for (final testId in consistentFailures) {
+        final testRun = testRuns[testId];
+        if (testRun != null) {
+          report.writeln('### ${testRun.testName}');
+          report.writeln('- **File**: ${testRun.testFile}');
+
+          // Include failure details if available
+          final testFailures = failures[testId];
+          if (testFailures != null && testFailures.isNotEmpty) {
+            final firstFailure = testFailures.first;
+            report.writeln('- **Error**: ${firstFailure.error}');
+            report.writeln('- **Stack Trace**: ${firstFailure.stackTrace}');
+          }
+
+          report.writeln();
+        }
+      }
+    }
+
+    // Include suggestions from patterns
+    if (_patternRegistry.isNotEmpty) {
+      report.writeln('## Suggested Fixes');
+      for (final pattern in _patternRegistry.values) {
+        final suggestion = generateSuggestion(pattern);
+        report.writeln('### ${pattern.category}');
+        report.writeln(suggestion);
+        report.writeln();
+      }
+    }
+
+    // Rerun commands
+    if (consistentFailures.isNotEmpty) {
+      report.writeln('## Rerun Commands');
+      for (final testId in consistentFailures) {
+        final testRun = testRuns[testId];
+        if (testRun != null) {
+          report.writeln('```bash');
+          report.writeln('dart test ${testRun.testFile}');
+          report.writeln('```');
+        }
+      }
+    }
+
+    return report.toString();
+  }
+
+  /// Generate failures report in JSON format
+  String generateFailuresJsonReport() {
+    final json = StringBuffer();
+    json.writeln('{');
+    json.writeln('  "failures": [');
+
+    final failureList = <String>[];
+    for (final testId in consistentFailures) {
+      final testRun = testRuns[testId];
+      if (testRun != null) {
+        failureList.add(
+            '    {"testName": "${testRun.testName}", "testFile": "${testRun.testFile}"}');
+      }
+    }
+
+    json.writeln(failureList.join(',\n'));
+    json.writeln('  ]');
+    json.writeln('}');
+
+    return json.toString();
+  }
+
+  /// Get all passing tests (100% pass rate)
+  List<TestRun> getAllPassingTests() {
+    return testRuns.values.where((test) => test.passRate == 1.0).toList();
+  }
+
+  /// Get all failing tests (consistent failures)
+  List<TestRun> getAllFailingTests() {
+    return testRuns.values.where((test) => test.isConsistentFailure).toList();
+  }
+
+  /// Find duplicate test names across different files
+  List<String> findDuplicateTestNames() {
+    final nameToFiles = <String, List<String>>{};
+
+    // Group tests by name
+    for (final test in testRuns.values) {
+      nameToFiles.putIfAbsent(test.testName, () => []).add(test.testFile);
+    }
+
+    // Find names with multiple files
+    final duplicates = <String>[];
+    for (final entry in nameToFiles.entries) {
+      if (entry.value.length > 1) {
+        duplicates.add(entry.key);
+      }
+    }
+
+    return duplicates;
+  }
+
+  /// Add a file change for watch mode
+  void addFileChange(String filePath) {
+    if (!_changedFiles.contains(filePath)) {
+      _changedFiles.add(filePath);
+    }
+  }
+
+  /// Get list of changed files in watch mode
+  List<String> getChangedFiles() {
+    return List.unmodifiable(_changedFiles);
+  }
+
+  /// Get tests that need to be rerun based on file changes
+  List<TestRun> getTestsToRerun() {
+    final testsToRerun = <TestRun>[];
+
+    for (final changedFile in _changedFiles) {
+      // Find tests whose test file matches the changed file
+      for (final test in testRuns.values) {
+        if (test.testFile == changedFile) {
+          testsToRerun.add(test);
+        }
+      }
+    }
+
+    return testsToRerun;
+  }
+
+  /// Handle user input in interactive mode
+  String handleUserInput(String input) {
+    final normalized = input.trim().toLowerCase();
+
+    switch (normalized) {
+      case 'r':
+      case 'rerun':
+        return 'rerun';
+      case 'a':
+      case 'all':
+        return 'rerunAll';
+      case 'q':
+      case 'quit':
+        return 'quit';
+      case 'h':
+      case 'help':
+        return 'help';
+      default:
+        return 'unknown';
+    }
   }
 
   /// Generate comprehensive report
@@ -971,8 +1607,8 @@ class TestAnalyzer {
         final test = parts.length > 1 ? parts[1] : 'unknown';
         final pattern = patterns[testId];
         final category = pattern?.category ?? 'Unknown';
-        final priority = pattern?.type == FailureType.nullError ||
-                pattern?.type == FailureType.assertion
+        final priority = pattern?.type == FailurePatternType.nullError ||
+                pattern?.type == FailurePatternType.assertion
             ? '🔴 High'
             : '🟡 Medium';
 
@@ -1051,7 +1687,7 @@ class TestAnalyzer {
       report.writeln('| Pattern Type | Count | Percentage | Visual |');
       report.writeln('|--------------|-------|------------|--------|');
 
-      final patternsByType = <FailureType, int>{};
+      final patternsByType = <FailurePatternType, int>{};
       for (final pattern in patterns.values) {
         patternsByType[pattern.type] = (patternsByType[pattern.type] ?? 0) + 1;
       }
@@ -1235,15 +1871,17 @@ class TestAnalyzer {
     }
 
     // Pattern-based insights
-    final nullErrors =
-        patterns.values.where((p) => p.type == FailureType.nullError).length;
+    final nullErrors = patterns.values
+        .where((p) => p.type == FailurePatternType.nullError)
+        .length;
     if (nullErrors > 3) {
       insights['🔍 Pattern'] =
           'Multiple null reference errors detected - review initialization logic';
     }
 
-    final timeouts =
-        patterns.values.where((p) => p.type == FailureType.timeout).length;
+    final timeouts = patterns.values
+        .where((p) => p.type == FailurePatternType.timeout)
+        .length;
     if (timeouts > 0) {
       insights['⏰ Timeout'] =
           'Timeout issues detected - increase timeout or optimize async operations';
@@ -1426,7 +2064,7 @@ class TestAnalyzer {
 
       // Add failure pattern distribution if available
       if (patterns.isNotEmpty) {
-        final patternsByType = <FailureType, int>{};
+        final patternsByType = <FailurePatternType, int>{};
         for (final pattern in patterns.values) {
           patternsByType[pattern.type] =
               (patternsByType[pattern.type] ?? 0) + 1;
@@ -1617,7 +2255,7 @@ class TestAnalyzer {
     print('─' * 50);
 
     // Group patterns by type
-    final patternsByType = <FailureType, int>{};
+    final patternsByType = <FailurePatternType, int>{};
     for (final pattern in patterns.values) {
       patternsByType[pattern.type] = (patternsByType[pattern.type] ?? 0) + 1;
     }
@@ -1831,16 +2469,18 @@ class TestAnalyzer {
     }
 
     // Pattern-based insights
-    final nullErrors =
-        patterns.values.where((p) => p.type == FailureType.nullError).length;
+    final nullErrors = patterns.values
+        .where((p) => p.type == FailurePatternType.nullError)
+        .length;
     if (nullErrors > 3) {
       insights.add(
         'Multiple null reference errors detected - review initialization logic',
       );
     }
 
-    final timeouts =
-        patterns.values.where((p) => p.type == FailureType.timeout).length;
+    final timeouts = patterns.values
+        .where((p) => p.type == FailurePatternType.timeout)
+        .length;
     if (timeouts > 0) {
       insights.add(
         'Timeout issues detected - consider increasing timeout or optimizing tests',
@@ -1886,7 +2526,7 @@ class TestAnalyzer {
     if (flakyTests.isNotEmpty) {
       print('    2. Add retry logic or improve test isolation for flaky tests');
     }
-    if (patterns.values.any((p) => p.type == FailureType.timeout)) {
+    if (patterns.values.any((p) => p.type == FailurePatternType.timeout)) {
       print('    3. Review async operations and add proper wait conditions');
     }
 
@@ -2687,6 +3327,11 @@ class TestPerformance {
   final String testName;
   final List<double> durations = [];
 
+  // Timing breakdown fields
+  double? setupTime;
+  double? teardownTime;
+  double? executionTime;
+
   double get averageDuration => durations.isEmpty
       ? 0
       : durations.reduce((a, b) => a + b) / durations.length;
@@ -2697,33 +3342,53 @@ class TestPerformance {
 
   double get totalDuration => durations.fold(0, (sum, d) => sum + d);
 
+  /// Calculate standard deviation of durations
+  double get standardDeviation {
+    if (durations.isEmpty) return 0;
+    final mean = averageDuration;
+    final variance =
+        durations.map((d) => math.pow(d - mean, 2)).reduce((a, b) => a + b) /
+            durations.length;
+    return math.sqrt(variance);
+  }
+
+  /// Total time including setup, execution, and teardown
+  double get totalTime {
+    return (setupTime ?? 0) + (executionTime ?? 0) + (teardownTime ?? 0);
+  }
+
   void addDuration(double duration) {
     durations.add(duration);
   }
-}
 
-enum FailureType {
-  assertion,
-  nullError,
-  timeout,
-  rangeError,
-  typeError,
-  ioError,
-  networkError,
-  unknown,
-}
+  /// Record setup time for performance profiling
+  void recordSetupTime(double time) {
+    setupTime = time;
+  }
 
-class FailurePattern {
-  FailurePattern({
-    required this.type,
-    required this.category,
-    required this.count,
-    this.suggestion,
-  });
-  final FailureType type;
-  final String category;
-  final int count;
-  final String? suggestion;
+  /// Record teardown time for performance profiling
+  void recordTeardownTime(double time) {
+    teardownTime = time;
+  }
+
+  /// Record execution time for performance profiling
+  void recordExecutionTime(double time) {
+    executionTime = time;
+  }
+
+  /// Check if there's a performance regression
+  /// Compares last duration to average of previous durations
+  bool hasPerformanceRegression({required double threshold}) {
+    if (durations.length < 2) return false;
+
+    final lastDuration = durations.last;
+    final previousDurations = durations.sublist(0, durations.length - 1);
+    final previousAverage =
+        previousDurations.reduce((a, b) => a + b) / previousDurations.length;
+
+    // Check if last duration is significantly higher than previous average
+    return lastDuration > (previousAverage * threshold);
+  }
 }
 
 /// Main entry point
@@ -2834,7 +3499,7 @@ void main(List<String> args) async {
     verbose: verbose,
     interactive: interactive,
     performanceMode: performance,
-    watch: watch,
+    watchMode: watch,
     generateFixes: !noFixes,
     generateReport: !noReport,
     slowTestThreshold: slowThreshold,

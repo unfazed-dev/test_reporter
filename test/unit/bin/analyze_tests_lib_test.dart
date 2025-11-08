@@ -16,25 +16,25 @@ import 'package:test_reporter/src/bin/analyze_tests_lib.dart' as analyzer;
 
 void main() {
   group('Data Classes', () {
-    group('FailureType Enum', () {
+    group('FailurePatternType Enum', () {
       test('should have all expected failure types', () {
-        expect(analyzer.FailureType.values, hasLength(8));
-        expect(analyzer.FailureType.values,
-            contains(analyzer.FailureType.assertion));
-        expect(analyzer.FailureType.values,
-            contains(analyzer.FailureType.nullError));
-        expect(analyzer.FailureType.values,
-            contains(analyzer.FailureType.timeout));
-        expect(analyzer.FailureType.values,
-            contains(analyzer.FailureType.rangeError));
-        expect(analyzer.FailureType.values,
-            contains(analyzer.FailureType.typeError));
-        expect(analyzer.FailureType.values,
-            contains(analyzer.FailureType.ioError));
-        expect(analyzer.FailureType.values,
-            contains(analyzer.FailureType.networkError));
-        expect(analyzer.FailureType.values,
-            contains(analyzer.FailureType.unknown));
+        expect(analyzer.FailurePatternType.values, hasLength(8));
+        expect(analyzer.FailurePatternType.values,
+            contains(analyzer.FailurePatternType.assertion));
+        expect(analyzer.FailurePatternType.values,
+            contains(analyzer.FailurePatternType.nullError));
+        expect(analyzer.FailurePatternType.values,
+            contains(analyzer.FailurePatternType.timeout));
+        expect(analyzer.FailurePatternType.values,
+            contains(analyzer.FailurePatternType.rangeError));
+        expect(analyzer.FailurePatternType.values,
+            contains(analyzer.FailurePatternType.typeError));
+        expect(analyzer.FailurePatternType.values,
+            contains(analyzer.FailurePatternType.fileSystemError));
+        expect(analyzer.FailurePatternType.values,
+            contains(analyzer.FailurePatternType.networkError));
+        expect(analyzer.FailurePatternType.values,
+            contains(analyzer.FailurePatternType.unknown));
       });
     });
 
@@ -321,12 +321,12 @@ Which: is not the expected value
     group('FailurePattern', () {
       test('should create with required parameters', () {
         final pattern = analyzer.FailurePattern(
-          type: analyzer.FailureType.assertion,
+          type: analyzer.FailurePatternType.assertion,
           category: 'Assertion Failure',
           count: 3,
         );
 
-        expect(pattern.type, equals(analyzer.FailureType.assertion));
+        expect(pattern.type, equals(analyzer.FailurePatternType.assertion));
         expect(pattern.category, equals('Assertion Failure'));
         expect(pattern.count, equals(3));
         expect(pattern.suggestion, isNull);
@@ -334,7 +334,7 @@ Which: is not the expected value
 
       test('should create with suggestion', () {
         final pattern = analyzer.FailurePattern(
-          type: analyzer.FailureType.nullError,
+          type: analyzer.FailurePatternType.nullError,
           category: 'Null Reference Error',
           count: 5,
           suggestion: 'Add null check for property',
@@ -345,14 +345,14 @@ Which: is not the expected value
 
       test('should handle all failure types', () {
         final types = [
-          analyzer.FailureType.assertion,
-          analyzer.FailureType.nullError,
-          analyzer.FailureType.timeout,
-          analyzer.FailureType.rangeError,
-          analyzer.FailureType.typeError,
-          analyzer.FailureType.ioError,
-          analyzer.FailureType.networkError,
-          analyzer.FailureType.unknown,
+          analyzer.FailurePatternType.assertion,
+          analyzer.FailurePatternType.nullError,
+          analyzer.FailurePatternType.timeout,
+          analyzer.FailurePatternType.rangeError,
+          analyzer.FailurePatternType.typeError,
+          analyzer.FailurePatternType.fileSystemError,
+          analyzer.FailurePatternType.networkError,
+          analyzer.FailurePatternType.unknown,
         ];
 
         for (final type in types) {
