@@ -9,7 +9,8 @@ import 'package:test/test.dart';
 /// Note: Run `dart run test_reporter:analyze_suite test/` first to generate reports.
 void main() {
   group('Suite Report Master Workflow Integration', () {
-    test('existing suite reports should include "✅ Recommended Workflow" section',
+    test(
+        'existing suite reports should include "✅ Recommended Workflow" section',
         () {
       // Check for existing suite reports
       final suiteDir = Directory('tests_reports/suite');
@@ -36,8 +37,7 @@ void main() {
       expect(
         reportContent,
         contains('## ✅ Recommended Workflow'),
-        reason:
-            'Suite report should include "✅ Recommended Workflow" section',
+        reason: 'Suite report should include "✅ Recommended Workflow" section',
       );
     });
 

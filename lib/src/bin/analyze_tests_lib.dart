@@ -730,6 +730,53 @@ class TestAnalyzer {
     }
   }
 
+  /// Get total number of test runs performed
+  int get totalRuns {
+    if (testRuns.isEmpty) return 0;
+    // All tests should have the same number of runs (runCount)
+    return testRuns.values.first.results.length;
+  }
+
+  /// Get flaky tests ranked by severity (highest flakiness rate first)
+  List<TestRun> getRankedFlakyTests() {
+    final flakyTestRuns = testRuns.values.where((run) => run.isFlaky).toList();
+    flakyTestRuns.sort((a, b) => b.flakinessRate.compareTo(a.flakinessRate));
+    return flakyTestRuns;
+  }
+
+  /// Generate a report specifically for flaky tests
+  String generateFlakyTestReport() {
+    final report = StringBuffer();
+    report.writeln('# Flaky Test Report');
+    report.writeln();
+
+    final rankedFlaky = getRankedFlakyTests();
+
+    if (rankedFlaky.isEmpty) {
+      report.writeln('No flaky tests detected.');
+      return report.toString();
+    }
+
+    report.writeln('## Summary');
+    report.writeln('Total flaky tests: ${rankedFlaky.length}');
+    report.writeln();
+
+    report.writeln('## Flaky Tests (Ranked by Severity)');
+    report.writeln();
+
+    for (final testRun in rankedFlaky) {
+      final flakinessPercent = (testRun.flakinessRate * 100).toStringAsFixed(0);
+      report.writeln('### ${testRun.testName}');
+      report.writeln('- **File**: ${testRun.testFile}');
+      report.writeln('- **Flakiness**: $flakinessPercent%');
+      report.writeln(
+          '- **Pass Rate**: ${(testRun.passRate * 100).toStringAsFixed(0)}%');
+      report.writeln();
+    }
+
+    return report.toString();
+  }
+
   /// Generate comprehensive report
   Future<void> _generateReport() async {
     _printReportHeader();
@@ -2560,6 +2607,60 @@ class TestRun {
   final String testName;
   final Map<int, bool> results = {};
   final Map<int, int> durations = {};
+
+  /// Add a test result for a specific run
+  void addResult(int runNumber,
+      {required bool passed, required int durationMs}) {
+    results[runNumber] = passed;
+    durations[runNumber] = durationMs;
+  }
+
+  /// Calculate pass rate (0.0 to 1.0)
+  double get passRate {
+    if (results.isEmpty) return 0.0;
+    final passCount = results.values.where((passed) => passed).length;
+    return passCount / results.length;
+  }
+
+  /// Check if test is flaky (has both passes and failures)
+  bool get isFlaky {
+    if (results.isEmpty) return false;
+    final hasPassed = results.values.any((passed) => passed);
+    final hasFailed = results.values.any((passed) => !passed);
+    return hasPassed && hasFailed;
+  }
+
+  /// Calculate flakiness rate (failure rate for flaky tests)
+  double get flakinessRate {
+    if (results.isEmpty) return 0.0;
+    final failCount = results.values.where((passed) => !passed).length;
+    return failCount / results.length;
+  }
+
+  /// Check if test fails consistently (all runs failed)
+  bool get isConsistentFailure {
+    if (results.isEmpty) return false;
+    return results.values.every((passed) => !passed);
+  }
+
+  /// Calculate average test duration in milliseconds
+  double get averageDuration {
+    if (durations.isEmpty) return 0.0;
+    final sum = durations.values.fold(0, (sum, d) => sum + d);
+    return sum / durations.length;
+  }
+
+  /// Get minimum test duration in milliseconds
+  int get minDuration {
+    if (durations.isEmpty) return 0;
+    return durations.values.reduce(math.min);
+  }
+
+  /// Get maximum test duration in milliseconds
+  int get maxDuration {
+    if (durations.isEmpty) return 0;
+    return durations.values.reduce(math.max);
+  }
 }
 
 class TestFailure {
