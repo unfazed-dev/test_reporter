@@ -169,23 +169,28 @@ class TestOrchestrator {
   Future<bool> runCoverageTool() async {
     try {
       // Detect source path from test path for coverage analysis
-      final sourcePath = detectSourcePath(testPath);
+      final sourcePath = sourcePathOverride ?? detectSourcePath(testPath);
+      // Use the original testPath as the test path for coverage analyzer
+      final actualTestPath = testPathOverride ?? testPath;
 
       if (verbose) {
-        print('  [INFO] Test path: $testPath');
+        print('  [INFO] Input path: $testPath');
         print('  [INFO] Source path for coverage: $sourcePath');
+        print('  [INFO] Test path for coverage: $actualTestPath');
       }
 
       final args = <String>[
         'run',
         'test_reporter:analyze_coverage',
         sourcePath,
+        '--test-path=$actualTestPath',
       ];
 
       if (verbose) {
         args.add('--verbose');
-        print('  [DEBUG] Running analyze_coverage on: $sourcePath');
+        print('  [DEBUG] Running analyze_coverage on: $sourcePath with test path: $actualTestPath');
       }
+      if (includeFixtures) args.add('--include-fixtures');
 
       if (!enableChecklist) {
         args.add('--no-checklist');

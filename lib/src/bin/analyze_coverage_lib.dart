@@ -86,6 +86,7 @@ class CoverageAnalyzer {
     bool? testImpact, // Alias for testImpactAnalysis
     this.enableChecklist = true,
     this.minimalChecklist = false,
+    this.includeFixtures = false,
     this.excludePatterns = const [],
     CoverageThresholds? thresholds,
     String? baselineFile,
@@ -120,6 +121,7 @@ class CoverageAnalyzer {
   final bool testImpactAnalysis;
   final bool enableChecklist;
   final bool minimalChecklist;
+  final bool includeFixtures;
   final List<String> excludePatterns;
   final CoverageThresholds thresholds;
   final String? baselineFile;
@@ -378,6 +380,11 @@ class CoverageAnalyzer {
     final args = _isFlutterProject == true
         ? ['test', '--coverage']
         : ['test', '--coverage=coverage'];
+
+    // Exclude fixtures by default unless --include-fixtures is used
+    if (!includeFixtures) {
+      args.add('--exclude-tags=fixture');
+    }
 
     // Add parallel flag if enabled
     if (parallel) {
@@ -2833,6 +2840,7 @@ void main(List<String> args) async {
   final testImpactAnalysis = args.contains('--impact');
   final enableChecklist = !args.contains('--no-checklist');
   final minimalChecklist = args.contains('--minimal-checklist');
+  final includeFixtures = args.contains('--include-fixtures');
 
   // Parse exclude patterns
   final excludePatterns = <String>[];
@@ -2880,14 +2888,20 @@ void main(List<String> args) async {
   final nonFlagArgs = <String>[];
   for (var i = 0; i < args.length; i++) {
     // Support both --lib and --source-path (aliases)
-    if ((args[i] == '--lib' || args[i] == '--source-path') &&
+    if (args[i].startsWith('--lib=') || args[i].startsWith('--source-path=')) {
+      libPath = args[i].split('=')[1];
+    } else if ((args[i] == '--lib' || args[i] == '--source-path') &&
         i + 1 < args.length) {
       libPath = args[i + 1];
       i++; // Skip the next arg since we consumed it
+    } else if (args[i].startsWith('--test-path=') || args[i].startsWith('--test=')) {
+      testPath = args[i].split('=')[1];
     } else if ((args[i] == '--test' || args[i] == '--test-path') &&
         i + 1 < args.length) {
       testPath = args[i + 1];
       i++; // Skip the next arg since we consumed it
+    } else if (args[i].startsWith('--module-name=')) {
+      explicitModuleName = args[i].split('=')[1];
     } else if (args[i] == '--module-name' && i + 1 < args.length) {
       explicitModuleName = args[i + 1];
       i++; // Skip the next arg since we consumed it
@@ -2918,14 +2932,15 @@ void main(List<String> args) async {
     if (nonFlagArgs.length > 1) {
       final secondArg = nonFlagArgs[1];
       // Assume first is source, second is test (original behavior)
-      libPath = firstArg;
-      testPath = secondArg;
+      libPath ??= firstArg;
+      testPath ??= secondArg;
     } else {
       // Auto-resolve using PathResolver - handles both test/ and lib/ inputs
       try {
         final resolved = PathResolver.resolvePaths(firstArg);
-        libPath = resolved.sourcePath;
-        testPath = resolved.testPath;
+        // Only use resolved paths if not explicitly set
+        libPath ??= resolved.sourcePath;
+        testPath ??= resolved.testPath;
       } catch (e) {
         // If resolution fails, show error and usage
         print('❌ Error: Could not resolve paths from "$firstArg"');
@@ -2998,6 +3013,7 @@ void main(List<String> args) async {
     print('  --parallel            Use parallel test execution');
     print('  --json                Export JSON report');
     print('  --impact              Enable test impact analysis');
+    print('  --include-fixtures    Include fixture tests (excluded by default)');
     print(
       '  --exclude <pattern>   Exclude files matching pattern (can be used multiple times)',
     );
@@ -3055,6 +3071,7 @@ void main(List<String> args) async {
     testImpactAnalysis: testImpactAnalysis,
     enableChecklist: enableChecklist,
     minimalChecklist: minimalChecklist,
+    includeFixtures: includeFixtures,
     excludePatterns: excludePatterns,
     thresholds: CoverageThresholds(
       minimum: minCoverage,
