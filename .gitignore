@@ -13,6 +13,6 @@ coverage/
 .vscode/
 *.iml
 
-# Reports (generated)
-reports/
-tests_reports/
+# Reports (generated) - only at root level
+/reports/
+/tests_reports/
