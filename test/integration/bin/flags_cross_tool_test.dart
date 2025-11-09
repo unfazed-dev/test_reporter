@@ -23,7 +23,7 @@ void main() {
       // Test analyze_tests with --verbose
       final testsResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--verbose'],
+        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--verbose', '--no-report'],
       );
 
       // Test analyze_coverage with --verbose
@@ -55,7 +55,7 @@ void main() {
       // Test analyze_tests with --module-name
       final testsResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--module-name=test-module'],
+        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--module-name=test-module', '--no-report'],
       );
 
       // Test analyze_coverage with --module-name
@@ -109,7 +109,7 @@ void main() {
       // Test analyze_tests with --no-checklist
       final testsResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--no-checklist'],
+        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--no-checklist', '--no-report'],
       );
 
       // Test analyze_coverage with --no-checklist
@@ -126,7 +126,7 @@ void main() {
       // Test analyze_tests with --minimal-checklist
       final testsResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--minimal-checklist'],
+        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--minimal-checklist', '--no-report'],
       );
 
       // Test analyze_coverage with --minimal-checklist
@@ -254,7 +254,7 @@ void main() {
     test('negative runs value is handled gracefully', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--runs=-1'],
+        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--runs=-1', '--no-report'],
       );
 
       // Should either reject or treat as default

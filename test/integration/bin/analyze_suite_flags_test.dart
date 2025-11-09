@@ -12,6 +12,12 @@ import 'package:test/test.dart';
 /// These tests verify that all CLI flags for the analyze_suite tool work
 /// correctly in real execution scenarios.
 ///
+/// ⚠️ **IMPORTANT: Report Generation Behavior**
+/// All tests in this file will generate reports in tests_reports/suite/.
+/// This is INTENTIONAL - analyze_suite has NO --no-report flag by design.
+/// The suite's primary purpose IS to generate unified reports.
+/// See bin/analyze_suite.dart:8-16 for design rationale.
+///
 /// Phase 5.4 of CLI Flags Audit - TDD Methodology:
 /// 🔴 RED: Write failing tests first
 /// 🟢 GREEN: Make tests pass

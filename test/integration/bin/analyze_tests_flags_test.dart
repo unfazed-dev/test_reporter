@@ -25,7 +25,8 @@ void main() {
         [
           'bin/analyze_tests.dart',
           'test/fixtures/passing_test.dart',
-          '--verbose'
+          '--verbose',
+          '--no-report'
         ],
       );
 
@@ -40,7 +41,8 @@ void main() {
         [
           'bin/analyze_tests.dart',
           'test/fixtures/passing_test.dart',
-          '--performance'
+          '--performance',
+          '--no-report'
         ],
       );
 
@@ -87,7 +89,8 @@ void main() {
         [
           'bin/analyze_tests.dart',
           'test/fixtures/failing_test.dart',
-          '--no-fixes'
+          '--no-fixes',
+          '--no-report'
         ],
       );
 
@@ -103,7 +106,8 @@ void main() {
         [
           'bin/analyze_tests.dart',
           'test/fixtures/passing_test.dart',
-          '--no-checklist'
+          '--no-checklist',
+          '--no-report'
         ],
       );
 
@@ -120,6 +124,7 @@ void main() {
           'bin/analyze_tests.dart',
           'test/fixtures/passing_test.dart',
           '--minimal-checklist',
+          '--no-report',
         ],
       );
 
@@ -167,7 +172,8 @@ void main() {
         [
           'bin/analyze_tests.dart',
           'test/fixtures/passing_test.dart',
-          '--runs=5'
+          '--runs=5',
+          '--no-report'
         ],
       );
 
@@ -189,7 +195,8 @@ void main() {
         [
           'bin/analyze_tests.dart',
           'test/fixtures/passing_test.dart',
-          '--slow=2.0'
+          '--slow=2.0',
+          '--no-report'
         ],
       );
 
@@ -281,13 +288,14 @@ void main() {
         [
           'bin/analyze_tests.dart',
           'test/fixtures/passing_test.dart',
-          '--verbose'
+          '--verbose',
+          '--no-report'
         ],
       );
 
       final aliasResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '-v'],
+        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '-v', '--no-report'],
       );
 
       expect(verboseResult.exitCode, equals(aliasResult.exitCode));
@@ -300,13 +308,14 @@ void main() {
         [
           'bin/analyze_tests.dart',
           'test/fixtures/passing_test.dart',
-          '--performance'
+          '--performance',
+          '--no-report'
         ],
       );
 
       final shortResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '-p'],
+        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '-p', '--no-report'],
       );
 
       expect(longResult.exitCode, equals(shortResult.exitCode));
@@ -321,7 +330,8 @@ void main() {
         [
           'bin/analyze_tests.dart',
           'test/fixtures/passing_test.dart',
-          '--verbose'
+          '--verbose',
+          '--no-report'
         ],
       );
 
@@ -332,7 +342,7 @@ void main() {
     test('slow threshold defaults to 1.0 seconds', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart'],
+        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--no-report'],
       );
 
       expect(result.exitCode, equals(0));
