@@ -2909,7 +2909,7 @@ ArgParser _createArgParser() {
     ..addOption(
       'module-name',
       help:
-          'Override module name for reports (auto-qualified with -fo/-fi/-pr)',
+          'Override module name for reports (auto-qualified with -fo/-fi)',
     )
     // Export/output flags
     ..addFlag(

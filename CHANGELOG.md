@@ -30,16 +30,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+### Changed
+
+#### Simplified Module Naming - Removed `-pr` Suffix (Breaking Change)
+
+**What Changed**: Removed the `-pr` (project) suffix from module naming convention. `test/` and `lib/` paths now use `-fo` (folder) suffix like all other directories.
+
+**Before (v3.1.0 and earlier)**:
+- `test/` → `all-tests-pr`
+- `lib/` → `all-sources-pr`
+- `test/unit/` → `unit-fo`
+
+**After (v3.2.0)**:
+- `test/` → `test-fo`
+- `lib/` → `lib-fo`
+- `test/unit/` → `unit-fo`
+
+**Rationale**: Simpler, more consistent naming. The `-pr` suffix was confusing - `test/` is just a folder like any other directory. The semantic meaning "project root" is already conveyed by the module name itself (`test` vs `test-unit`).
+
+**Migration**:
+- Report filenames will change from `all-tests-pr_*` to `test-fo_*`
+- Report filenames will change from `all-sources-pr_*` to `lib-fo_*`
+- Update any scripts/tools parsing report filenames to expect `-fo` instead of `-pr`
+- PathType.project enum removed - only `folder` and `file` remain
+
+**Affected Files**:
+- `lib/src/utils/module_identifier.dart` - Removed `PathType.project` and `_projectSuffix`
+- Report generation in all 4 tools now produces simpler names
+
+---
+
 ### Fixed
 
 #### --module-name Auto-Qualification
 
-**Problem**: Manual `--module-name` values were not being qualified with required suffixes (-fo/-fi/-pr), causing inconsistent report naming.
+**Problem**: Manual `--module-name` values were not being qualified with required suffixes (-fo/-fi), causing inconsistent report naming.
 
 **Solution**: All 3 tools now auto-qualify manual module names:
 - `--module-name utils` + folder path → `utils-fo`
 - `--module-name report_utils` + file path → `report-utils-fi`
-- `--module-name my_tests` + project path → `my-tests-pr`
 
 **Validation**: Throws ArgumentError if pre-qualified name doesn't match detected path type:
 - ❌ `--module-name utils-fi` for folder path (invalid)
@@ -49,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `ModuleIdentifier.qualifyManualModuleName()` function
 - Updated `analyze_tests_lib.dart`, `analyze_coverage_lib.dart`, `extract_failures_lib.dart`
 - All tools now call `qualifyManualModuleName()` when `--module-name` is provided
-- Help text updated with "(auto-qualified with -fo/-fi/-pr)" note
+- Help text updated with "(auto-qualified with -fo/-fi)"
 
 **Backward Compatibility**: Already-qualified names (e.g., `--module-name utils-fo`) continue to work, now with validation.
 

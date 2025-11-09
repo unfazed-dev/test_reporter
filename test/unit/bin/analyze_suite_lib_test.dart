@@ -108,12 +108,12 @@ void main() {
 
       test('should handle test root path', () {
         final orchestrator = TestOrchestrator(testPath: 'test');
-        expect(orchestrator.extractModuleName(), equals('all-tests-pr'));
+        expect(orchestrator.extractModuleName(), equals('test-fo'));
       });
 
       test('should handle test root path with trailing slash', () {
         final orchestrator = TestOrchestrator(testPath: 'test/');
-        expect(orchestrator.extractModuleName(), equals('all-tests-pr'));
+        expect(orchestrator.extractModuleName(), equals('test-fo'));
       });
 
       test('should extract file name without _test suffix', () {
@@ -150,12 +150,12 @@ void main() {
 
       test('should return default for empty path', () {
         final orchestrator = TestOrchestrator(testPath: '');
-        expect(orchestrator.extractModuleName(), equals('all-tests-fo'));
+        expect(orchestrator.extractModuleName(), equals('test-fo'));
       });
 
       test('should return default for root-only path', () {
         final orchestrator = TestOrchestrator(testPath: '/');
-        expect(orchestrator.extractModuleName(), equals('all-tests-fo'));
+        expect(orchestrator.extractModuleName(), equals('test-fo'));
       });
     });
 

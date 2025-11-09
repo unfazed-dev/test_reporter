@@ -2680,7 +2680,7 @@ class TestAnalyzer {
     final moduleName = explicitModuleName ??
         (targetFiles.isNotEmpty
             ? ModuleIdentifier.getQualifiedModuleName(targetFiles.first)
-            : 'all-tests-pr');
+            : 'test-fo');
 
     // Clean old reports - keep only latest report per module
     if (verbose) {
@@ -3241,7 +3241,7 @@ ArgParser _createArgParser() {
     ..addOption(
       'module-name',
       help:
-          'Override module name for reports (auto-qualified with -fo/-fi/-pr)',
+          'Override module name for reports (auto-qualified with -fo/-fi)',
     );
 }
 

@@ -8,7 +8,6 @@ const _dartExtension = '.dart';
 // Module naming constants
 const _folderSuffix = '-fo';
 const _fileSuffix = '-fi';
-const _projectSuffix = '-pr';
 
 // Validation constants
 const _maxNameLength = 150;
@@ -20,11 +19,8 @@ enum PathType {
   /// Individual file (e.g., auth_test.dart)
   file,
 
-  /// Directory/folder (e.g., auth/)
+  /// Directory/folder (e.g., auth/, test/, lib/)
   folder,
-
-  /// Project root (e.g., test/, lib/)
-  project,
 }
 
 /// Extracts and generates consistent module identifiers from file paths.
@@ -34,9 +30,8 @@ enum PathType {
 /// across the test reporter tools.
 ///
 /// **Module Naming Convention:**
-/// - Folder: `{module}-fo` (e.g., `auth-fo`)
+/// - Folder: `{module}-fo` (e.g., `auth-fo`, `test-fo`, `lib-fo`)
 /// - File: `{module}-fi` (e.g., `auth-test-fi`)
-/// - Project: `{module}-pr` (e.g., `all-tests-pr`)
 ///
 /// **Example Usage:**
 /// ```dart
@@ -65,8 +60,8 @@ class ModuleIdentifier {
   /// - lib/src/auth/ → auth
   /// - test/auth_test.dart → auth
   /// - lib/src/auth_service.dart → auth_service
-  /// - test/ → all_tests
-  /// - lib/ → all_sources
+  /// - test/ → test
+  /// - lib/ → lib
   ///
   /// Returns the extracted module name
   static String extractModuleName(String path) {
@@ -74,13 +69,13 @@ class ModuleIdentifier {
 
     // Handle special cases: empty path or root directories
     if (normalized.isEmpty || normalized == '/' || normalized == '.') {
-      return 'all_tests';
+      return 'test';
     }
     if (normalized == _testPrefix || normalized == 'test') {
-      return 'all_tests';
+      return 'test';
     }
     if (normalized == _libPrefix || normalized == 'lib') {
-      return 'all_sources';
+      return 'lib';
     }
 
     // Remove test/ or lib/ prefix
@@ -145,7 +140,6 @@ class ModuleIdentifier {
     final suffix = switch (type) {
       PathType.folder => _folderSuffix,
       PathType.file => _fileSuffix,
-      PathType.project => _projectSuffix,
     };
 
     return '$normalized$suffix';
@@ -156,8 +150,8 @@ class ModuleIdentifier {
   /// Examples:
   /// - test/auth/ → auth-fo
   /// - lib/src/auth_service.dart → auth-service-fi
-  /// - test/ → all-tests-pr
-  /// - lib/ → all-sources-pr
+  /// - test/ → test-fo
+  /// - lib/ → lib-fo
   static String getQualifiedModuleName(String path) {
     final baseName = extractModuleName(path);
     final type = _detectPathType(path);
@@ -169,7 +163,7 @@ class ModuleIdentifier {
   /// Examples:
   /// - auth-service-fo → (baseName: 'auth-service', type: PathType.folder)
   /// - auth-test-fi → (baseName: 'auth-test', type: PathType.file)
-  /// - all-tests-pr → (baseName: 'all-tests', type: PathType.project)
+  /// - test-fo → (baseName: 'test', type: PathType.folder)
   /// - invalid → null
   ///
   /// Returns null if the format is invalid
@@ -183,7 +177,6 @@ class ModuleIdentifier {
     final suffixMappings = [
       (_folderSuffix, PathType.folder),
       (_fileSuffix, PathType.file),
-      (_projectSuffix, PathType.project),
     ];
 
     for (final (suffix, type) in suffixMappings) {
@@ -282,24 +275,16 @@ class ModuleIdentifier {
     return true;
   }
 
-  /// Detect path type (file, folder, or project) from path string
+  /// Detect path type (file or folder) from path string
   static PathType _detectPathType(String path) {
     final normalized = _normalizePath(path);
-
-    // Check for project root (with or without trailing slash)
-    if (normalized == _testPrefix ||
-        normalized == 'test' ||
-        normalized == _libPrefix ||
-        normalized == 'lib') {
-      return PathType.project;
-    }
 
     // Check for file (ends with .dart)
     if (normalized.endsWith(_dartExtension)) {
       return PathType.file;
     }
 
-    // Default to folder
+    // Default to folder (including test/, lib/, and all directories)
     return PathType.folder;
   }
 

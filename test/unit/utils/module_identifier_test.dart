@@ -41,14 +41,14 @@ void main() {
     test('should handle special case: test root', () {
       expect(
         ModuleIdentifier.extractModuleName('test/'),
-        equals('all_tests'),
+        equals('test'),
       );
     });
 
     test('should handle special case: lib root', () {
       expect(
         ModuleIdentifier.extractModuleName('lib/'),
-        equals('all_sources'),
+        equals('lib'),
       );
     });
 
@@ -110,10 +110,10 @@ void main() {
       );
     });
 
-    test('should add -pr suffix for project', () {
+    test('should add -fo suffix for test root folder', () {
       expect(
-        ModuleIdentifier.generateQualifiedName('all_tests', PathType.project),
-        equals('all-tests-pr'),
+        ModuleIdentifier.generateQualifiedName('test', PathType.folder),
+        equals('test-fo'),
       );
     });
 
@@ -165,14 +165,14 @@ void main() {
     test('should handle test root', () {
       expect(
         ModuleIdentifier.getQualifiedModuleName('test/'),
-        equals('all-tests-pr'),
+        equals('test-fo'),
       );
     });
 
     test('should handle lib root', () {
       expect(
         ModuleIdentifier.getQualifiedModuleName('lib/'),
-        equals('all-sources-pr'),
+        equals('lib-fo'),
       );
     });
 
@@ -208,12 +208,12 @@ void main() {
       expect(result.type, equals(PathType.file));
     });
 
-    test('should parse project qualified name', () {
-      final result = ModuleIdentifier.parseQualifiedName('all-tests-pr');
+    test('should parse test root as folder', () {
+      final result = ModuleIdentifier.parseQualifiedName('test-fo');
 
       expect(result, isNotNull);
-      expect(result!.baseName, equals('all-tests'));
-      expect(result.type, equals(PathType.project));
+      expect(result!.baseName, equals('test'));
+      expect(result.type, equals(PathType.folder));
     });
 
     test('should return null for invalid format', () {
@@ -299,10 +299,10 @@ void main() {
       );
     });
 
-    test('should qualify unqualified project module name', () {
+    test('should qualify unqualified test root folder name', () {
       expect(
         ModuleIdentifier.qualifyManualModuleName('test-suite', 'test/'),
-        equals('test-suite-pr'),
+        equals('test-suite-fo'),
       );
     });
 
@@ -321,10 +321,10 @@ void main() {
       );
     });
 
-    test('should validate and keep qualified project name', () {
+    test('should validate and keep qualified folder name for test root', () {
       expect(
-        ModuleIdentifier.qualifyManualModuleName('all-tests-pr', 'test/'),
-        equals('all-tests-pr'),
+        ModuleIdentifier.qualifyManualModuleName('test-fo', 'test/'),
+        equals('test-fo'),
       );
     });
 
