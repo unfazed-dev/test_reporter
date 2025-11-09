@@ -52,7 +52,8 @@ void main() {
       expect(results['parallel'], isTrue);
       expect(results['report'], isFalse); // --no-report means report=false
       expect(results['fixes'], isFalse); // --no-fixes means fixes=false
-      expect(results['checklist'], isFalse); // --no-checklist means checklist=false
+      expect(results['checklist'],
+          isFalse); // --no-checklist means checklist=false
       expect(results['minimal-checklist'], isTrue);
       expect(results['include-fixtures'], isTrue);
       expect(results['dependencies'], isTrue);
@@ -79,8 +80,10 @@ void main() {
 
       // Verify flag values match long forms
       expect(results['verbose'], isTrue, reason: '-v should set verbose');
-      expect(results['interactive'], isTrue, reason: '-i should set interactive');
-      expect(results['performance'], isTrue, reason: '-p should set performance');
+      expect(results['interactive'], isTrue,
+          reason: '-i should set interactive');
+      expect(results['performance'], isTrue,
+          reason: '-p should set performance');
       expect(results['watch'], isTrue, reason: '-w should set watch');
       expect(results['help'], isTrue, reason: '-h should set help');
 
@@ -90,27 +93,33 @@ void main() {
     test('Test 3: Negatable flags work (--report vs --no-report)', () {
       // Test --report (default: true)
       final resultsWithReport = parser.parse(['--report']);
-      expect(resultsWithReport['report'], isTrue, reason: '--report should enable report');
+      expect(resultsWithReport['report'], isTrue,
+          reason: '--report should enable report');
 
       // Test --no-report
       final resultsNoReport = parser.parse(['--no-report']);
-      expect(resultsNoReport['report'], isFalse, reason: '--no-report should disable report');
+      expect(resultsNoReport['report'], isFalse,
+          reason: '--no-report should disable report');
 
       // Test --fixes (default: true)
       final resultsWithFixes = parser.parse(['--fixes']);
-      expect(resultsWithFixes['fixes'], isTrue, reason: '--fixes should enable fixes');
+      expect(resultsWithFixes['fixes'], isTrue,
+          reason: '--fixes should enable fixes');
 
       // Test --no-fixes
       final resultsNoFixes = parser.parse(['--no-fixes']);
-      expect(resultsNoFixes['fixes'], isFalse, reason: '--no-fixes should disable fixes');
+      expect(resultsNoFixes['fixes'], isFalse,
+          reason: '--no-fixes should disable fixes');
 
       // Test --checklist (default: true)
       final resultsWithChecklist = parser.parse(['--checklist']);
-      expect(resultsWithChecklist['checklist'], isTrue, reason: '--checklist should enable checklist');
+      expect(resultsWithChecklist['checklist'], isTrue,
+          reason: '--checklist should enable checklist');
 
       // Test --no-checklist
       final resultsNoChecklist = parser.parse(['--no-checklist']);
-      expect(resultsNoChecklist['checklist'], isFalse, reason: '--no-checklist should disable checklist');
+      expect(resultsNoChecklist['checklist'], isFalse,
+          reason: '--no-checklist should disable checklist');
 
       print('✓ Test 3: Negatable flags work');
     });
@@ -124,9 +133,12 @@ void main() {
       ]);
 
       // Verify type conversion (stored as strings, will be parsed by implementation)
-      expect(results['runs'], equals('10'), reason: '--runs should parse numeric value');
-      expect(results['slow'], equals('3.5'), reason: '--slow should parse decimal value');
-      expect(results['workers'], equals('16'), reason: '--workers should parse numeric value');
+      expect(results['runs'], equals('10'),
+          reason: '--runs should parse numeric value');
+      expect(results['slow'], equals('3.5'),
+          reason: '--slow should parse decimal value');
+      expect(results['workers'], equals('16'),
+          reason: '--workers should parse numeric value');
 
       print('✓ Test 4: Numeric options parsed');
     });
@@ -137,12 +149,18 @@ void main() {
 
       // Verify defaults
       expect(results['runs'], equals('3'), reason: 'Default runs should be 3');
-      expect(results['slow'], equals('1.0'), reason: 'Default slow threshold should be 1.0');
-      expect(results['workers'], equals('4'), reason: 'Default workers should be 4');
-      expect(results['report'], isTrue, reason: 'Reports should be enabled by default');
-      expect(results['fixes'], isTrue, reason: 'Fixes should be enabled by default');
-      expect(results['checklist'], isTrue, reason: 'Checklist should be enabled by default');
-      expect(results['verbose'], isFalse, reason: 'Verbose should be false by default');
+      expect(results['slow'], equals('1.0'),
+          reason: 'Default slow threshold should be 1.0');
+      expect(results['workers'], equals('4'),
+          reason: 'Default workers should be 4');
+      expect(results['report'], isTrue,
+          reason: 'Reports should be enabled by default');
+      expect(results['fixes'], isTrue,
+          reason: 'Fixes should be enabled by default');
+      expect(results['checklist'], isTrue,
+          reason: 'Checklist should be enabled by default');
+      expect(results['verbose'], isFalse,
+          reason: 'Verbose should be false by default');
 
       print('✓ Test 5: Default values work');
     });
@@ -169,21 +187,32 @@ void main() {
       final helpText = parser.usage;
 
       // Verify all flags are documented
-      expect(helpText, contains('verbose'), reason: 'Help should document --verbose');
-      expect(helpText, contains('interactive'), reason: 'Help should document --interactive');
-      expect(helpText, contains('performance'), reason: 'Help should document --performance');
-      expect(helpText, contains('watch'), reason: 'Help should document --watch');
-      expect(helpText, contains('parallel'), reason: 'Help should document --parallel');
-      expect(helpText, contains('report'), reason: 'Help should document --report');
-      expect(helpText, contains('fixes'), reason: 'Help should document --fixes');
-      expect(helpText, contains('checklist'), reason: 'Help should document --checklist');
+      expect(helpText, contains('verbose'),
+          reason: 'Help should document --verbose');
+      expect(helpText, contains('interactive'),
+          reason: 'Help should document --interactive');
+      expect(helpText, contains('performance'),
+          reason: 'Help should document --performance');
+      expect(helpText, contains('watch'),
+          reason: 'Help should document --watch');
+      expect(helpText, contains('parallel'),
+          reason: 'Help should document --parallel');
+      expect(helpText, contains('report'),
+          reason: 'Help should document --report');
+      expect(helpText, contains('fixes'),
+          reason: 'Help should document --fixes');
+      expect(helpText, contains('checklist'),
+          reason: 'Help should document --checklist');
       expect(helpText, contains('runs'), reason: 'Help should document --runs');
       expect(helpText, contains('slow'), reason: 'Help should document --slow');
-      expect(helpText, contains('workers'), reason: 'Help should document --workers');
-      expect(helpText, contains('module-name'), reason: 'Help should document --module-name');
+      expect(helpText, contains('workers'),
+          reason: 'Help should document --workers');
+      expect(helpText, contains('module-name'),
+          reason: 'Help should document --module-name');
 
       // Verify help text has reasonable formatting
-      expect(helpText.length, greaterThan(100), reason: 'Help text should be comprehensive');
+      expect(helpText.length, greaterThan(100),
+          reason: 'Help text should be comprehensive');
 
       print('✓ Test 7: Help text generated');
     });
@@ -259,12 +288,14 @@ ArgParser _createAnalyzeTestsArgParser() {
     ..addFlag(
       'mutation',
       abbr: 'm',
-      help: 'Run mutation testing to verify test effectiveness (STUB - not implemented)',
+      help:
+          'Run mutation testing to verify test effectiveness (STUB - not implemented)',
       negatable: false,
     )
     ..addFlag(
       'impact',
-      help: 'Analyze test impact based on code changes (STUB - not implemented)',
+      help:
+          'Analyze test impact based on code changes (STUB - not implemented)',
       negatable: false,
     )
     // Other flags

@@ -163,8 +163,7 @@ void main() {
       expect(helpText, contains('report'),
           reason: 'Help should document --report');
       expect(helpText, contains('lib'), reason: 'Help should document --lib');
-      expect(helpText, contains('test'),
-          reason: 'Help should document --test');
+      expect(helpText, contains('test'), reason: 'Help should document --test');
       expect(helpText, contains('exclude'),
           reason: 'Help should document --exclude');
       expect(helpText, contains('min-coverage'),
@@ -276,7 +275,8 @@ ArgParser _createAnalyzeCoverageArgParser() {
     )
     ..addFlag(
       'watch',
-      help: 'Enable watch mode for continuous monitoring (STUB - not implemented)',
+      help:
+          'Enable watch mode for continuous monitoring (STUB - not implemented)',
       negatable: false,
     )
     ..addFlag(

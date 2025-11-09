@@ -5,6 +5,31 @@ All notable changes to the test_reporter package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+#### CLI Flag Cleanup - Stub Flag Removal
+
+**analyze_tests** - Removed 3 unimplemented stub flags:
+- `--dependencies` / `-d`: Dependency analysis feature (never implemented)
+- `--mutation` / `-m`: Mutation testing feature (never implemented)
+- `--impact`: Test impact analysis feature (never implemented)
+
+**analyze_coverage** - Removed 6 unimplemented stub flags:
+- `--branch`: Branch coverage analysis (never implemented)
+- `--incremental`: Incremental coverage for changed files (never implemented)
+- `--mutation`: Mutation testing (never implemented)
+- `--watch`: Watch mode (never implemented)
+- `--parallel`: Parallel execution (never implemented)
+- `--impact`: Test impact analysis (never implemented)
+
+**Rationale**: These flags were parsed but had no implementation, causing user confusion. Removing broken promises provides a cleaner, more honest UX.
+
+**Migration**: If you were using these flags, simply remove them from your CLI commands. The flags had no effect, so removal will not change behavior.
+
+---
+
 ## [3.1.0] - 2025-11-06
 
 **Feature Release**: Interactive actionable checklists in all reports.

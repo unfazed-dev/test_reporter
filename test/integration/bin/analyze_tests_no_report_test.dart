@@ -113,7 +113,7 @@ void main() {
 
       // Verify command completed successfully
       expect(result.exitCode, anyOf([0, 1]),
-        reason: 'Command should complete (pass or fail is fine)');
+          reason: 'Command should complete (pass or fail is fine)');
 
       // Wait a moment for any async file operations
       await Future.delayed(Duration(milliseconds: 500));
@@ -150,8 +150,7 @@ void main() {
       print('✓ Test 2: Verified NO report files created');
     });
 
-    test(
-        '--no-report with --verbose should show test output but NO report',
+    test('--no-report with --verbose should show test output but NO report',
         () async {
       // 🔴 RED: This test should FAIL initially (report is printed)
       //
@@ -372,8 +371,7 @@ void main() {
       expect(
         testsHasReport,
         equals(coverageHasReport),
-        reason:
-            'Both tools should handle --no-report consistently. '
+        reason: 'Both tools should handle --no-report consistently. '
             'analyze_coverage works correctly (suppresses output), '
             'so analyze_tests should also suppress output.',
       );

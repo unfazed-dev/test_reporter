@@ -248,7 +248,9 @@ void main() {
   });
 
   group('ReportEntry', () {
-    test('🔴 toString() should return formatted string representation (lines 42-44)', () {
+    test(
+        '🔴 toString() should return formatted string representation (lines 42-44)',
+        () {
       // Create a ReportEntry
       final entry = ReportEntry(
         reportPath: 'tests_reports/coverage/test-fo_coverage@1234_051125.md',
@@ -263,7 +265,10 @@ void main() {
 
       // Verify it contains all the key information
       expect(result, contains('ReportEntry'));
-      expect(result, contains('path=tests_reports/coverage/test-fo_coverage@1234_051125.md'));
+      expect(
+          result,
+          contains(
+              'path=tests_reports/coverage/test-fo_coverage@1234_051125.md'));
       expect(result, contains('tool=analyze_coverage'));
       expect(result, contains('type=coverage'));
       expect(result, contains('module=test-fo'));

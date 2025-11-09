@@ -19,6 +19,7 @@ import '../../helpers/mock_process.dart';
 import '../../helpers/mock_file_system.dart';
 import '../../fixtures/lcov_generator.dart';
 import '../../fixtures/sample_pubspec.dart';
+
 /// - Error handling
 ///
 /// Uses mocked Process and FileSystem to simulate tool execution.

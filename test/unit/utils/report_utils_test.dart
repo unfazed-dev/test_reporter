@@ -557,8 +557,7 @@ void main() {
           p.join(reportsDir.path, 'quality', 'no-json_report@1433_091125.md');
       await Directory(p.join(reportsDir.path, 'quality'))
           .create(recursive: true);
-      await File(reportPath)
-          .writeAsString('# Report\n\nNo JSON section here.');
+      await File(reportPath).writeAsString('# Report\n\nNo JSON section here.');
 
       final result = await ReportUtils.extractJsonFromReport(reportPath);
 
@@ -566,8 +565,8 @@ void main() {
     });
 
     test('should handle malformed JSON gracefully', () async {
-      final reportPath = p.join(
-          reportsDir.path, 'quality', 'bad-json_report@1434_091125.md');
+      final reportPath =
+          p.join(reportsDir.path, 'quality', 'bad-json_report@1434_091125.md');
       await Directory(p.join(reportsDir.path, 'quality'))
           .create(recursive: true);
       await File(reportPath).writeAsString('''
@@ -595,8 +594,8 @@ Content here.
       final reliabilityDir = Directory(p.join(reportsDir.path, 'reliability'));
       await reliabilityDir.create(recursive: true);
 
-      final report = File(
-          p.join(reliabilityDir.path, 'verbose-fi_report_tests@2153_041125.md'));
+      final report = File(p.join(
+          reliabilityDir.path, 'verbose-fi_report_tests@2153_041125.md'));
       await report.writeAsString('Test report');
 
       // Run with verbose=true (output goes to stdout, hard to capture in test)
@@ -678,5 +677,4 @@ Content here.
       expect(path, contains('default-path-fo_report_coverage@1435_091125.md'));
     });
   });
-
 }

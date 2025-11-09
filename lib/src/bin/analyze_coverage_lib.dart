@@ -2046,7 +2046,7 @@ class CoverageAnalyzer {
     report.writeln();
     report.writeln('# All features');
     report.writeln(
-      'dart analyzer/coverage_tool.dart lib/src/core --fix --branch --incremental --parallel --json',
+      'dart analyzer/coverage_tool.dart lib/src/core --fix --json --min-coverage=80',
     );
     report.writeln('```');
     report.writeln();
@@ -2842,17 +2842,15 @@ void _printUsage(ArgParser parser) {
   print('  # With auto-fix');
   print('  dart coverage_tool.dart lib/src/core --fix');
   print('');
-  print('  # Incremental coverage with branch analysis');
-  print('  dart coverage_tool.dart --incremental --branch');
-  print('');
-  print('  # Parallel execution with thresholds');
-  print('  dart coverage_tool.dart --parallel --min-coverage=80 --warn-coverage=60');
+  print('  # Coverage thresholds');
+  print('  dart coverage_tool.dart --min-coverage=80 --warn-coverage=60');
   print('');
   print('  # Exclude generated files');
-  print('  dart coverage_tool.dart --exclude "*.g.dart" --exclude "*.freezed.dart"');
+  print(
+      '  dart coverage_tool.dart --exclude "*.g.dart" --exclude "*.freezed.dart"');
   print('');
   print('  # Full analysis with all features');
-  print('  dart coverage_tool.dart --fix --branch --parallel --json');
+  print('  dart coverage_tool.dart --fix --json --min-coverage=80');
   print('');
   print('Note: Coverage badge is automatically embedded in every report');
 }
@@ -2908,37 +2906,6 @@ ArgParser _createArgParser() {
     ..addOption(
       'module-name',
       help: 'Override module name for reports',
-    )
-    // Advanced analysis flags (some are STUBS - to be removed in Phase 3)
-    ..addFlag(
-      'branch',
-      help: 'Include branch coverage analysis (STUB - not implemented)',
-      negatable: false,
-    )
-    ..addFlag(
-      'incremental',
-      help: 'Only analyze changed files (git diff) (STUB - not implemented)',
-      negatable: false,
-    )
-    ..addFlag(
-      'mutation',
-      help: 'Run mutation testing (STUB - not implemented)',
-      negatable: false,
-    )
-    ..addFlag(
-      'watch',
-      help: 'Enable watch mode for continuous monitoring (STUB - not implemented)',
-      negatable: false,
-    )
-    ..addFlag(
-      'parallel',
-      help: 'Use parallel test execution (STUB - not implemented)',
-      negatable: false,
-    )
-    ..addFlag(
-      'impact',
-      help: 'Enable test impact analysis (STUB - not implemented)',
-      negatable: false,
     )
     // Export/output flags
     ..addFlag(

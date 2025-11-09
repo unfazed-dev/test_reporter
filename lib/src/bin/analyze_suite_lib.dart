@@ -188,7 +188,8 @@ class TestOrchestrator {
 
       if (verbose) {
         args.add('--verbose');
-        print('  [DEBUG] Running analyze_coverage on: $sourcePath with test path: $actualTestPath');
+        print(
+            '  [DEBUG] Running analyze_coverage on: $sourcePath with test path: $actualTestPath');
       }
       if (includeFixtures) args.add('--include-fixtures');
 

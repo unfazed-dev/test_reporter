@@ -268,15 +268,17 @@ void main() {
         // Test with a mix of ranges and isolated lines to trigger line 245
         final description = formatLineRangeDescription(
           'lib/src/auth/service.dart',
-          [10, 15, 16, 20],  // 10 is isolated, 15-16 is a range, 20 is isolated
+          [10, 15, 16, 20], // 10 is isolated, 15-16 is a range, 20 is isolated
         );
 
         // Should contain both isolated lines and ranges
-        expect(description, anyOf([
-          contains('10'),
-          contains('20'),
-          contains('15-16'),
-        ]));
+        expect(
+            description,
+            anyOf([
+              contains('10'),
+              contains('20'),
+              contains('15-16'),
+            ]));
       });
 
       test('should detect error handling pattern', () {
@@ -368,7 +370,7 @@ void main() {
         // Non-consecutive lines create isolated single-line ranges
         final testCases = groupLinesIntoTestCases(
           'lib/src/auth/service.dart',
-          [10, 15, 20],  // Three isolated lines
+          [10, 15, 20], // Three isolated lines
         );
 
         // Should have 3 separate test cases, each for a single line

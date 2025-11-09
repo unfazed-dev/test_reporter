@@ -9,9 +9,6 @@
 /// dart test_analyzer.dart --runs=5           # Detect flaky tests
 /// dart test_analyzer.dart --performance      # Track slow tests
 /// dart test_analyzer.dart --parallel         # Speed up execution
-/// dart test_analyzer.dart --dependencies     # Analyze test dependencies
-/// dart test_analyzer.dart --mutation         # Verify test effectiveness
-/// dart test_analyzer.dart --impact           # Identify affected tests
 /// ```
 ///
 /// ## Core Features
@@ -20,9 +17,6 @@
 /// - **Performance Profiling**: Identifies slow tests and performance bottlenecks
 /// - **Interactive Debugging**: Deep dive into specific test failures with source viewing
 /// - **Parallel Execution**: Run tests in parallel with configurable worker pool
-/// - **Dependency Analysis**: Generate test dependency graphs and detect circular deps
-/// - **Mutation Testing**: Verify test effectiveness by simulating code mutations
-/// - **Impact Analysis**: Identify which tests to run based on code changes
 /// - **Watch Mode**: Continuous testing with auto re-run on file changes
 ///
 /// ## Output Sections
@@ -161,9 +155,6 @@ class TestAnalyzer {
     this.targetFiles = const [],
     this.parallel = false,
     this.maxWorkers = 4,
-    this.dependencyAnalysis = false,
-    this.mutationTesting = false,
-    this.impactAnalysis = false,
     this.enableChecklist = true,
     this.minimalChecklist = false,
     this.explicitModuleName,
@@ -213,9 +204,6 @@ class TestAnalyzer {
   final List<String> targetFiles;
   final bool parallel;
   final int maxWorkers;
-  final bool dependencyAnalysis;
-  final bool mutationTesting;
-  final bool impactAnalysis;
   final bool enableChecklist;
   final bool minimalChecklist;
   final String? explicitModuleName;
@@ -474,30 +462,15 @@ class TestAnalyzer {
         exit(2);
       }
 
-      // Step 2: Analyze test dependencies if enabled
-      if (dependencyAnalysis) {
-        await _analyzeTestDependencies(testFiles);
-      }
-
-      // Step 3: Run tests multiple times
+      // Step 2: Run tests multiple times
       await _runTestsMultipleTimes(testFiles);
 
-      // Step 4: Analyze failures and patterns
+      // Step 3: Analyze failures and patterns
       _analyzeFailures();
 
-      // Step 5: Track performance metrics
+      // Step 4: Track performance metrics
       if (performanceMode) {
         _analyzePerformance();
-      }
-
-      // Step 6: Run mutation testing if enabled
-      if (mutationTesting) {
-        await _runMutationTesting(testFiles);
-      }
-
-      // Step 7: Analyze test impact if enabled
-      if (impactAnalysis) {
-        await _analyzeTestImpact(testFiles);
       }
 
       // Step 5: Generate comprehensive report (if enabled)
@@ -2559,241 +2532,6 @@ class TestAnalyzer {
     return '🔴';
   }
 
-  /// Analyze test dependencies and generate dependency graph
-  Future<void> _analyzeTestDependencies(List<String> testFiles) async {
-    print('\n$yellow▶ Analyzing test dependencies...$reset');
-
-    final dependencies = <String, Set<String>>{};
-
-    for (final testFile in testFiles) {
-      final file = File(testFile);
-      if (!await file.exists()) continue;
-
-      final content = await file.readAsString();
-      final imports = <String>{};
-
-      // Extract imports
-      final importPattern = RegExp(r'''import\s+['"]([^'"]+)['"];''');
-      for (final match in importPattern.allMatches(content)) {
-        final import = match.group(1)!;
-        if (!import.startsWith('dart:') &&
-            !import.startsWith('package:flutter/')) {
-          imports.add(import);
-        }
-      }
-
-      dependencies[testFile] = imports;
-    }
-
-    // Print dependency graph
-    print('\n  ${cyan}Test Dependency Graph:$reset');
-    for (final entry in dependencies.entries) {
-      final testName = entry.key.split('/').last;
-      print('    $green▸$reset $testName');
-      for (final dep in entry.value) {
-        print('      $gray└─$reset $dep');
-      }
-    }
-
-    // Find circular dependencies
-    final circular = _findCircularDependencies(dependencies);
-    if (circular.isNotEmpty) {
-      print('\n  $red⚠ Circular dependencies detected:$reset');
-      for (final cycle in circular) {
-        print('    ${cycle.join(' → ')}');
-      }
-    }
-
-    // Find isolated tests (no dependencies)
-    final isolated = dependencies.entries
-        .where((e) => e.value.isEmpty)
-        .map((e) => e.key)
-        .toList();
-    if (isolated.isNotEmpty) {
-      print(
-        '\n  $green✓ Isolated tests (no dependencies):$reset ${isolated.length}',
-      );
-    }
-  }
-
-  /// Find circular dependencies in the dependency graph
-  List<List<String>> _findCircularDependencies(
-    Map<String, Set<String>> dependencies,
-  ) {
-    final cycles = <List<String>>[];
-    final visited = <String>{};
-    final recursionStack = <String>[];
-
-    void dfs(String node) {
-      if (recursionStack.contains(node)) {
-        final cycleStart = recursionStack.indexOf(node);
-        cycles.add(recursionStack.sublist(cycleStart).toList()..add(node));
-        return;
-      }
-
-      if (visited.contains(node)) return;
-
-      visited.add(node);
-      recursionStack.add(node);
-
-      for (final dep in dependencies[node] ?? <String>{}) {
-        if (dependencies.containsKey(dep)) {
-          dfs(dep);
-        }
-      }
-
-      recursionStack.removeLast();
-    }
-
-    for (final node in dependencies.keys) {
-      if (!visited.contains(node)) {
-        dfs(node);
-      }
-    }
-
-    return cycles;
-  }
-
-  /// Run mutation testing to verify test effectiveness
-  Future<void> _runMutationTesting(List<String> testFiles) async {
-    print('\n$yellow▶ Running mutation testing...$reset');
-    print(
-      '  ${cyan}Mutation testing helps verify that tests actually catch bugs$reset',
-    );
-
-    final mutations = <String, int>{
-      'Operator mutations': 0,
-      'Literal mutations': 0,
-      'Statement deletions': 0,
-      'Condition inversions': 0,
-    };
-
-    // For each test file, find the corresponding source file
-    for (final testFile in testFiles) {
-      final sourceFile = testFile
-          .replaceFirst('test/', 'lib/')
-          .replaceFirst('_test.dart', '.dart');
-
-      final source = File(sourceFile);
-      if (!await source.exists()) continue;
-
-      print('\n  ${cyan}Mutating: ${sourceFile.split('/').last}$reset');
-
-      // Simulate mutations (in real implementation, would actually mutate code)
-      final content = await source.readAsString();
-
-      // Count potential mutations
-      mutations['Operator mutations'] = mutations['Operator mutations']! +
-          RegExp(r'[+\-*/%<>]=?').allMatches(content).length;
-      mutations['Literal mutations'] = mutations['Literal mutations']! +
-          RegExp(r'\b\d+\b').allMatches(content).length;
-      mutations['Statement deletions'] = mutations['Statement deletions']! +
-          RegExp(';').allMatches(content).length ~/ 2;
-      mutations['Condition inversions'] = mutations['Condition inversions']! +
-          RegExp(r'if\s*\(').allMatches(content).length;
-    }
-
-    // Print mutation testing summary
-    print('\n  ${cyan}Mutation Testing Summary:$reset');
-    var totalMutations = 0;
-    for (final entry in mutations.entries) {
-      print('    ${entry.key}: ${entry.value}');
-      totalMutations += entry.value;
-    }
-
-    print('\n  ${yellow}Total potential mutations: $totalMutations$reset');
-    print(
-      '  ${dim}Note: Run tests after each mutation to verify test effectiveness$reset',
-    );
-
-    // Mutation score calculation (simulated)
-    const mutationScore =
-        85.0; // In real implementation, calculate actual score
-    print(
-      '\n  ${cyan}Mutation Score: ${_getMutationScoreEmoji(mutationScore)} ${mutationScore.toStringAsFixed(1)}%$reset',
-    );
-
-    if (mutationScore < 80) {
-      print('  $red⚠ Low mutation score indicates weak test coverage$reset');
-      print(
-        '  ${dim}Consider adding more assertions and edge case tests$reset',
-      );
-    }
-  }
-
-  String _getMutationScoreEmoji(double score) {
-    if (score >= 90) return '🟢';
-    if (score >= 80) return '🟡';
-    if (score >= 70) return '🟠';
-    return '🔴';
-  }
-
-  /// Analyze test impact based on code changes
-  Future<void> _analyzeTestImpact(List<String> testFiles) async {
-    print('\n$yellow▶ Analyzing test impact...$reset');
-
-    // Get git diff to find changed files
-    final gitDiff = await Process.run('git', ['diff', '--name-only', 'HEAD~1']);
-    final changedFiles = gitDiff.stdout
-        .toString()
-        .split('\n')
-        .where((f) => f.isNotEmpty)
-        .toList();
-
-    if (changedFiles.isEmpty) {
-      print('  $green✓$reset No code changes detected');
-      return;
-    }
-
-    print('  ${cyan}Changed files:$reset');
-    for (final file in changedFiles) {
-      print('    • $file');
-    }
-
-    // Find tests that should be run based on changes
-    final impactedTests = <String>{};
-
-    for (final changedFile in changedFiles) {
-      if (changedFile.startsWith('lib/')) {
-        // Find corresponding test file
-        final testFile = changedFile
-            .replaceFirst('lib/', 'test/')
-            .replaceFirst('.dart', '_test.dart');
-
-        if (testFiles.contains(testFile)) {
-          impactedTests.add(testFile);
-        }
-
-        // Also find tests that import this file
-        for (final testFile in testFiles) {
-          final content = await File(testFile).readAsString();
-          if (content.contains(changedFile)) {
-            impactedTests.add(testFile);
-          }
-        }
-      }
-    }
-
-    print('\n  ${cyan}Impacted tests (${impactedTests.length}):$reset');
-    for (final test in impactedTests) {
-      print('    $green▸$reset ${test.split('/').last}');
-    }
-
-    if (impactedTests.isEmpty) {
-      print('  $yellow⚠ No tests found for changed files$reset');
-      print('  ${dim}Consider adding tests for the modified code$reset');
-    } else {
-      final percentage =
-          (impactedTests.length / testFiles.length * 100).toStringAsFixed(1);
-      print('\n  ${cyan}Impact scope: $percentage% of tests affected$reset');
-
-      // Suggest running only impacted tests
-      print('\n  $green💡 Optimization suggestion:$reset');
-      print('    Run only impacted tests to save time:');
-      print('    ${dim}dart test ${impactedTests.join(' ')}$reset');
-    }
-  }
-
   /// Interactive mode for debugging specific failures
   Future<void> _enterInteractiveMode() async {
     print('$cyan🔍 Interactive Debug Mode$reset');
@@ -3470,24 +3208,6 @@ ArgParser _createArgParser() {
       help: 'Run tests in parallel for faster execution',
       negatable: false,
     )
-    // Advanced analysis flags (STUB - to be removed in Phase 3)
-    ..addFlag(
-      'dependencies',
-      abbr: 'd',
-      help: 'Analyze test dependency graph (STUB - not implemented)',
-      negatable: false,
-    )
-    ..addFlag(
-      'mutation',
-      abbr: 'm',
-      help: 'Run mutation testing to verify test effectiveness (STUB - not implemented)',
-      negatable: false,
-    )
-    ..addFlag(
-      'impact',
-      help: 'Analyze test impact based on code changes (STUB - not implemented)',
-      negatable: false,
-    )
     // Other flags
     ..addFlag(
       'include-fixtures',
@@ -3547,9 +3267,6 @@ void main(List<String> args) async {
   final generateReport = results['report'] as bool;
   final help = results['help'] as bool;
   final parallel = results['parallel'] as bool;
-  final dependencyAnalysis = results['dependencies'] as bool;
-  final mutationTesting = results['mutation'] as bool;
-  final impactAnalysis = results['impact'] as bool;
   final enableChecklist = results['checklist'] as bool;
   final minimalChecklist = results['minimal-checklist'] as bool;
   final includeFixtures = results['include-fixtures'] as bool;
@@ -3617,9 +3334,6 @@ void main(List<String> args) async {
     targetFiles: targetFiles,
     parallel: parallel,
     maxWorkers: maxWorkers,
-    dependencyAnalysis: dependencyAnalysis,
-    mutationTesting: mutationTesting,
-    impactAnalysis: impactAnalysis,
     enableChecklist: enableChecklist,
     minimalChecklist: minimalChecklist,
     explicitModuleName: explicitModuleName,
