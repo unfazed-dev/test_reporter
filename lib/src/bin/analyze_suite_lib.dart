@@ -54,6 +54,7 @@ class TestOrchestrator {
     this.parallel = false,
     this.enableChecklist = true,
     this.minimalChecklist = false,
+    this.includeFixtures = false,
     this.explicitModuleName,
     this.testPathOverride,
     this.sourcePathOverride,
@@ -66,6 +67,7 @@ class TestOrchestrator {
   final bool parallel;
   final bool enableChecklist;
   final bool minimalChecklist;
+  final bool includeFixtures;
   final String? explicitModuleName;
   final String? testPathOverride;
   final String? sourcePathOverride;
@@ -287,6 +289,7 @@ class TestOrchestrator {
         print('  [DEBUG] Running analyze_tests on: $actualTestPath');
       }
       if (parallel) args.add('--parallel');
+      if (includeFixtures) args.add('--include-fixtures');
 
       if (!enableChecklist) {
         args.add('--no-checklist');

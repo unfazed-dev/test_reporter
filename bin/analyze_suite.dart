@@ -63,6 +63,11 @@ void main(List<String> arguments) async {
       negatable: false,
     )
     ..addFlag(
+      'include-fixtures',
+      help: 'Include fixture tests (excluded by default)',
+      negatable: false,
+    )
+    ..addFlag(
       'help',
       abbr: 'h',
       help: 'Show this help message',
@@ -132,6 +137,7 @@ void main(List<String> arguments) async {
     parallel: args['parallel'] as bool,
     enableChecklist: args['checklist'] as bool,
     minimalChecklist: args['minimal-checklist'] as bool,
+    includeFixtures: args['include-fixtures'] as bool,
     explicitModuleName: args['module-name'] as String?,
     testPathOverride: args['test-path'] as String?,
     sourcePathOverride: args['source-path'] as String?,
