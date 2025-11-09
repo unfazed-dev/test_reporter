@@ -1,3 +1,6 @@
+@Tags(['integration'])
+library;
+
 /// Integration tests for analyze_tests CLI tool
 ///
 /// Tests the complete workflow of the test analyzer including:
@@ -8,7 +11,9 @@
 /// - Performance profiling
 ///
 /// Uses actual fixture files from test/fixtures/
-library;
+///
+/// NOTE: These tests generate real reports in tests_reports/
+/// Run with: dart test --tags integration
 
 import 'dart:io';
 

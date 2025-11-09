@@ -1,9 +1,5 @@
-import 'package:test/test.dart';
-import 'package:test_reporter/src/bin/analyze_coverage_lib.dart';
-import '../../helpers/mock_process.dart';
-import '../../helpers/mock_file_system.dart';
-import '../../fixtures/lcov_generator.dart';
-import '../../fixtures/sample_pubspec.dart';
+@Tags(['integration'])
+library;
 
 /// Integration tests for CoverageAnalyzer workflow (Phase 2.1 - Core Suite)
 ///
@@ -13,6 +9,16 @@ import '../../fixtures/sample_pubspec.dart';
 /// - Report generation
 /// - Incremental mode
 /// - Parallel execution
+///
+/// NOTE: These tests generate real reports in tests_reports/
+/// Run with: dart test --tags integration
+
+import 'package:test/test.dart';
+import 'package:test_reporter/src/bin/analyze_coverage_lib.dart';
+import '../../helpers/mock_process.dart';
+import '../../helpers/mock_file_system.dart';
+import '../../fixtures/lcov_generator.dart';
+import '../../fixtures/sample_pubspec.dart';
 /// - Error handling
 ///
 /// Uses mocked Process and FileSystem to simulate tool execution.
@@ -213,10 +219,11 @@ void main() {
         result: MockProcessResult(stdout: '', stderr: '', exitCode: 0),
       );
 
-      // Act: Run analyzer
+      // Act: Run analyzer with JSON export enabled
       final analyzer = CoverageAnalyzer(
         testPath: 'test',
         libPath: 'lib/src',
+        exportJson: true, // Enable JSON export for this test
         processManager: processManager,
         fileSystem: fileSystem,
       );

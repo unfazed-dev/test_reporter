@@ -1,3 +1,6 @@
+@Tags(['integration'])
+library;
+
 // 🔴 RED Phase: Phase 2.4 - Threshold Validation & Baseline Tests
 // Status: IN PROGRESS - Creating tests with TDD methodology
 // TDD Methodology: Write FAILING tests FIRST

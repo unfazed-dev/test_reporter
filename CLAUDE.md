@@ -417,6 +417,55 @@ dart run scripts/generate_integration_tests.dart
 dart run scripts/fixture_generator.dart
 ```
 
+### Integration Tests (Important!)
+
+**Integration tests are SKIPPED by default** to prevent polluting the `tests_reports/` directory with mock data during normal test runs.
+
+**Running Unit Tests Only (Default)**:
+```bash
+dart test  # Runs 778 unit tests, skips 165 integration tests
+```
+
+**Running Integration Tests Explicitly**:
+```bash
+# Run ONLY integration tests
+dart test --tags integration
+
+# Run ALL tests (unit + integration)
+dart test --tags unit,integration
+
+# Run specific integration test file
+dart test test/integration/bin/coverage_analyzer_workflow_test.dart --tags integration
+```
+
+**Why Integration Tests are Isolated**:
+- Integration tests generate **real reports** in `tests_reports/` directories
+- Running them during `dart test` pollutes production report directories with synthetic/mock data
+- This caused confusion when mock "failure reports" appeared alongside real failures
+- All integration test files now have `@Tags(['integration'])` annotation
+- Configuration is in `dart_test.yaml` (integration tag is skipped by default)
+- **Note**: 7 misplaced "integration" tests were deleted (they were actually unit tests with no real I/O)
+
+**When to Run Integration Tests**:
+- Before publishing a new release
+- When testing report generation functionality
+- When debugging analyzer workflows
+- For comprehensive pre-commit validation
+
+**Cleaning Up Integration Test Reports**:
+Integration tests generate real reports in `tests_reports/` subdirectories. After running integration tests explicitly, clean up test-generated reports:
+
+```bash
+# Clean up integration test reports (keep only production reports)
+rm -rf tests_reports/reliability/  # Test analyzer integration test reports
+rm -rf tests_reports/quality/      # Old coverage integration test reports
+
+# Or clean ALL reports (nuclear option)
+rm -rf tests_reports/*
+```
+
+**Note**: The `tests_reports/` directory is in `.gitignore` - these reports are never committed to the repository.
+
 ### Testing Workflow
 
 1. **Dogfooding**: Run tools on themselves to verify functionality

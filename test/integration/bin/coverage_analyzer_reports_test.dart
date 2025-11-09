@@ -1,3 +1,6 @@
+@Tags(['integration'])
+library;
+
 // 🔴 RED Phase: Phase 2.3 - Report Generation Tests (SIMPLIFIED)
 // Status: IN PROGRESS - Creating simplified tests with correct APIs
 // TDD Methodology: Write FAILING tests FIRST

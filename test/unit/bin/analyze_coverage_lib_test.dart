@@ -25,8 +25,8 @@ void main() {
       test('should create with default values', () {
         final thresholds = CoverageThresholds();
 
-        expect(thresholds.minimum, equals(80.0));
-        expect(thresholds.warning, equals(90.0));
+        expect(thresholds.minimum, equals(0.0)); // Opt-in enforcement
+        expect(thresholds.warning, equals(0.0)); // Opt-in warnings
         expect(thresholds.failOnDecrease, isFalse);
       });
 
@@ -34,7 +34,7 @@ void main() {
         final thresholds = CoverageThresholds(minimum: 70.0);
 
         expect(thresholds.minimum, equals(70.0));
-        expect(thresholds.warning, equals(90.0)); // default
+        expect(thresholds.warning, equals(0.0)); // default (opt-in)
         expect(thresholds.failOnDecrease, isFalse); // default
       });
 
@@ -143,9 +143,9 @@ void main() {
         expect(thresholds.validate(100.0), isTrue);
       });
 
-      test('should return false for 0% coverage', () {
-        final thresholds = CoverageThresholds();
-        expect(thresholds.validate(0.0), isFalse);
+      test('should return true for 0% coverage with default threshold', () {
+        final thresholds = CoverageThresholds(); // default minimum = 0.0
+        expect(thresholds.validate(0.0), isTrue); // Passes because 0.0 >= 0.0
       });
 
       test('should handle baseline null gracefully', () {
@@ -648,8 +648,8 @@ void main() {
           testPath: 'test',
         );
 
-        expect(analyzer.thresholds.minimum, equals(80.0));
-        expect(analyzer.thresholds.warning, equals(90.0));
+        expect(analyzer.thresholds.minimum, equals(0.0)); // Opt-in enforcement
+        expect(analyzer.thresholds.warning, equals(0.0)); // Opt-in warnings
         expect(analyzer.thresholds.failOnDecrease, isFalse);
       });
 

@@ -1,3 +1,6 @@
+@Tags(['integration'])
+library;
+
 import 'package:test/test.dart';
 import 'package:test_reporter/src/bin/analyze_coverage_lib.dart';
 import '../../helpers/mock_process.dart';
