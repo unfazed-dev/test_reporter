@@ -33,6 +33,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:args/args.dart';
 import 'package:test_reporter/src/utils/checklist_utils.dart';
 import 'package:test_reporter/src/utils/module_identifier.dart';
 import 'package:test_reporter/src/utils/path_resolver.dart';
@@ -2827,103 +2828,209 @@ class FileAnalysis {
   final Set<String> testedMethods = {};
 }
 
+/// Prints usage information with ArgParser-generated help text
+void _printUsage(ArgParser parser) {
+  print('Usage: dart coverage_tool.dart [options] [module_path]');
+  print('');
+  print('Options:');
+  print(parser.usage);
+  print('');
+  print('Examples:');
+  print('  # Basic usage');
+  print('  dart coverage_tool.dart performance');
+  print('');
+  print('  # With auto-fix');
+  print('  dart coverage_tool.dart lib/src/core --fix');
+  print('');
+  print('  # Incremental coverage with branch analysis');
+  print('  dart coverage_tool.dart --incremental --branch');
+  print('');
+  print('  # Parallel execution with thresholds');
+  print('  dart coverage_tool.dart --parallel --min-coverage=80 --warn-coverage=60');
+  print('');
+  print('  # Exclude generated files');
+  print('  dart coverage_tool.dart --exclude "*.g.dart" --exclude "*.freezed.dart"');
+  print('');
+  print('  # Full analysis with all features');
+  print('  dart coverage_tool.dart --fix --branch --parallel --json');
+  print('');
+  print('Note: Coverage badge is automatically embedded in every report');
+}
+
+/// Creates and configures the ArgParser for analyze_coverage
+///
+/// Defines all CLI flags and options with their defaults, help text, and validation.
+/// This replaces the manual string parsing previously used.
+ArgParser _createArgParser() {
+  return ArgParser()
+    // Basic options
+    ..addFlag(
+      'fix',
+      help: 'Generate missing test cases automatically',
+      negatable: false,
+    )
+    ..addFlag(
+      'report',
+      help: 'Generate coverage report',
+      defaultsTo: true,
+      negatable: true,
+    )
+    ..addFlag(
+      'checklist',
+      help: 'Generate actionable checklists',
+      defaultsTo: true,
+      negatable: true,
+    )
+    ..addFlag(
+      'minimal-checklist',
+      help: 'Generate compact checklist format',
+      negatable: false,
+    )
+    ..addFlag(
+      'help',
+      abbr: 'h',
+      help: 'Show this help message',
+      negatable: false,
+    )
+    // Path options
+    ..addOption(
+      'lib',
+      help: 'Path to source files (alias: --source-path)',
+      defaultsTo: 'lib/src',
+      aliases: ['source-path'],
+    )
+    ..addOption(
+      'test',
+      help: 'Path to test files (alias: --test-path)',
+      defaultsTo: 'test',
+      aliases: ['test-path'],
+    )
+    ..addOption(
+      'module-name',
+      help: 'Override module name for reports',
+    )
+    // Advanced analysis flags (some are STUBS - to be removed in Phase 3)
+    ..addFlag(
+      'branch',
+      help: 'Include branch coverage analysis (STUB - not implemented)',
+      negatable: false,
+    )
+    ..addFlag(
+      'incremental',
+      help: 'Only analyze changed files (git diff) (STUB - not implemented)',
+      negatable: false,
+    )
+    ..addFlag(
+      'mutation',
+      help: 'Run mutation testing (STUB - not implemented)',
+      negatable: false,
+    )
+    ..addFlag(
+      'watch',
+      help: 'Enable watch mode for continuous monitoring (STUB - not implemented)',
+      negatable: false,
+    )
+    ..addFlag(
+      'parallel',
+      help: 'Use parallel test execution (STUB - not implemented)',
+      negatable: false,
+    )
+    ..addFlag(
+      'impact',
+      help: 'Enable test impact analysis (STUB - not implemented)',
+      negatable: false,
+    )
+    // Export/output flags
+    ..addFlag(
+      'json',
+      help: 'Export JSON report',
+      negatable: false,
+    )
+    ..addFlag(
+      'include-fixtures',
+      help: 'Include fixture tests (excluded by default)',
+      negatable: false,
+    )
+    // Coverage thresholds
+    ..addOption(
+      'min-coverage',
+      help: 'Minimum coverage threshold (0-100)',
+      defaultsTo: '0',
+    )
+    ..addOption(
+      'warn-coverage',
+      help: 'Warning coverage threshold (0-100)',
+      defaultsTo: '0',
+    )
+    ..addFlag(
+      'fail-on-decrease',
+      help: 'Fail if coverage decreases from baseline',
+      negatable: false,
+    )
+    // File filtering
+    ..addMultiOption(
+      'exclude',
+      help: 'Exclude files matching pattern (can be used multiple times)',
+    )
+    ..addOption(
+      'baseline',
+      help: 'Compare against baseline coverage file',
+    );
+}
+
 void main(List<String> args) async {
-  // Parse arguments
-  final autoFix = args.contains('--fix');
-  final skipReport = args.contains('--no-report');
-  final branchCoverage = args.contains('--branch');
-  final incremental = args.contains('--incremental');
-  final mutationTesting = args.contains('--mutation');
-  final watchMode = args.contains('--watch');
-  final parallel = args.contains('--parallel');
-  final exportJson = args.contains('--json');
-  final testImpactAnalysis = args.contains('--impact');
-  final enableChecklist = !args.contains('--no-checklist');
-  final minimalChecklist = args.contains('--minimal-checklist');
-  final includeFixtures = args.contains('--include-fixtures');
+  // Create and use ArgParser for consistent, validated flag parsing
+  final parser = _createArgParser();
 
-  // Parse exclude patterns
-  final excludePatterns = <String>[];
-  for (var i = 0; i < args.length; i++) {
-    if (args[i] == '--exclude' && i + 1 < args.length) {
-      excludePatterns.add(args[i + 1]);
-    }
+  // Parse arguments with error handling
+  late final ArgResults results;
+  try {
+    results = parser.parse(args);
+  } on FormatException catch (e) {
+    print('❌ Error: ${e.message}');
+    print('');
+    _printUsage(parser);
+    exit(2);
   }
 
-  // Parse thresholds
-  double minCoverage = 0;
-  double warnCoverage = 0;
-  final failOnDecrease = args.contains('--fail-on-decrease');
-  for (var i = 0; i < args.length; i++) {
-    // Handle both --min-coverage=80 and --min-coverage 80 formats
-    if (args[i].startsWith('--min-coverage')) {
-      if (args[i].contains('=')) {
-        minCoverage = double.tryParse(args[i].split('=')[1]) ?? 0;
-      } else if (i + 1 < args.length) {
-        minCoverage = double.tryParse(args[i + 1]) ?? 0;
-      }
-    } else if (args[i].startsWith('--warn-coverage')) {
-      if (args[i].contains('=')) {
-        warnCoverage = double.tryParse(args[i].split('=')[1]) ?? 0;
-      } else if (i + 1 < args.length) {
-        warnCoverage = double.tryParse(args[i + 1]) ?? 0;
-      }
-    }
+  // Show help if requested
+  if (results['help'] as bool) {
+    _printUsage(parser);
+    return;
   }
 
-  // Parse baseline file
-  String? baselineFile;
-  for (var i = 0; i < args.length; i++) {
-    if (args[i] == '--baseline' && i + 1 < args.length) {
-      baselineFile = args[i + 1];
-    }
-  }
+  // Extract flag values from parsed results
+  final autoFix = results['fix'] as bool;
+  final skipReport = !(results['report'] as bool);
+  final branchCoverage = results['branch'] as bool;
+  final incremental = results['incremental'] as bool;
+  final mutationTesting = results['mutation'] as bool;
+  final watchMode = results['watch'] as bool;
+  final parallel = results['parallel'] as bool;
+  final exportJson = results['json'] as bool;
+  final testImpactAnalysis = results['impact'] as bool;
+  final enableChecklist = results['checklist'] as bool;
+  final minimalChecklist = results['minimal-checklist'] as bool;
+  final includeFixtures = results['include-fixtures'] as bool;
+  final failOnDecrease = results['fail-on-decrease'] as bool;
 
-  // Parse paths - allow any source directory (bin/, lib/, scripts/, etc.)
-  String? libPath;
-  String? testPath;
-  String? explicitModuleName;
+  // Extract multi-value exclude patterns
+  final excludePatterns = results['exclude'] as List<String>;
 
-  // Collect non-flag arguments
-  final nonFlagArgs = <String>[];
-  for (var i = 0; i < args.length; i++) {
-    // Support both --lib and --source-path (aliases)
-    if (args[i].startsWith('--lib=') || args[i].startsWith('--source-path=')) {
-      libPath = args[i].split('=')[1];
-    } else if ((args[i] == '--lib' || args[i] == '--source-path') &&
-        i + 1 < args.length) {
-      libPath = args[i + 1];
-      i++; // Skip the next arg since we consumed it
-    } else if (args[i].startsWith('--test-path=') || args[i].startsWith('--test=')) {
-      testPath = args[i].split('=')[1];
-    } else if ((args[i] == '--test' || args[i] == '--test-path') &&
-        i + 1 < args.length) {
-      testPath = args[i + 1];
-      i++; // Skip the next arg since we consumed it
-    } else if (args[i].startsWith('--module-name=')) {
-      explicitModuleName = args[i].split('=')[1];
-    } else if (args[i] == '--module-name' && i + 1 < args.length) {
-      explicitModuleName = args[i + 1];
-      i++; // Skip the next arg since we consumed it
-    } else if (!args[i].startsWith('--')) {
-      // Check if previous arg was a flag that takes a value
-      final isPreviousFlag = i > 0 &&
-          (args[i - 1] == '--lib' ||
-              args[i - 1] == '--source-path' ||
-              args[i - 1] == '--test' ||
-              args[i - 1] == '--test-path' ||
-              args[i - 1] == '--module-name' ||
-              args[i - 1] == '--exclude' ||
-              args[i - 1] == '--baseline' ||
-              args[i - 1].startsWith('--min-coverage') ||
-              args[i - 1].startsWith('--warn-coverage'));
-      if (!isPreviousFlag) {
-        nonFlagArgs.add(args[i]);
-      }
-    }
-  }
+  // Extract numeric thresholds
+  final minCoverage = double.tryParse(results['min-coverage'] as String) ?? 0;
+  final warnCoverage = double.tryParse(results['warn-coverage'] as String) ?? 0;
 
-  // Process non-flag arguments
+  // Extract baseline file
+  final baselineFile = results['baseline'] as String?;
+
+  // Extract paths from options (may be overridden by rest arguments)
+  String? libPath = results['lib'] as String?;
+  String? testPath = results['test'] as String?;
+  final explicitModuleName = results['module-name'] as String?;
+
+  // Process rest arguments (positional arguments)
+  final nonFlagArgs = results.rest;
   if (nonFlagArgs.isNotEmpty) {
     // First argument can be either test or source path - use smart resolution
     final firstArg = nonFlagArgs[0];
@@ -2932,15 +3039,15 @@ void main(List<String> args) async {
     if (nonFlagArgs.length > 1) {
       final secondArg = nonFlagArgs[1];
       // Assume first is source, second is test (original behavior)
-      libPath ??= firstArg;
-      testPath ??= secondArg;
+      libPath = firstArg;
+      testPath = secondArg;
     } else {
       // Auto-resolve using PathResolver - handles both test/ and lib/ inputs
       try {
         final resolved = PathResolver.resolvePaths(firstArg);
-        // Only use resolved paths if not explicitly set
-        libPath ??= resolved.sourcePath;
-        testPath ??= resolved.testPath;
+        // Override defaults with resolved paths
+        libPath = resolved.sourcePath;
+        testPath = resolved.testPath;
       } catch (e) {
         // If resolution fails, show error and usage
         print('❌ Error: Could not resolve paths from "$firstArg"');
@@ -2958,7 +3065,7 @@ void main(List<String> args) async {
     }
   }
 
-  // Set defaults if not provided
+  // Ensure we have paths (defaults are in ArgParser)
   libPath ??= 'lib/src';
   testPath ??= 'test';
 
@@ -2985,76 +3092,6 @@ void main(List<String> args) async {
     print(
         '  dart run test_reporter:analyze_coverage test/ --module-name=my-module');
     exit(2);
-  }
-
-  // Print usage if no valid paths
-  if (args.contains('--help') || args.contains('-h')) {
-    print('Usage: dart coverage_tool.dart [options] [module_path]');
-    print('');
-    print('Basic Options:');
-    print('  --lib <path>          Path to source files (default: lib/src)');
-    print('  --test <path>         Path to test files (default: test)');
-    print('  --fix                 Generate missing test cases automatically');
-    print('  --no-report           Skip generating coverage report');
-    print('  --help, -h            Show this help message');
-    print('');
-    print('Path Control (v3.0):');
-    print('  --source-path <path>  Explicit source path (alias for --lib)');
-    print('  --test-path <path>    Explicit test path (alias for --test)');
-    print('  --module-name <name>  Override module name for reports');
-    print('');
-    print('Advanced Options (v2.0):');
-    print('  --branch              Include branch coverage analysis');
-    print('  --incremental         Only analyze changed files (git diff)');
-    print('  --mutation            Run mutation testing');
-    print(
-      '  --watch               Enable watch mode for continuous monitoring',
-    );
-    print('  --parallel            Use parallel test execution');
-    print('  --json                Export JSON report');
-    print('  --impact              Enable test impact analysis');
-    print('  --include-fixtures    Include fixture tests (excluded by default)');
-    print(
-      '  --exclude <pattern>   Exclude files matching pattern (can be used multiple times)',
-    );
-    print('                        Common patterns:');
-    print(
-      '                          --exclude "*.g.dart"        (generated files)',
-    );
-    print(
-      '                          --exclude "*.freezed.dart"  (Freezed files)',
-    );
-    print('                          --exclude "test/mocks/*"    (mock files)');
-    print('  --baseline <file>     Compare against baseline coverage');
-    print('  --min-coverage <n>    Minimum coverage threshold (0-100)');
-    print('  --warn-coverage <n>   Warning coverage threshold (0-100)');
-    print('  --fail-on-decrease    Fail if coverage decreases from baseline');
-    print('');
-    print('Examples:');
-    print('  # Basic usage');
-    print('  dart coverage_tool.dart performance');
-    print('');
-    print('  # With auto-fix');
-    print('  dart coverage_tool.dart lib/src/core --fix');
-    print('');
-    print('  # Incremental coverage with branch analysis');
-    print('  dart coverage_tool.dart --incremental --branch');
-    print('');
-    print('  # Parallel execution with thresholds');
-    print(
-      '  dart coverage_tool.dart --parallel --min-coverage=80 --warn-coverage=60',
-    );
-    print('');
-    print('  # Exclude generated files');
-    print(
-      '  dart coverage_tool.dart --exclude "*.g.dart" --exclude "*.freezed.dart"',
-    );
-    print('');
-    print('  # Full analysis with all features');
-    print('  dart coverage_tool.dart --fix --branch --parallel --json');
-    print('');
-    print('Note: Coverage badge is automatically embedded in every report');
-    exit(0);
   }
 
   final analyzer = CoverageAnalyzer(
