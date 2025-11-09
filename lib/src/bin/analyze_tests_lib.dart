@@ -3240,8 +3240,7 @@ ArgParser _createArgParser() {
     )
     ..addOption(
       'module-name',
-      help:
-          'Override module name for reports (auto-qualified with -fo/-fi)',
+      help: 'Override module name for reports (auto-qualified with -fo/-fi)',
     );
 }
 

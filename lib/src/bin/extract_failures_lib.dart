@@ -137,8 +137,7 @@ class FailedTestExtractor {
       )
       ..addOption(
         'module-name',
-        help:
-            'Override module name for reports (auto-qualified with -fo/-fi)',
+        help: 'Override module name for reports (auto-qualified with -fo/-fi)',
       )
       ..addFlag(
         'verbose',

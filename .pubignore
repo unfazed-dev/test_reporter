@@ -1,0 +1,23 @@
+# Development planning documents
+REPORT_GENERATION_REFACTORING_PLAN.md
+TEST_IMPLEMENTATION_PLAN.md
+
+# Development-only documentation (not needed by package users)
+.agent/
+
+# Project-specific scripts (not generic utilities)
+scripts/fix_*.dart
+scripts/reorganize_views.dart
+scripts/rename_account_manager.dart
+scripts/fix_locator_imports.dart
+scripts/generate_routes.dart
+scripts/test_templates.dart
+
+# Git and IDE
+.git/
+.idea/
+.vscode/
+
+# Build artifacts
+build/
+.dart_tool/
