@@ -76,13 +76,13 @@ Phase 5: ⬜ PENDING - Comprehensive Flag Testing (3-4 hours)
   ⬜ 5.5 Edge cases (1 hour)
 ```
 
-**Current Status**: ⚠️ **IN PROGRESS** - Phases 1-4 complete (80%), Phase 5.1 ✅ complete
-**Tests Created**: 57 / ~66 (6 old integration + 7 analyze_tests unit + 9 analyze_coverage unit + 15 stub removal + 20 analyze_tests flags ✅)
+**Current Status**: ⚠️ **IN PROGRESS** - Phases 1-4 complete (80%), Phase 5.1-5.2 ✅ complete
+**Tests Created**: 80 / ~66 (6 old integration + 7 analyze_tests unit + 9 analyze_coverage unit + 15 stub removal + 20 analyze_tests flags ✅ + 23 analyze_coverage flags ✅)
 **Flags Fixed**: 1 / 1 critical bug ✅
 **Tools Refactored**: 2 / 2 (ArgParser migration) ✅
 **Stubs Removed**: 9 / 9 ✅
 **Documentation**: 4 / 4 files updated ✅
-**Integration Tests**: 20 / ~60 analyze_tests flags ✅
+**Integration Tests**: 43 / ~60 (20 analyze_tests ✅ + 23 analyze_coverage ✅)
 **Blockers**: None
 **Known Issues**: None
 
@@ -991,8 +991,8 @@ if (generateReport) {
 ### 5.2 analyze_coverage Flag Tests (1 hour)
 
 **File**: `test/integration/bin/analyze_coverage_flags_test.dart`
-**Status**: ⬜ PENDING
-**Target**: ~20 integration tests for 17 flags
+**Status**: ✅ COMPLETE
+**Target**: ~20 integration tests for 17 flags (actually created 23 tests)
 
 **Test Checklist**:
 - [ ] Test all boolean flags:
