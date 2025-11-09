@@ -2969,13 +2969,14 @@ void main(List<String> args) async {
   // Extract flag values from parsed results
   final autoFix = results['fix'] as bool;
   final skipReport = !(results['report'] as bool);
-  final branchCoverage = results['branch'] as bool;
-  final incremental = results['incremental'] as bool;
-  final mutationTesting = results['mutation'] as bool;
-  final watchMode = results['watch'] as bool;
-  final parallel = results['parallel'] as bool;
+  // Stub flags removed in Phase 3 - defaults from CoverageAnalyzerConfig used instead
+  final branchCoverage = false; // results['branch'] as bool;
+  final incremental = false; // results['incremental'] as bool;
+  final mutationTesting = false; // results['mutation'] as bool;
+  final watchMode = false; // results['watch'] as bool;
+  final parallel = false; // results['parallel'] as bool;
   final exportJson = results['json'] as bool;
-  final testImpactAnalysis = results['impact'] as bool;
+  final testImpactAnalysis = false; // results['impact'] as bool;
   final enableChecklist = results['checklist'] as bool;
   final minimalChecklist = results['minimal-checklist'] as bool;
   final includeFixtures = results['include-fixtures'] as bool;
