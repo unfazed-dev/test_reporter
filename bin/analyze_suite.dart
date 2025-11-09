@@ -4,6 +4,16 @@
 ///
 /// Command-line entry point for the Unified Test Analysis Orchestrator.
 /// All business logic is in lib/src/bin/analyze_suite_lib.dart
+///
+/// ## Design Note: No --no-report Flag
+///
+/// This orchestrator tool does NOT support a `--no-report` flag by design.
+/// The suite's PRIMARY PURPOSE is to generate unified reports combining
+/// coverage and test analysis. Adding `--no-report` would make this tool
+/// pointless.
+///
+/// If you need to run tests without generating reports, use the individual
+/// tools (`analyze_tests`, `analyze_coverage`) with their `--no-report` flags.
 
 import 'dart:io';
 
@@ -87,6 +97,10 @@ void main(List<String> arguments) async {
     print('Unified Test Analysis Orchestrator');
     print('\nUsage: dart run_all.dart [test_path] [options]\n');
     print(parser.usage);
+    print(
+        '\nNote: Reports are ALWAYS generated (this tool\'s primary purpose).');
+    print('      Use individual tools (analyze_tests, analyze_coverage) with');
+    print('      --no-report if you need to skip report generation.');
     exit(0);
   }
 

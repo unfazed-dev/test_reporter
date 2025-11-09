@@ -330,6 +330,8 @@ All tools generate reports in `tests_reports/` with subdirectories:
 - Combines results into unified report
 - Handles module name extraction from test paths
 
+**Important**: `analyze_suite` does NOT support `--no-report` - this is **intentional by design**. The suite's purpose IS to generate unified reports. Use individual tools (`analyze_tests`, `analyze_coverage`) with `--no-report` if you need to skip report generation.
+
 ---
 
 ## 🔴🟢♻️ TDD Methodology (MANDATORY)

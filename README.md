@@ -174,17 +174,14 @@ dart run test_reporter:analyze_coverage --fix
 # Analyze specific module with explicit paths
 dart run test_reporter:analyze_coverage test/auth --source-path lib/src/auth
 
-# Branch coverage with incremental analysis
-dart run test_reporter:analyze_coverage --branch --incremental
-
 # Set coverage thresholds
 dart run test_reporter:analyze_coverage --min-coverage=80 --warn-coverage=90
 
 # Exclude generated files
 dart run test_reporter:analyze_coverage --exclude "*.g.dart" --exclude "*.freezed.dart"
 
-# Parallel execution with JSON export
-dart run test_reporter:analyze_coverage --parallel --json
+# JSON export with thresholds
+dart run test_reporter:analyze_coverage --json --min-coverage=80
 
 # Custom module name
 dart run test_reporter:analyze_coverage --module-name auth-service
@@ -235,9 +232,6 @@ Options:
   --performance, -p    Track and report test performance metrics
   --watch, -w          Watch for changes and re-run analysis
   --parallel           Run tests in parallel for faster execution
-  --dependencies, -d   Analyze test dependency graph
-  --mutation, -m       Run mutation testing to verify test effectiveness
-  --impact             Analyze test impact based on code changes
   --runs=N             Number of test runs (default: 3)
   --slow=N             Slow test threshold in seconds (default: 1.0)
   --workers=N          Max parallel workers (default: 4)
@@ -263,13 +257,7 @@ Basic Options:
   --help, -h            Show this help message
 
 Advanced Options:
-  --branch              Include branch coverage analysis
-  --incremental         Only analyze changed files (git diff)
-  --mutation            Run mutation testing
-  --watch               Enable watch mode for continuous monitoring
-  --parallel            Use parallel test execution
   --json                Export JSON report
-  --impact              Enable test impact analysis
   --exclude <pattern>   Exclude files matching pattern (repeatable)
   --baseline <file>     Compare against baseline coverage
   --min-coverage <n>    Minimum coverage threshold (0-100)

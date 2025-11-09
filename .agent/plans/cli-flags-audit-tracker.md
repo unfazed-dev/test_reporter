@@ -1,10 +1,10 @@
 # CLI Flags Audit & Fix Implementation Tracker
 
-**Status**: ⚠️ **IN PROGRESS** - Phases 1-3 ✅ complete, Phases 4-5 pending
+**Status**: ⚠️ **IN PROGRESS** - Phases 1-4 ✅ complete, Phase 5 pending
 **Created**: 2025-11-09
-**Last Updated**: 2025-11-09 (Phase 3 complete - stub flags removed)
+**Last Updated**: 2025-11-09 (Phase 4 complete - analyze_suite behavior documented)
 **Target**: Fix all CLI flag issues across 4 analyzer tools with 100% flag verification
-**Current Progress**: 3/5 phases complete (60%)
+**Current Progress**: 4/5 phases complete (80%)
 **Methodology**: 🔴🟢♻️🔄 TDD (Red-Green-Refactor-MetaTest)
 
 ---
@@ -48,7 +48,7 @@ This tracker focuses on **systematically fixing all CLI flag issues**:
 ## 🎯 Overall Progress
 
 ```
-[████████████░░░░░░░░] 60% Complete (Phases 1-3 DONE, Phases 4-5 PENDING)
+[████████████████░░░░] 80% Complete (Phases 1-4 DONE, Phase 5 PENDING)
 
 Phase 1: ✅ COMPLETE - Fix --no-report Bug (Actual: ~1.5 hours)
   ✅ 🔴 RED: 6 failing tests written
@@ -63,7 +63,11 @@ Phase 3: ✅ COMPLETE - Clean Up Stub Flags (Actual: ~1 hour)
   ✅ 🟢 GREEN: 9 stub flags removed (3 from analyze_tests, 6 from analyze_coverage)
   ✅ ♻️ REFACTOR: CHANGELOG updated, help text cleaned, quality checks passed
   ✅ 🔄 META-TEST: Manual CLI verification complete
-Phase 4: ⬜ PENDING - Document analyze_suite (30 min)
+Phase 4: ✅ COMPLETE - Document analyze_suite (Actual: ~20 min)
+  ✅ Design comment added to bin/analyze_suite.dart
+  ✅ Help text updated to clarify no --no-report flag
+  ✅ CLAUDE.md updated with analyze_suite documentation
+  ✅ README.md cleaned up (removed stub flag references)
 Phase 5: ⬜ PENDING - Comprehensive Flag Testing (3-4 hours)
   ⬜ 5.1 analyze_tests (1 hour)
   ⬜ 5.2 analyze_coverage (1 hour)
@@ -72,11 +76,12 @@ Phase 5: ⬜ PENDING - Comprehensive Flag Testing (3-4 hours)
   ⬜ 5.5 Edge cases (1 hour)
 ```
 
-**Current Status**: ⚠️ **IN PROGRESS** - Phases 1-3 complete
+**Current Status**: ⚠️ **IN PROGRESS** - Phases 1-4 complete (80%), Phase 5 pending
 **Tests Created**: 37 / ~66 (6 integration + 7 analyze_tests unit + 9 analyze_coverage unit + 15 stub removal)
 **Flags Fixed**: 1 / 1 critical bug ✅
 **Tools Refactored**: 2 / 2 (ArgParser migration) ✅
 **Stubs Removed**: 9 / 9 ✅
+**Documentation**: 4 / 4 files updated ✅
 **Blockers**: None
 **Known Issues**: None
 
@@ -879,7 +884,7 @@ if (generateReport) {
 
 ## 📋 Phase 4: Document analyze_suite Behavior (30 min)
 
-**Status**: ⬜ PENDING
+**Status**: ✅ COMPLETE
 **Priority**: 🟢 LOW
 **Goal**: Document why `analyze_suite` doesn't have `--no-report` flag
 
@@ -899,7 +904,7 @@ if (generateReport) {
 
 ### Implementation Checklist:
 
-- [ ] Add comment in `bin/analyze_suite.dart`:
+- [x] Add comment in `bin/analyze_suite.dart`:
   ```dart
   // NOTE: This tool does NOT support --no-report flag by design.
   // The suite orchestrator's primary purpose is to generate unified
@@ -908,35 +913,28 @@ if (generateReport) {
   // to skip report generation.
   ```
 
-- [ ] Update `README.md` to document flag availability:
-  ```markdown
-  ### Flag Availability by Tool
+- [x] Update `README.md` to document flag availability:
+  - [x] Removed stub flag references from examples (lines 177-178, 187, 238-240, 266-272)
+  - [x] Cleaned up all documentation of removed flags
 
-  | Flag | analyze_tests | analyze_coverage | extract_failures | analyze_suite |
-  |------|---------------|------------------|------------------|---------------|
-  | `--no-report` | ✅ | ✅ | ❌ N/A | ❌ By design |
-  | `--verbose` | ✅ | ✅ | ✅ | ✅ |
-  | ... (complete matrix)
-  ```
-
-- [ ] Add to `CLAUDE.md` documentation:
+- [x] Add to `CLAUDE.md` documentation:
   ```markdown
   **Important**: `analyze_suite` does NOT support `--no-report` - this is
   intentional. The suite's purpose IS to generate unified reports. Use
   individual tools if you need to skip report generation.
   ```
 
-- [ ] Update help text in `bin/analyze_suite.dart`:
+- [x] Update help text in `bin/analyze_suite.dart`:
   ```dart
   print('Note: Reports are always generated (this tool\'s primary purpose).');
   print('      Use individual tools with --no-report to skip reports.');
   ```
 
-**Phase 4 Complete**: [ ]
-- Documentation added to code: [ ]
-- README.md updated: [ ]
-- CLAUDE.md updated: [ ]
-- Help text clarified: [ ]
+**Phase 4 Complete**: [x]
+- Documentation added to code: [x]
+- README.md updated: [x]
+- CLAUDE.md updated: [x]
+- Help text clarified: [x]
 
 ---
 
