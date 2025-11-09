@@ -200,4 +200,96 @@ void main() {
       );
     });
   });
+
+  group('PathResolver - Smart Search Tests', () {
+    // These tests exercise the _findFileInLibTree, _findDirectoryInLibTree,
+    // _findFileInTestTree, and _findDirectoryInTestTree methods by using
+    // real files/directories that exist in the project.
+
+    test('🔴 should find existing file in lib/ tree (smart search)', () {
+      // Test uses actual file: lib/src/utils/report_utils.dart
+      final result = PathResolver.inferSourcePath(
+        'test/unit/utils/report_utils_test.dart',
+      );
+
+      // Smart search should find lib/src/utils/report_utils.dart
+      expect(result, equals('lib/src/utils/report_utils.dart'));
+    });
+
+    test('🔴 should find existing directory in lib/ tree (smart search)', () {
+      // Test uses actual directory: lib/src/utils/
+      final result = PathResolver.inferSourcePath('test/unit/utils/');
+
+      // Smart search should find lib/src/utils/
+      expect(result, equals('lib/src/utils/'));
+    });
+
+    test('🔴 should find existing file in test/ tree (smart search)', () {
+      // Test uses actual file: test/unit/utils/report_utils_test.dart
+      final result = PathResolver.inferTestPath(
+        'lib/src/utils/report_utils.dart',
+      );
+
+      // Smart search should find test/unit/utils/report_utils_test.dart
+      expect(result, equals('test/unit/utils/report_utils_test.dart'));
+    });
+
+    test('🔴 should find existing directory in test/ tree (smart search)', () {
+      // Test uses actual directory: test/unit/utils/
+      final result = PathResolver.inferTestPath('lib/src/utils/');
+
+      // Smart search should find test/unit/utils/
+      expect(result, equals('test/unit/utils/'));
+    });
+
+    test('🔴 should find bin directory in test/ tree', () {
+      // Another directory search test for _findDirectoryInTestTree
+      final result = PathResolver.inferTestPath('lib/src/bin/');
+
+      // Should find test/unit/bin/ or test/integration/bin/
+      expect(result, contains('bin'));
+      expect(result, startsWith('test/'));
+      expect(result, endsWith('/'));
+    });
+
+    test('🔴 should validate file paths exist', () {
+      // Test with actual files that exist
+      final result = PathResolver.validatePaths(
+        'test/unit/utils/report_utils_test.dart',
+        'lib/src/utils/report_utils.dart',
+      );
+
+      expect(result, isTrue);
+    });
+
+    test('🔴 should return false when test file does not exist', () {
+      final result = PathResolver.validatePaths(
+        'test/nonexistent_file_test.dart',
+        'lib/src/utils/report_utils.dart',
+      );
+
+      expect(result, isFalse);
+    });
+
+    test('🔴 should return false when source file does not exist', () {
+      final result = PathResolver.validatePaths(
+        'test/unit/utils/report_utils_test.dart',
+        'lib/src/utils/nonexistent_file.dart',
+      );
+
+      expect(result, isFalse);
+    });
+
+    test('🔴 should use fallback when file not found via smart search', () {
+      // Even when file doesn't exist, inference should return fallback path
+      final result = PathResolver.resolvePaths(
+        'test/nonexistent_module_test.dart',
+      );
+
+      // Should use fallback mapping (lines 346-347 are actually unreachable
+      // because inference always returns a fallback value)
+      expect(result.testPath, equals('test/nonexistent_module_test.dart'));
+      expect(result.sourcePath, equals('lib/src/nonexistent_module.dart'));
+    });
+  });
 }

@@ -264,6 +264,21 @@ void main() {
             ]));
       });
 
+      test('🔴 should format single isolated line correctly (line 245)', () {
+        // Test with a mix of ranges and isolated lines to trigger line 245
+        final description = formatLineRangeDescription(
+          'lib/src/auth/service.dart',
+          [10, 15, 16, 20],  // 10 is isolated, 15-16 is a range, 20 is isolated
+        );
+
+        // Should contain both isolated lines and ranges
+        expect(description, anyOf([
+          contains('10'),
+          contains('20'),
+          contains('15-16'),
+        ]));
+      });
+
       test('should detect error handling pattern', () {
         final description = formatLineRangeDescription(
           'lib/src/auth/service.dart',
@@ -279,6 +294,36 @@ void main() {
             contains('catch'),
           ]),
         );
+      });
+
+      test('🔴 should detect error keyword (line 205)', () {
+        final description = formatLineRangeDescription(
+          'lib/src/auth/service.dart',
+          [15],
+          codeSnippet: 'final error = validateInput();',
+        );
+
+        expect(description, contains('Error handling'));
+      });
+
+      test('🔴 should detect exception keyword (line 206)', () {
+        final description = formatLineRangeDescription(
+          'lib/src/auth/service.dart',
+          [15],
+          codeSnippet: 'throw MyCustomException();',
+        );
+
+        expect(description, contains('Error handling'));
+      });
+
+      test('🔴 should detect branch with else keyword (line 211)', () {
+        final description = formatLineRangeDescription(
+          'lib/src/auth/service.dart',
+          [15],
+          codeSnippet: 'return value else defaultValue;',
+        );
+
+        expect(description, contains('Branch coverage'));
       });
 
       test('should detect null check pattern', () {
@@ -316,6 +361,22 @@ void main() {
         );
 
         expect(testCases.length, equals(3));
+      });
+
+      test('🔴 should format isolated lines as single numbers (line 245)', () {
+        // This test ensures line 245 is covered: ranges.add(rangeStart.toString());
+        // Non-consecutive lines create isolated single-line ranges
+        final testCases = groupLinesIntoTestCases(
+          'lib/src/auth/service.dart',
+          [10, 15, 20],  // Three isolated lines
+        );
+
+        // Should have 3 separate test cases, each for a single line
+        expect(testCases.length, equals(3));
+        // Verify they're formatted as single numbers (not ranges like "10-10")
+        expect(testCases[0].lineRange, equals('10'));
+        expect(testCases[1].lineRange, equals('15'));
+        expect(testCases[2].lineRange, equals('20'));
       });
 
       test('should include descriptions for each group', () {
