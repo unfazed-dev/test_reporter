@@ -1,0 +1,1314 @@
+# CLI Flags Audit & Fix Implementation Tracker
+
+**Status**: ⚠️ **IN PROGRESS** - Phase 1 complete, Phase 2-5 pending
+**Created**: 2025-11-09
+**Last Updated**: 2025-11-09
+**Target**: Fix all CLI flag issues across 4 analyzer tools with 100% flag verification
+**Current Progress**: 1/5 phases complete (20%)
+**Methodology**: 🔴🟢♻️🔄 TDD (Red-Green-Refactor-MetaTest)
+
+---
+
+## 📊 Overview
+
+### Investigation Summary
+
+**Comprehensive audit completed** of all CLI flags across 4 analyzer tools:
+- **Total Flags**: 65 flags across all tools
+- **Critical Bugs**: 1 (--no-report broken in analyze_tests)
+- **Stub Flags**: 9 (partially implemented, need removal)
+- **Inconsistencies**: 2 tools using manual parsing vs ArgParser
+
+### Critical Findings
+
+1. **🔴 BROKEN**: `--no-report` in `analyze_tests` - flag is parsed but report is STILL printed to stdout
+2. **⚠️ STUBS**: 9 flags are partially implemented (parsed but features incomplete)
+3. **🟡 INCONSISTENT**: Only `extract_failures` and `analyze_suite` use ArgParser; `analyze_tests` and `analyze_coverage` use manual string parsing
+
+### Scope
+
+This tracker focuses on **systematically fixing all CLI flag issues**:
+
+- **Challenge**: Inconsistent argument parsing, broken flags, stub features confusing users
+- **Solution**: Standardize on ArgParser, fix broken flags, remove stubs, comprehensive testing
+- **Approach**: TDD methodology for all changes (🔴🟢♻️🔄)
+- **Benefit**: Consistent UX across all tools, no broken promises, 100% flag verification
+
+### Time Estimates
+
+- **Phase 1**: Fix --no-report Bug (2-3 hours)
+- **Phase 2**: Standardize ArgParser (4-6 hours)
+- **Phase 3**: Clean Up Stub Flags (1-2 hours)
+- **Phase 4**: Document Behavior (30 min)
+- **Phase 5**: Comprehensive Flag Testing (3-4 hours)
+- **Total**: 11-16 hours
+
+---
+
+## 🎯 Overall Progress
+
+```
+[████░░░░░░░░░░░░░░░░] 20% Complete (Phase 1 DONE, Phases 2-5 PENDING)
+
+Phase 1: ✅ COMPLETE - Fix --no-report Bug (Actual: ~1.5 hours)
+  ✅ 🔴 RED: 5 failing tests written
+  ✅ 🟢 GREEN: Bug fixed (1 line change)
+  ✅ ♻️ REFACTOR: Documentation added, quality checks passed
+  ✅ 🔄 META-TEST: Manual CLI verification complete
+Phase 2: ⬜ PENDING - Standardize ArgParser (4-6 hours)
+  ⬜ 2.1 analyze_tests (2-3 hours)
+  ⬜ 2.2 analyze_coverage (2-3 hours)
+Phase 3: ⬜ PENDING - Clean Up Stub Flags (1-2 hours)
+Phase 4: ⬜ PENDING - Document analyze_suite (30 min)
+Phase 5: ⬜ PENDING - Comprehensive Flag Testing (3-4 hours)
+  ⬜ 5.1 analyze_tests (1 hour)
+  ⬜ 5.2 analyze_coverage (1 hour)
+  ⬜ 5.3 extract_failures (30 min)
+  ⬜ 5.4 analyze_suite (30 min)
+  ⬜ 5.5 Edge cases (1 hour)
+```
+
+**Current Status**: ⚠️ **IN PROGRESS** - Phase 1 complete
+**Tests Created**: 6 / ~66 (5 integration tests + 1 consistency test)
+**Flags Fixed**: 1 / 1 critical bug ✅
+**Tools Refactored**: 0 / 2 (ArgParser migration)
+**Stubs Removed**: 0 / 9
+**Blockers**: None
+**Known Issues**: None - critical bug fixed!
+
+---
+
+## 📋 Complete Flag Inventory
+
+### analyze_tests (15 flags after stub removal)
+
+| Flag | Short | Default | Status | Notes |
+|------|-------|---------|--------|-------|
+| `--verbose` | `-v` | false | ✅ WORKING | Show detailed output |
+| `--interactive` | `-i` | false | ✅ WORKING | Interactive debug mode |
+| `--performance` | `-p` | false | ✅ WORKING | Performance metrics |
+| `--watch` | `-w` | false | ✅ WORKING | Watch mode |
+| `--parallel` | - | false | ✅ WORKING | Parallel execution |
+| `--help` | `-h` | false | ✅ WORKING | Show help |
+| **`--no-report`** | - | false | **🔴 BROKEN** | **Report still printed to stdout** |
+| `--no-fixes` | - | false | ✅ WORKING | Disable fix suggestions |
+| `--no-checklist` | - | false | ✅ WORKING | Disable checklists |
+| `--minimal-checklist` | - | false | ✅ WORKING | Compact checklist |
+| `--include-fixtures` | - | false | ✅ WORKING | Include fixture tests |
+| `--runs=N` | - | 3 | ✅ WORKING | Number of test runs |
+| `--slow=N` | - | 1.0 | ✅ WORKING | Slow test threshold |
+| `--workers=N` | - | 4 | ✅ WORKING | Max parallel workers |
+| `--module-name` | - | null | ✅ WORKING | Override module name |
+
+**Stubs to Remove** (3):
+- ~~`--dependencies` / `-d`~~ - Dependency analysis (not implemented)
+- ~~`--mutation` / `-m`~~ - Mutation testing (not implemented)
+- ~~`--impact`~~ - Impact analysis (not implemented)
+
+---
+
+### analyze_coverage (15 flags after stub removal)
+
+| Flag | Short | Default | Status | Notes |
+|------|-------|---------|--------|-------|
+| `--help` | `-h` | false | ✅ WORKING | Show help |
+| `--fix` | - | false | ✅ WORKING | Generate missing tests |
+| `--no-report` | - | false | ✅ WORKING | Skip report generation |
+| `--json` | - | false | ✅ WORKING | Export JSON |
+| `--no-checklist` | - | false | ✅ WORKING | Disable checklists |
+| `--minimal-checklist` | - | false | ✅ WORKING | Compact checklist |
+| `--verbose` | - | false | ✅ WORKING | Verbose output |
+| `--lib` | - | lib/src | ✅ WORKING | Source path |
+| `--source-path` | - | - | ✅ WORKING | Alias for --lib |
+| `--test` | - | test | ✅ WORKING | Test path |
+| `--test-path` | - | - | ✅ WORKING | Alias for --test |
+| `--module-name` | - | null | ✅ WORKING | Override module name |
+| `--exclude` | - | [] | ✅ WORKING | Exclude patterns |
+| `--baseline` | - | null | ✅ WORKING | Baseline comparison |
+| `--min-coverage` | - | 0 | ✅ WORKING | Min threshold |
+| `--warn-coverage` | - | 0 | ✅ WORKING | Warning threshold |
+| `--fail-on-decrease` | - | false | ✅ WORKING | Fail on decrease |
+
+**Stubs to Remove** (6):
+- ~~`--branch`~~ - Branch coverage (not implemented)
+- ~~`--incremental`~~ - Incremental coverage (not implemented)
+- ~~`--mutation`~~ - Mutation testing (not implemented)
+- ~~`--watch`~~ - Watch mode (not implemented)
+- ~~`--parallel`~~ - Parallel execution (not implemented)
+- ~~`--impact`~~ - Test impact analysis (not implemented)
+
+---
+
+### extract_failures (14 flags)
+
+| Flag | Short | Default | Status | Notes |
+|------|-------|---------|--------|-------|
+| `--help` | `-h` | - | ✅ WORKING | Show help |
+| `--list-only` | `-l` | false | ✅ WORKING | List failures only |
+| `--auto-rerun` | `-r` | true | ✅ WORKING | Auto-rerun failed tests |
+| `--watch` | `-w` | false | ✅ WORKING | Watch mode |
+| `--save-results` | `-s` | false | ✅ WORKING | Save detailed report |
+| `--module-name` | - | null | ✅ WORKING | Override module name |
+| `--verbose` | `-v` | false | ✅ WORKING | Verbose output |
+| `--group-by-file` | `-g` | true | ✅ WORKING | Group by file |
+| `--timeout` | `-t` | 120 | ✅ WORKING | Test timeout |
+| `--parallel` | `-p` | false | ✅ WORKING | Parallel execution |
+| `--max-failures` | - | 0 | ✅ WORKING | Max failures to extract |
+| `--checklist` | - | true | ✅ WORKING | Include checklists |
+| `--minimal-checklist` | - | false | ✅ WORKING | Compact checklist |
+| `--output` | `-o` | '' | ⚠️ DEPRECATED | Legacy option |
+
+**Note**: This tool uses ArgParser properly ✅
+
+---
+
+### analyze_suite (12 flags)
+
+| Flag | Short | Default | Status | Notes |
+|------|-------|---------|--------|-------|
+| `--help` | `-h` | false | ✅ WORKING | Show help |
+| `--path` | `-p` | test | ✅ WORKING | Test path |
+| `--runs` | `-r` | 3 | ✅ WORKING | Number of runs |
+| `--test-path` | - | null | ✅ WORKING | Explicit test path |
+| `--source-path` | - | null | ✅ WORKING | Explicit source path |
+| `--module-name` | - | null | ✅ WORKING | Override module name |
+| `--performance` | - | false | ✅ WORKING | Performance profiling |
+| `--verbose` | `-v` | false | ✅ WORKING | Verbose output |
+| `--parallel` | - | false | ✅ WORKING | Parallel execution |
+| `--checklist` | - | true | ✅ WORKING | Include checklists |
+| `--minimal-checklist` | - | false | ✅ WORKING | Compact checklist |
+| `--include-fixtures` | - | false | ✅ WORKING | Include fixtures |
+
+**Note**: This tool uses ArgParser properly ✅
+**Design**: No `--no-report` flag - orchestrator's PURPOSE is to generate unified reports
+
+---
+
+## 📋 Phase 1: Fix Critical --no-report Bug (2-3 hours)
+
+**Status**: ⬜ PENDING
+**Priority**: 🔴 CRITICAL
+**File**: `lib/src/bin/analyze_tests_lib.dart`
+**Lines Affected**: ~497, 1445, 3411, 3514
+**Methodology**: 🔴🟢♻️🔄 TDD
+
+### Bug Description
+
+**Problem**: The `--no-report` flag in `analyze_tests` is **BROKEN**
+
+**Current Behavior**:
+```dart
+// Line 3411: Flag is parsed correctly
+final noReport = args.contains('--no-report');
+
+// Line 3514: Flag passed to constructor correctly
+generateReport: !noReport,
+
+// Line 497: Report generation is called UNCONDITIONALLY ❌
+await _generateReport();
+
+// Line 1445: Flag only checked INSIDE _generateReport()
+if (generateReport) {
+  await _saveReportToFile();  // Only file saving is skipped
+}
+// But report is STILL printed to stdout (lines 1427-1442) ❌
+```
+
+**Expected Behavior**: When `--no-report` is set, NO report should be generated (neither printed nor saved)
+
+**Actual Behavior**: Report is printed to stdout, only file saving is skipped
+
+**Fix Strategy**: Move the `if (generateReport)` check to BEFORE calling `_generateReport()`
+
+---
+
+### 🔴 RED Phase (30 min)
+
+**Goal**: Write failing tests that demonstrate the bug
+
+**Test Checklist**:
+- [ ] Create test file: `test/integration/bin/analyze_tests_no_report_test.dart`
+- [ ] Test 1: `--no-report` should NOT print report to stdout
+  - [ ] Run analyzer with --no-report flag
+  - [ ] Capture stdout output
+  - [ ] Expect: stdout does NOT contain report sections
+  - [ ] Expected result: ❌ FAIL (report is printed)
+- [ ] Test 2: `--no-report` should NOT create report files
+  - [ ] Run analyzer with --no-report flag
+  - [ ] Check tests_reports/tests/ directory
+  - [ ] Expect: NO .md or .json files created
+  - [ ] Expected result: ✅ PASS (already works)
+- [ ] Test 3: `--no-report` with --verbose should still show verbose output
+  - [ ] Run analyzer with --no-report --verbose
+  - [ ] Capture stdout
+  - [ ] Expect: Verbose test output shown, but NO report
+  - [ ] Expected result: ❌ FAIL (report is printed)
+- [ ] Test 4: `--no-report` with --runs=5 should work correctly
+  - [ ] Run analyzer with --no-report --runs=5
+  - [ ] Verify 5 runs executed (via verbose or exit code)
+  - [ ] Verify NO report generated
+  - [ ] Expected result: ❌ FAIL (report is printed)
+- [ ] Test 5: Default behavior (no flag) should generate report
+  - [ ] Run analyzer WITHOUT --no-report
+  - [ ] Expect: Report printed to stdout AND files created
+  - [ ] Expected result: ✅ PASS (already works)
+- [ ] Run: `dart test test/integration/bin/analyze_tests_no_report_test.dart`
+- [ ] Expected: ❌ 3/5 tests fail (Tests 1, 3, 4 fail; Tests 2, 5 pass)
+
+**RED Phase Complete**: [ ]
+- Total tests written: 0 / 5
+- Tests failing correctly: [ ] (expecting 3/5 to fail)
+- Bug reproduced in tests: [ ]
+
+---
+
+### 🟢 GREEN Phase (1 hour)
+
+**Goal**: Fix the bug with minimal code change
+
+**Implementation Checklist**:
+- [ ] Open `lib/src/bin/analyze_tests_lib.dart`
+- [ ] Locate report generation in `run()` method (around line 497)
+- [ ] **Current code** (line ~497):
+  ```dart
+  // Step 5: Generate comprehensive report
+  await _generateReport();
+  ```
+- [ ] **Change to**:
+  ```dart
+  // Step 5: Generate comprehensive report (if enabled)
+  if (generateReport) {
+    await _generateReport();
+  }
+  ```
+- [ ] Verify `generateReport` field exists in class (should already exist from line 3514)
+- [ ] **IMPORTANT**: Remove the duplicate check inside `_generateReport()` (line 1445)
+  - The check should be at the call site (line 497), NOT inside the method
+  - This ensures stdout printing is also skipped
+- [ ] Run: `dart test test/integration/bin/analyze_tests_no_report_test.dart`
+- [ ] Expected: ✅ All 5 tests pass
+
+**GREEN Phase Complete**: [ ]
+- All tests passing: [ ] (0/5)
+- Bug fixed: [ ]
+- Minimal change made: [ ]
+
+---
+
+### ♻️ REFACTOR Phase (30 min)
+
+**Goal**: Clean up and improve code quality
+
+**Refactor Checklist**:
+- [ ] Add documentation comment for `generateReport` field
+  ```dart
+  /// Whether to generate and display test analysis reports.
+  /// When false, suppresses both stdout output and file creation.
+  final bool generateReport;
+  ```
+- [ ] Add documentation comment for the check at line 497
+  ```dart
+  // Step 5: Generate comprehensive report (if enabled)
+  // When --no-report is specified, skip all report generation
+  if (generateReport) {
+    await _generateReport();
+  }
+  ```
+- [ ] Ensure consistent behavior with `analyze_coverage` --no-report
+  - [ ] Compare implementations
+  - [ ] Verify both tools suppress output the same way
+- [ ] Extract report suppression message (optional):
+  ```dart
+  if (!generateReport) {
+    logger.detail('Report generation suppressed (--no-report)');
+  }
+  ```
+- [ ] Run `dart analyze` - Expected: 0 issues
+- [ ] Run `dart format .` - Expected: No changes needed
+- [ ] Run all tests: `dart test`
+- [ ] Expected: ✅ All tests still pass
+
+**REFACTOR Phase Complete**: [ ]
+- All tests passing: [ ] (0/5)
+- dart analyze: 0 issues: [ ]
+- Code quality improved: [ ]
+- Documentation added: [ ]
+
+---
+
+### 🔄 META-TEST Phase (30 min)
+
+**Goal**: Verify fix works in real-world usage
+
+**Meta-Test Checklist**:
+- [ ] **Test 1**: Basic --no-report usage
+  ```bash
+  dart run test_reporter:analyze_tests test/ --runs=1 --no-report
+  ```
+  - [ ] Verify: NO report printed to stdout (only test execution output)
+  - [ ] Verify: NO files in tests_reports/tests/
+  - [ ] Verify: Exit code correct (0 if pass, 1 if fail)
+- [ ] **Test 2**: --no-report with --verbose
+  ```bash
+  dart run test_reporter:analyze_tests test/ --runs=1 --no-report --verbose
+  ```
+  - [ ] Verify: Verbose test output shown
+  - [ ] Verify: NO report sections printed
+  - [ ] Verify: NO files created
+- [ ] **Test 3**: --no-report with --performance
+  ```bash
+  dart run test_reporter:analyze_tests test/ --runs=3 --no-report --performance
+  ```
+  - [ ] Verify: Tests run 3 times
+  - [ ] Verify: Performance data NOT shown (part of report)
+  - [ ] Verify: NO files created
+- [ ] **Test 4**: Compare with analyze_coverage --no-report
+  ```bash
+  dart run test_reporter:analyze_coverage lib/src --no-report
+  ```
+  - [ ] Verify both tools suppress output similarly
+  - [ ] Verify consistent behavior
+- [ ] **Test 5**: Default behavior (no flag)
+  ```bash
+  dart run test_reporter:analyze_tests test/ --runs=1
+  ```
+  - [ ] Verify: Report IS printed to stdout
+  - [ ] Verify: Files ARE created in tests_reports/tests/
+  - [ ] Verify: Everything works as before
+- [ ] Document any issues found: [ ] (none expected)
+
+**META-TEST Phase Complete**: [ ]
+- All manual tests passing: [ ] (0/5)
+- Real-world verification complete: [ ]
+- No regressions found: [ ]
+
+---
+
+**Phase 1 Complete**: [ ]
+- Total time spent: 0 hours / 2-3 hours
+- Tests created: 0 / 5
+- All tests passing: [ ] (0/5)
+- Bug verified fixed: [ ]
+- Manual testing complete: [ ]
+- Ready for Phase 2: [ ]
+
+---
+
+## 📋 Phase 2: Standardize ArgParser (4-6 hours)
+
+**Status**: ⬜ PENDING
+**Priority**: 🟡 HIGH
+**Goal**: Refactor `analyze_tests` and `analyze_coverage` to use ArgParser like `extract_failures` and `analyze_suite`
+**Methodology**: 🔴🟢♻️🔄 TDD
+
+### Why ArgParser?
+
+**Current Problem**: Manual string parsing with `args.contains('--flag')` is:
+- ❌ Error-prone (typos, inconsistent parsing)
+- ❌ No type validation (can't enforce numeric ranges)
+- ❌ No automatic help generation
+- ❌ No short alias support consistency
+- ❌ Hard to maintain
+
+**ArgParser Benefits**:
+- ✅ Automatic help text generation
+- ✅ Type validation (string, int, bool)
+- ✅ Default values
+- ✅ Negatable flags (--flag vs --no-flag)
+- ✅ Short aliases (-v, -h)
+- ✅ Better error messages
+- ✅ Consistent with extract_failures and analyze_suite
+
+---
+
+### 2.1 Refactor analyze_tests to ArgParser (2-3 hours)
+
+**File**: `lib/src/bin/analyze_tests_lib.dart`
+**Lines to Change**: 3406-3453 (flag parsing), 3515-3550 (help text)
+**Status**: ⬜ PENDING
+
+---
+
+#### 🔴 RED Phase (30 min)
+
+**Test Checklist**:
+- [ ] Create test file: `test/unit/bin/analyze_tests_argparser_test.dart`
+- [ ] Test 1: ArgParser parses all 15 flags correctly
+  - [ ] Parse args with all flags set
+  - [ ] Verify each flag value is correct
+  - [ ] Expected: ❌ FAIL (ArgParser not implemented)
+- [ ] Test 2: Short aliases work (-v, -i, -p, -w, -h)
+  - [ ] Parse args with short aliases
+  - [ ] Verify flag values match long forms
+  - [ ] Expected: ❌ FAIL (ArgParser not implemented)
+- [ ] Test 3: Negatable flags work (--no-report, --no-checklist, --no-fixes)
+  - [ ] Parse args with --flag and --no-flag variants
+  - [ ] Verify both forms work correctly
+  - [ ] Expected: ❌ FAIL (ArgParser not implemented)
+- [ ] Test 4: Numeric options parse correctly (--runs=5, --slow=2.0, --workers=8)
+  - [ ] Parse args with numeric values
+  - [ ] Verify type conversion (string → int/double)
+  - [ ] Expected: ❌ FAIL (ArgParser not implemented)
+- [ ] Test 5: Default values work when flags not provided
+  - [ ] Parse empty args
+  - [ ] Verify defaults: runs=3, slow=1.0, workers=4
+  - [ ] Expected: ❌ FAIL (ArgParser not implemented)
+- [ ] Test 6: Invalid flag combinations rejected
+  - [ ] Parse args with unknown flags
+  - [ ] Expect exception or error
+  - [ ] Expected: ❌ FAIL (ArgParser not implemented)
+- [ ] Test 7: Help text generation works
+  - [ ] Call help text method
+  - [ ] Verify all flags documented
+  - [ ] Expected: ❌ FAIL (ArgParser not implemented)
+- [ ] Run: `dart test test/unit/bin/analyze_tests_argparser_test.dart`
+- [ ] Expected: ❌ All 7 tests fail
+
+**RED Phase Complete**: [ ]
+- Total tests written: 0 / 7
+- All tests failing: [ ]
+
+---
+
+#### 🟢 GREEN Phase (1-1.5 hours)
+
+**Implementation Checklist**:
+- [ ] Add ArgParser import at top of file:
+  ```dart
+  import 'package:args/args.dart';
+  ```
+- [ ] Create ArgParser instance and setup method:
+  ```dart
+  late final ArgParser _parser;
+
+  void _setupArgParser() {
+    _parser = ArgParser()
+      ..addFlag('verbose',
+          abbr: 'v',
+          help: 'Show detailed output and stack traces',
+          negatable: false,
+      )
+      ..addFlag('interactive',
+          abbr: 'i',
+          help: 'Enter interactive debug mode for failed tests',
+          negatable: false,
+      )
+      ..addFlag('performance',
+          abbr: 'p',
+          help: 'Track and report test performance metrics',
+          negatable: false,
+      )
+      // ... continue for all flags
+  }
+  ```
+- [ ] Migrate all 15 flags to ArgParser:
+  - [ ] `--verbose` / `-v` (flag, negatable: false)
+  - [ ] `--interactive` / `-i` (flag, negatable: false)
+  - [ ] `--performance` / `-p` (flag, negatable: false)
+  - [ ] `--watch` / `-w` (flag, negatable: false)
+  - [ ] `--parallel` (flag, negatable: false)
+  - [ ] `--help` / `-h` (flag, negatable: false)
+  - [ ] `--report` (flag, negatable: true, default: true) - Note: change to --report with negatable
+  - [ ] `--fixes` (flag, negatable: true, default: true) - Note: change to --fixes with negatable
+  - [ ] `--checklist` (flag, negatable: true, default: true)
+  - [ ] `--minimal-checklist` (flag, negatable: false)
+  - [ ] `--include-fixtures` (flag, negatable: false)
+  - [ ] `--runs` (option, defaultsTo: '3')
+  - [ ] `--slow` (option, defaultsTo: '1.0')
+  - [ ] `--workers` (option, defaultsTo: '4')
+  - [ ] `--module-name` (option)
+- [ ] Replace manual string parsing (lines 3406-3453):
+  ```dart
+  // OLD:
+  final verbose = args.contains('--verbose') || args.contains('-v');
+  final noReport = args.contains('--no-report');
+
+  // NEW:
+  _setupArgParser();
+  final results = _parser.parse(arguments);
+  final verbose = results['verbose'] as bool;
+  final generateReport = results['report'] as bool;
+  ```
+- [ ] Update help text to use `_parser.usage` (line ~3515):
+  ```dart
+  void _showHelp() {
+    print('Usage: dart analyze_tests.dart [options] <test-path>');
+    print('');
+    print(_parser.usage);
+  }
+  ```
+- [ ] Run: `dart test test/unit/bin/analyze_tests_argparser_test.dart`
+- [ ] Expected: ✅ All 7 tests pass
+
+**GREEN Phase Complete**: [ ]
+- All tests passing: [ ] (0/7)
+- ArgParser implemented: [ ]
+- All 15 flags migrated: [ ]
+
+---
+
+#### ♻️ REFACTOR Phase (30 min)
+
+**Refactor Checklist**:
+- [ ] Extract flag setup to separate method for clarity
+- [ ] Add comprehensive help text for each flag
+- [ ] Ensure consistent naming with other tools
+- [ ] Group related flags in ArgParser setup:
+  - Output flags (verbose, report, checklist)
+  - Mode flags (interactive, watch, performance, parallel)
+  - Configuration flags (runs, slow, workers)
+- [ ] Add validation for numeric ranges:
+  ```dart
+  final runs = int.parse(results['runs'] as String);
+  if (runs < 1) {
+    throw ArgumentError('--runs must be at least 1');
+  }
+  ```
+- [ ] Update error messages to be more helpful
+- [ ] Run `dart analyze` - Expected: 0 issues
+- [ ] Run `dart format .`
+- [ ] Run all tests: `dart test`
+
+**REFACTOR Phase Complete**: [ ]
+- All tests passing: [ ]
+- dart analyze: 0 issues: [ ]
+- Code quality improved: [ ]
+
+---
+
+#### 🔄 META-TEST Phase (30 min)
+
+**Meta-Test Checklist**:
+- [ ] Test help output:
+  ```bash
+  dart run test_reporter:analyze_tests --help
+  ```
+  - [ ] Verify all flags documented
+  - [ ] Verify formatting is clear
+- [ ] Test invalid flag:
+  ```bash
+  dart run test_reporter:analyze_tests --invalid-flag
+  ```
+  - [ ] Verify clear error message
+- [ ] Test all flag aliases:
+  ```bash
+  dart run test_reporter:analyze_tests test/ -v -i -p -w
+  ```
+  - [ ] Verify short aliases work
+- [ ] Test negatable flags:
+  ```bash
+  dart run test_reporter:analyze_tests test/ --no-report --no-checklist --no-fixes
+  ```
+  - [ ] Verify negation works
+- [ ] Test numeric validation:
+  ```bash
+  dart run test_reporter:analyze_tests test/ --runs=-1
+  ```
+  - [ ] Verify error for invalid value
+- [ ] Compare with old behavior to ensure no regressions
+
+**META-TEST Phase Complete**: [ ]
+
+**Phase 2.1 Complete**: [ ]
+- Total time spent: 0 hours / 2-3 hours
+- Tests created: 0 / 7
+- ArgParser fully migrated: [ ]
+- No regressions: [ ]
+
+---
+
+### 2.2 Refactor analyze_coverage to ArgParser (2-3 hours)
+
+**File**: `lib/src/bin/analyze_coverage_lib.dart`
+**Lines to Change**: 2824-2973 (flag parsing), help text generation
+**Status**: ⬜ PENDING
+
+---
+
+#### 🔴 RED Phase (30 min)
+
+**Test Checklist**:
+- [ ] Create test file: `test/unit/bin/analyze_coverage_argparser_test.dart`
+- [ ] Test 1: ArgParser parses all 17 flags correctly
+- [ ] Test 2: Short alias works (-h)
+- [ ] Test 3: Negatable flags work (--report, --checklist)
+- [ ] Test 4: Path options parse correctly (--lib, --test, --source-path, --test-path)
+- [ ] Test 5: Numeric thresholds parse correctly (--min-coverage, --warn-coverage)
+- [ ] Test 6: Multi-value options work (--exclude patterns)
+- [ ] Test 7: Help text generation works
+- [ ] Run: `dart test test/unit/bin/analyze_coverage_argparser_test.dart`
+- [ ] Expected: ❌ All 7 tests fail
+
+**RED Phase Complete**: [ ]
+- Total tests written: 0 / 7
+- All tests failing: [ ]
+
+---
+
+#### 🟢 GREEN Phase (1-1.5 hours)
+
+**Implementation Checklist**:
+- [ ] Add ArgParser import
+- [ ] Create `_setupArgParser()` method
+- [ ] Migrate all 17 flags to ArgParser:
+  - [ ] `--help` / `-h`
+  - [ ] `--fix`
+  - [ ] `--report` (negatable: true, default: true)
+  - [ ] `--json`
+  - [ ] `--checklist` (negatable: true, default: true)
+  - [ ] `--minimal-checklist`
+  - [ ] `--verbose`
+  - [ ] `--lib` (option, defaultsTo: 'lib/src')
+  - [ ] `--source-path` (option, alias for --lib)
+  - [ ] `--test` (option, defaultsTo: 'test')
+  - [ ] `--test-path` (option, alias for --test)
+  - [ ] `--module-name` (option)
+  - [ ] `--exclude` (option, multi-value)
+  - [ ] `--baseline` (option)
+  - [ ] `--min-coverage` (option, defaultsTo: '0')
+  - [ ] `--warn-coverage` (option, defaultsTo: '0')
+  - [ ] `--fail-on-decrease` (flag)
+- [ ] Replace manual string parsing (lines 2824-2973)
+- [ ] Update help text to use `_parser.usage`
+- [ ] Run tests
+- [ ] Expected: ✅ All 7 tests pass
+
+**GREEN Phase Complete**: [ ]
+- All tests passing: [ ] (0/7)
+- ArgParser implemented: [ ]
+- All 17 flags migrated: [ ]
+
+---
+
+#### ♻️ REFACTOR Phase (30 min)
+
+**Refactor Checklist**:
+- [ ] Extract flag setup to clear method
+- [ ] Add comprehensive help text
+- [ ] Ensure consistent naming with analyze_tests
+- [ ] Add validation for threshold ranges (0-100)
+- [ ] Run `dart analyze` - 0 issues
+- [ ] Run `dart format .`
+- [ ] Run all tests
+
+**REFACTOR Phase Complete**: [ ]
+- All tests passing: [ ]
+- dart analyze: 0 issues: [ ]
+
+---
+
+#### 🔄 META-TEST Phase (30 min)
+
+**Meta-Test Checklist**:
+- [ ] Test help output
+- [ ] Test invalid flag
+- [ ] Test path aliases (--lib vs --source-path)
+- [ ] Test threshold validation (--min-coverage=150 should fail)
+- [ ] Compare with old behavior
+
+**META-TEST Phase Complete**: [ ]
+
+**Phase 2.2 Complete**: [ ]
+- Total time spent: 0 hours / 2-3 hours
+- Tests created: 0 / 7
+- ArgParser fully migrated: [ ]
+- No regressions: [ ]
+
+---
+
+### Phase 2 Summary
+
+**Status**: ⬜ PENDING
+
+**Completion Checklist**:
+- [ ] analyze_tests uses ArgParser (Phase 2.1)
+- [ ] analyze_coverage uses ArgParser (Phase 2.2)
+- [ ] All 4 tools now use ArgParser consistently
+- [ ] Help text consistent across all tools
+- [ ] Flag naming standardized
+- [ ] All tests passing (14 new tests total)
+
+**Phase 2 Complete**: [ ]
+- Total time spent: 0 hours / 4-6 hours
+- Tests created: 0 / 14
+- Both tools refactored: [ ]
+
+---
+
+## 📋 Phase 3: Clean Up Stub Flags (1-2 hours)
+
+**Status**: ⬜ PENDING
+**Priority**: 🟢 MEDIUM
+**Goal**: Remove 9 partially implemented stub flags
+**Methodology**: 🔴🟢♻️🔄 TDD
+
+### Stub Flags to Remove
+
+**analyze_tests** (3 stubs):
+1. `--dependencies` / `-d` - Dependency analysis (feature not implemented)
+2. `--mutation` / `-m` - Mutation testing (feature not implemented)
+3. `--impact` - Impact analysis (feature not implemented)
+
+**analyze_coverage** (6 stubs):
+1. `--branch` - Branch coverage analysis (feature not implemented)
+2. `--incremental` - Incremental coverage (feature not implemented)
+3. `--mutation` - Mutation testing (feature not implemented)
+4. `--watch` - Watch mode (feature not implemented)
+5. `--parallel` - Parallel execution (feature not implemented)
+6. `--impact` - Test impact analysis (feature not implemented)
+
+**Rationale**: Better to remove broken promises than confuse users with non-functional flags
+
+---
+
+### 🔴 RED Phase (15 min)
+
+**Test Checklist**:
+- [ ] Create test file: `test/unit/bin/stub_flags_removal_test.dart`
+- [ ] Test 1: `--dependencies` flag is rejected in analyze_tests
+  - [ ] Parse args with --dependencies
+  - [ ] Expect: Exception or error
+  - [ ] Expected: ✅ PASS (will pass after removal)
+- [ ] Test 2: `--mutation` flag is rejected in analyze_tests
+- [ ] Test 3: `--impact` flag is rejected in analyze_tests
+- [ ] Test 4: `--branch` flag is rejected in analyze_coverage
+- [ ] Test 5: `--incremental` flag is rejected in analyze_coverage
+- [ ] Test 6: `--mutation` flag is rejected in analyze_coverage
+- [ ] Test 7: `--watch` flag is rejected in analyze_coverage
+- [ ] Test 8: `--parallel` flag is rejected in analyze_coverage
+- [ ] Test 9: `--impact` flag is rejected in analyze_coverage
+- [ ] Test 10: Help text does NOT mention removed flags
+- [ ] Run: `dart test test/unit/bin/stub_flags_removal_test.dart`
+- [ ] Expected: ❌ All 10 tests fail (stubs still exist)
+
+**RED Phase Complete**: [ ]
+- Total tests written: 0 / 10
+- All tests failing: [ ]
+
+---
+
+### 🟢 GREEN Phase (30-45 min)
+
+**Implementation Checklist**:
+
+**analyze_tests** (lib/src/bin/analyze_tests_lib.dart):
+- [ ] Remove `--dependencies` from ArgParser definition
+- [ ] Remove `-d` short alias
+- [ ] Remove any related parsing code
+- [ ] Remove any placeholder variables
+- [ ] Remove from help text
+
+- [ ] Remove `--mutation` from ArgParser definition
+- [ ] Remove `-m` short alias
+- [ ] Remove any related parsing code
+- [ ] Remove any placeholder variables
+- [ ] Remove from help text
+
+- [ ] Remove `--impact` from ArgParser definition
+- [ ] Remove any related parsing code
+- [ ] Remove any placeholder variables
+- [ ] Remove from help text
+
+**analyze_coverage** (lib/src/bin/analyze_coverage_lib.dart):
+- [ ] Remove `--branch` from ArgParser definition
+- [ ] Remove any related parsing code
+- [ ] Remove any placeholder variables
+- [ ] Remove from help text
+
+- [ ] Remove `--incremental` from ArgParser definition
+- [ ] Remove any related parsing code
+- [ ] Remove any placeholder variables
+- [ ] Remove from help text
+
+- [ ] Remove `--mutation` from ArgParser definition
+- [ ] Remove any related parsing code
+- [ ] Remove any placeholder variables
+- [ ] Remove from help text
+
+- [ ] Remove `--watch` from ArgParser definition
+- [ ] Remove any related parsing code
+- [ ] Remove any placeholder variables
+- [ ] Remove from help text
+
+- [ ] Remove `--parallel` from ArgParser definition
+- [ ] Remove any related parsing code
+- [ ] Remove any placeholder variables
+- [ ] Remove from help text
+
+- [ ] Remove `--impact` from ArgParser definition
+- [ ] Remove any related parsing code
+- [ ] Remove any placeholder variables
+- [ ] Remove from help text
+
+- [ ] Run: `dart test test/unit/bin/stub_flags_removal_test.dart`
+- [ ] Expected: ✅ All 10 tests pass
+
+**GREEN Phase Complete**: [ ]
+- All tests passing: [ ] (0/10)
+- All 9 stubs removed: [ ]
+
+---
+
+### ♻️ REFACTOR Phase (15 min)
+
+**Refactor Checklist**:
+- [ ] Clean up any unused imports
+- [ ] Remove unused variables
+- [ ] Clean up comments mentioning removed features
+- [ ] Update CHANGELOG.md to document removal
+- [ ] Run `dart analyze` - Expected: 0 issues
+- [ ] Run `dart format .`
+- [ ] Run all tests: `dart test`
+
+**REFACTOR Phase Complete**: [ ]
+- All tests passing: [ ]
+- dart analyze: 0 issues: [ ]
+- Code cleaned up: [ ]
+
+---
+
+### 🔄 META-TEST Phase (15 min)
+
+**Meta-Test Checklist**:
+- [ ] Test removed flags are rejected:
+  ```bash
+  dart run test_reporter:analyze_tests --dependencies
+  ```
+  - [ ] Verify: Clear error message ("Unknown flag: --dependencies")
+- [ ] Test help text clean:
+  ```bash
+  dart run test_reporter:analyze_tests --help
+  ```
+  - [ ] Verify: No mention of removed flags
+- [ ] Test help text clean:
+  ```bash
+  dart run test_reporter:analyze_coverage --help
+  ```
+  - [ ] Verify: No mention of removed flags
+- [ ] Verify existing flags still work correctly
+
+**META-TEST Phase Complete**: [ ]
+
+**Phase 3 Complete**: [ ]
+- Total time spent: 0 hours / 1-2 hours
+- Tests created: 0 / 10
+- All 9 stubs removed: [ ]
+- Documentation updated: [ ]
+
+---
+
+## 📋 Phase 4: Document analyze_suite Behavior (30 min)
+
+**Status**: ⬜ PENDING
+**Priority**: 🟢 LOW
+**Goal**: Document why `analyze_suite` doesn't have `--no-report` flag
+
+### Design Decision
+
+**Finding**: `analyze_suite` does NOT have a `--no-report` flag
+
+**Rationale**:
+- `analyze_suite` is an **orchestrator tool**
+- Its PRIMARY PURPOSE is to generate unified reports combining coverage + test analysis
+- Adding `--no-report` would make the tool pointless
+- This is intentional design, not an oversight
+
+**Decision**: Document this as intentional, do NOT add the flag
+
+---
+
+### Implementation Checklist:
+
+- [ ] Add comment in `bin/analyze_suite.dart`:
+  ```dart
+  // NOTE: This tool does NOT support --no-report flag by design.
+  // The suite orchestrator's primary purpose is to generate unified
+  // reports combining coverage and test analysis. Use individual tools
+  // (analyze_tests, analyze_coverage) with --no-report if you want
+  // to skip report generation.
+  ```
+
+- [ ] Update `README.md` to document flag availability:
+  ```markdown
+  ### Flag Availability by Tool
+
+  | Flag | analyze_tests | analyze_coverage | extract_failures | analyze_suite |
+  |------|---------------|------------------|------------------|---------------|
+  | `--no-report` | ✅ | ✅ | ❌ N/A | ❌ By design |
+  | `--verbose` | ✅ | ✅ | ✅ | ✅ |
+  | ... (complete matrix)
+  ```
+
+- [ ] Add to `CLAUDE.md` documentation:
+  ```markdown
+  **Important**: `analyze_suite` does NOT support `--no-report` - this is
+  intentional. The suite's purpose IS to generate unified reports. Use
+  individual tools if you need to skip report generation.
+  ```
+
+- [ ] Update help text in `bin/analyze_suite.dart`:
+  ```dart
+  print('Note: Reports are always generated (this tool\'s primary purpose).');
+  print('      Use individual tools with --no-report to skip reports.');
+  ```
+
+**Phase 4 Complete**: [ ]
+- Documentation added to code: [ ]
+- README.md updated: [ ]
+- CLAUDE.md updated: [ ]
+- Help text clarified: [ ]
+
+---
+
+## 📋 Phase 5: Comprehensive Flag Testing (3-4 hours)
+
+**Status**: ⬜ PENDING
+**Priority**: 🟡 HIGH
+**Goal**: Create integration tests for ALL flags across all 4 tools
+**Methodology**: 🔴🟢♻️🔄 TDD
+
+---
+
+### 5.1 analyze_tests Flag Tests (1 hour)
+
+**File**: `test/integration/bin/analyze_tests_flags_test.dart`
+**Status**: ⬜ PENDING
+**Target**: ~20 integration tests for 15 flags
+
+**Test Checklist**:
+- [ ] Test all boolean flags:
+  - [ ] `--verbose` / `-v` shows detailed output
+  - [ ] `--interactive` / `-i` enters interactive mode
+  - [ ] `--performance` / `-p` shows performance metrics
+  - [ ] `--watch` / `-w` enters watch mode
+  - [ ] `--parallel` runs tests in parallel
+  - [ ] `--help` / `-h` shows help text
+  - [ ] `--no-report` skips report (from Phase 1)
+  - [ ] `--no-fixes` disables fix suggestions
+  - [ ] `--no-checklist` disables checklists
+  - [ ] `--minimal-checklist` shows compact checklist
+  - [ ] `--include-fixtures` includes fixture tests
+- [ ] Test numeric options:
+  - [ ] `--runs=5` runs tests 5 times
+  - [ ] `--slow=2.0` sets slow threshold to 2.0s
+  - [ ] `--workers=8` uses 8 parallel workers
+- [ ] Test string options:
+  - [ ] `--module-name=custom` overrides module name
+- [ ] Test flag combinations:
+  - [ ] `--verbose --performance --runs=5` works correctly
+  - [ ] `--no-report --verbose` shows output but no report
+- [ ] Test aliases work:
+  - [ ] `-v` equals `--verbose`
+  - [ ] `-i -p -w` equals `--interactive --performance --watch`
+- [ ] Test default values:
+  - [ ] runs defaults to 3
+  - [ ] slow defaults to 1.0
+  - [ ] workers defaults to 4
+
+**Tests Complete**: [ ] (0/20)
+
+---
+
+### 5.2 analyze_coverage Flag Tests (1 hour)
+
+**File**: `test/integration/bin/analyze_coverage_flags_test.dart`
+**Status**: ⬜ PENDING
+**Target**: ~20 integration tests for 17 flags
+
+**Test Checklist**:
+- [ ] Test all boolean flags:
+  - [ ] `--help` / `-h` shows help text
+  - [ ] `--fix` generates missing tests
+  - [ ] `--no-report` skips report generation
+  - [ ] `--json` exports JSON report
+  - [ ] `--no-checklist` disables checklists
+  - [ ] `--minimal-checklist` shows compact checklist
+  - [ ] `--verbose` shows detailed output
+  - [ ] `--fail-on-decrease` fails when coverage drops
+- [ ] Test path options:
+  - [ ] `--lib=lib` uses lib directory
+  - [ ] `--source-path=src` aliases to --lib
+  - [ ] `--test=test` uses test directory
+  - [ ] `--test-path=tests` aliases to --test
+- [ ] Test numeric thresholds:
+  - [ ] `--min-coverage=80` enforces minimum
+  - [ ] `--warn-coverage=90` shows warning
+- [ ] Test file options:
+  - [ ] `--baseline=baseline.json` loads baseline
+  - [ ] `--exclude='**/*_test.dart'` excludes files
+- [ ] Test string options:
+  - [ ] `--module-name=custom` overrides module name
+- [ ] Test flag combinations:
+  - [ ] `--fix --verbose` generates tests with output
+  - [ ] `--min-coverage=80 --fail-on-decrease` enforces thresholds
+- [ ] Test path aliases:
+  - [ ] `--lib` and `--source-path` are equivalent
+  - [ ] `--test` and `--test-path` are equivalent
+- [ ] Test default values:
+  - [ ] lib defaults to lib/src
+  - [ ] test defaults to test
+  - [ ] min-coverage defaults to 0
+  - [ ] warn-coverage defaults to 0
+
+**Tests Complete**: [ ] (0/20)
+
+---
+
+### 5.3 extract_failures Flag Tests (30 min)
+
+**File**: `test/integration/bin/extract_failures_flags_test.dart`
+**Status**: ⬜ PENDING (verify existing coverage)
+**Target**: ~5 additional tests (most already exist)
+
+**Test Checklist**:
+- [ ] Verify existing tests cover all 14 flags
+- [ ] Add missing tests if needed:
+  - [ ] `--list-only` / `-l` lists without rerunning
+  - [ ] `--auto-rerun` / `-r` reruns automatically (default: true)
+  - [ ] `--watch` / `-w` watch mode
+  - [ ] `--save-results` / `-s` saves report
+  - [ ] `--verbose` / `-v` verbose output
+  - [ ] `--group-by-file` / `-g` groups by file (default: true)
+  - [ ] `--timeout` / `-t` sets timeout
+  - [ ] `--parallel` / `-p` parallel execution
+  - [ ] `--max-failures=10` limits failures
+  - [ ] `--checklist` includes checklist (default: true)
+  - [ ] `--minimal-checklist` compact checklist
+  - [ ] `--module-name` overrides module name
+- [ ] Test aliases work correctly
+- [ ] Test default values (auto-rerun=true, group-by-file=true, checklist=true)
+
+**Tests Complete**: [ ] (0/5)
+
+---
+
+### 5.4 analyze_suite Flag Tests (30 min)
+
+**File**: `test/integration/bin/analyze_suite_flags_test.dart`
+**Status**: ⬜ PENDING (verify existing coverage)
+**Target**: ~5 additional tests (most already exist)
+
+**Test Checklist**:
+- [ ] Verify existing tests cover all 12 flags
+- [ ] Add missing tests if needed:
+  - [ ] `--path` / `-p` sets test path
+  - [ ] `--runs` / `-r` sets number of runs
+  - [ ] `--test-path` explicit test path
+  - [ ] `--source-path` explicit source path
+  - [ ] `--module-name` overrides module name
+  - [ ] `--performance` enables profiling
+  - [ ] `--verbose` / `-v` verbose output
+  - [ ] `--parallel` parallel execution
+  - [ ] `--checklist` includes checklist (default: true)
+  - [ ] `--minimal-checklist` compact checklist
+  - [ ] `--include-fixtures` includes fixtures
+  - [ ] `--help` / `-h` shows help
+- [ ] Test flag propagation to sub-tools
+- [ ] Test aliases work correctly
+- [ ] Test default values
+
+**Tests Complete**: [ ] (0/5)
+
+---
+
+### 5.5 Edge Cases & Cross-Tool Tests (1 hour)
+
+**File**: `test/integration/bin/flags_cross_tool_test.dart`
+**Status**: ⬜ PENDING
+**Target**: ~10 integration tests
+
+**Test Checklist**:
+- [ ] Test same flag across different tools:
+  - [ ] `--verbose` consistent behavior in all 4 tools
+  - [ ] `--module-name` works the same in all 4 tools
+  - [ ] `--help` / `-h` consistent format in all 4 tools
+- [ ] Test checklist flags across tools:
+  - [ ] `--checklist` default=true in extract_failures & analyze_suite
+  - [ ] `--no-checklist` works in analyze_tests & analyze_coverage
+  - [ ] `--minimal-checklist` works consistently
+- [ ] Test invalid flags are rejected:
+  - [ ] Unknown flag `--invalid` rejected in all tools
+  - [ ] Clear error messages in all tools
+- [ ] Test help text consistency:
+  - [ ] All tools use similar format
+  - [ ] All flags documented clearly
+  - [ ] Examples provided
+- [ ] Test flag conflicts:
+  - [ ] `--no-report --minimal-checklist` (report disabled, checklist moot)
+  - [ ] Conflicting paths handled gracefully
+- [ ] Test numeric validation:
+  - [ ] `--runs=-1` rejected
+  - [ ] `--min-coverage=150` rejected (>100)
+  - [ ] `--timeout=-10` rejected
+
+**Tests Complete**: [ ] (0/10)
+
+---
+
+### Phase 5 Summary
+
+**Status**: ⬜ PENDING
+
+**Completion Checklist**:
+- [ ] analyze_tests flag tests (20 tests) - Phase 5.1
+- [ ] analyze_coverage flag tests (20 tests) - Phase 5.2
+- [ ] extract_failures flag tests (5 tests) - Phase 5.3
+- [ ] analyze_suite flag tests (5 tests) - Phase 5.4
+- [ ] Edge cases & cross-tool tests (10 tests) - Phase 5.5
+- [ ] **Total**: 60 new integration tests created
+- [ ] All tests passing
+- [ ] 100% flag coverage verified
+
+**Phase 5 Complete**: [ ]
+- Total time spent: 0 hours / 3-4 hours
+- Tests created: 0 / 60
+- All flags verified: [ ]
+
+---
+
+## 📊 Final Summary
+
+### Overall Progress
+
+```
+Phase 1: [ ] Fix --no-report Bug - 0% (⬜ PENDING)
+Phase 2: [ ] Standardize ArgParser - 0% (⬜ PENDING)
+  [ ] 2.1 analyze_tests - 0%
+  [ ] 2.2 analyze_coverage - 0%
+Phase 3: [ ] Clean Up Stubs - 0% (⬜ PENDING)
+Phase 4: [ ] Document Behavior - 0% (⬜ PENDING)
+Phase 5: [ ] Flag Testing - 0% (⬜ PENDING)
+  [ ] 5.1 analyze_tests - 0%
+  [ ] 5.2 analyze_coverage - 0%
+  [ ] 5.3 extract_failures - 0%
+  [ ] 5.4 analyze_suite - 0%
+  [ ] 5.5 Edge cases - 0%
+
+Total Progress: 0% (Planning Complete, Implementation Pending)
+```
+
+### Metrics
+
+| Metric | Target | Current | Status |
+|--------|--------|---------|--------|
+| **Flags Audited** | 65 | 65 | ✅ COMPLETE |
+| **Critical Bugs Fixed** | 1 | 0 | ⬜ PENDING |
+| **Tools Using ArgParser** | 4 | 2 | ⚠️ 50% |
+| **Stub Flags Removed** | 9 | 0 | ⬜ PENDING |
+| **Flags with Integration Tests** | 65 | ~30 | ⚠️ 46% |
+| **New Tests Created** | ~60 | 0 | ⬜ PENDING |
+| **Documentation Updated** | 4 files | 0 | ⬜ PENDING |
+
+### Flag Summary by Tool
+
+| Tool | Total Flags | Working | Broken | Stubs | ArgParser |
+|------|-------------|---------|--------|-------|-----------|
+| analyze_tests | 18 | 14 | 1 | 3 | ❌ → ✅ |
+| analyze_coverage | 23 | 17 | 0 | 6 | ❌ → ✅ |
+| extract_failures | 14 | 14 | 0 | 0 | ✅ |
+| analyze_suite | 12 | 12 | 0 | 0 | ✅ |
+| **TOTAL** | **67** | **57** | **1** | **9** | **2/4 → 4/4** |
+
+### Quality Gates
+
+**Phase 1 Complete When**:
+- [ ] `--no-report` in `analyze_tests` prevents ALL output
+- [ ] 5 integration tests created and passing
+- [ ] Manual testing verifies fix works
+- [ ] `dart analyze` shows 0 issues
+
+**Phase 2 Complete When**:
+- [ ] Both tools use ArgParser
+- [ ] 14 new unit tests created and passing
+- [ ] Help text consistent across all tools
+- [ ] No regressions in existing functionality
+
+**Phase 3 Complete When**:
+- [ ] All 9 stub flags removed
+- [ ] 10 new tests verify flags rejected
+- [ ] Help text updated
+- [ ] CHANGELOG.md documents removal
+
+**Phase 4 Complete When**:
+- [ ] Documentation added to 4 files
+- [ ] Design decision clearly explained
+- [ ] Users understand why flag doesn't exist
+
+**Phase 5 Complete When**:
+- [ ] 60 new integration tests created
+- [ ] All 65 flags verified working
+- [ ] Cross-tool consistency confirmed
+- [ ] Edge cases covered
+
+**ALL PHASES Complete When**:
+- [ ] 1 critical bug fixed
+- [ ] 4 tools use ArgParser consistently
+- [ ] 9 stub flags removed
+- [ ] ~89 new tests created (5 + 14 + 10 + 60)
+- [ ] All tests passing
+- [ ] Documentation updated
+- [ ] `dart analyze` - 0 issues
+- [ ] `dart format` - all files formatted
+- [ ] All 4 tools self-test successfully
+- [ ] README.md has complete flag matrix
+
+---
+
+## 🚀 Next Steps
+
+**Current Status**: Planning complete, ready to begin implementation
+
+**Implementation Order** (by priority):
+1. **Phase 1** (CRITICAL) - Fix `--no-report` bug in analyze_tests
+2. **Phase 2** (HIGH) - Standardize ArgParser for consistency
+3. **Phase 3** (MEDIUM) - Remove stub flags to prevent confusion
+4. **Phase 5** (HIGH) - Comprehensive testing for reliability
+5. **Phase 4** (LOW) - Documentation for clarity
+
+**Immediate Next Action**: Begin Phase 1 (🔴 RED phase)
+1. Create test file: `test/integration/bin/analyze_tests_no_report_test.dart`
+2. Write 5 failing tests demonstrating the bug
+3. Verify tests fail correctly
+4. Proceed to GREEN phase
+
+---
+
+## 📝 Notes & Blockers
+
+### Current Blockers
+
+- None
+
+### Implementation Strategy
+
+- **TDD Mandatory**: All changes follow 🔴🟢♻️🔄 cycle
+- **Test First**: Write failing tests before implementation
+- **Incremental**: Complete one phase before starting next
+- **Quality**: Run `dart analyze` and `dart format` after each phase
+- **Self-Test**: Run all 4 tools on themselves after changes
+
+### Design Decisions
+
+1. **ArgParser Standardization**: Use ArgParser for all CLI parsing (consistency + safety)
+2. **Stub Removal**: Remove incomplete features rather than leaving broken promises
+3. **analyze_suite --no-report**: Document as intentional omission (orchestrator's purpose is reports)
+4. **Flag Naming**: Consistent naming across all tools (--verbose, --module-name, etc.)
+5. **Negatable Flags**: Change from `--no-flag` to `--flag` with negatable:true where appropriate
+
+### Key Reference Files
+
+- **Investigation Report**: Embedded in this tracker (Section: Complete Flag Inventory)
+- **bin-coverage-100-tracker.md**: Template for this tracker structure
+- **CLAUDE.md**: Project guidelines and commit message format
+- **README.md**: User-facing documentation (to be updated with flag matrix)
+
+---
+
+## 🔄 Update History
+
+- **2025-11-09**: Tracker created - Planning complete
+- **2025-11-09**: Investigation complete - 65 flags audited, 1 critical bug found, 9 stubs identified
+
+---
+
+**Ready to begin Phase 1!** 🚀

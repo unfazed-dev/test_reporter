@@ -201,7 +201,13 @@ class TestAnalyzer {
   final bool performanceMode;
   final bool watch;
   final bool generateFixes;
+
+  /// Whether to generate and display test analysis reports.
+  /// When false (via --no-report flag), suppresses both stdout output and file creation.
+  /// This provides a clean way to run tests multiple times for reliability checks
+  /// without cluttering the console or generating report files.
   final bool generateReport;
+
   final double slowTestThreshold;
   final List<String> targetFiles;
   final bool parallel;
@@ -493,8 +499,11 @@ class TestAnalyzer {
         await _analyzeTestImpact(testFiles);
       }
 
-      // Step 5: Generate comprehensive report
-      await _generateReport();
+      // Step 5: Generate comprehensive report (if enabled)
+      // When --no-report is specified, skip all report generation
+      if (generateReport) {
+        await _generateReport();
+      }
 
       // Step 6: Interactive mode for debugging
       if (interactive && failures.isNotEmpty) {
