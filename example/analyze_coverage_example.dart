@@ -42,28 +42,13 @@ Future<void> main() async {
   print('\n' + '=' * 60);
   print('\n📌 Example 3: Validate coverage meets 80% threshold\n');
   print('Command equivalent:');
-  print('  dart run test_reporter:analyze_coverage lib/src --threshold=80');
+  print('  dart run test_reporter:analyze_coverage lib/src --min-coverage=80');
   print('\nFails (exit code 1) if coverage is below 80%.');
   print('Perfect for CI/CD quality gates!');
 
-  // Example 4: Incremental coverage (changed files only)
+  // Example 4: Specific file or directory
   print('\n' + '=' * 60);
-  print('\n📌 Example 4: Analyze only files changed in git\n');
-  print('Command equivalent:');
-  print('  dart run test_reporter:analyze_coverage lib/src --incremental');
-  print('\nUses `git diff` to analyze only modified files.');
-  print('Much faster for large codebases!');
-
-  // Example 5: Branch coverage
-  print('\n' + '=' * 60);
-  print('\n📌 Example 5: Include branch coverage analysis\n');
-  print('Command equivalent:');
-  print('  dart run test_reporter:analyze_coverage lib/src --branch');
-  print('\nAnalyzes coverage of conditional branches (if/else, switch, etc.)');
-
-  // Example 6: Specific file or directory
-  print('\n' + '=' * 60);
-  print('\n📌 Example 6: Analyze specific file\n');
+  print('\n📌 Example 4: Analyze specific file\n');
   print('Command equivalent:');
   print(
       '  dart run test_reporter:analyze_coverage lib/src/utils/report_utils.dart');
@@ -117,9 +102,8 @@ Future<void> main() async {
   print('\n' + '=' * 60);
   print('\n💡 Pro Tips');
   print('\n1. Use --fix to bootstrap test files for new features');
-  print('2. Set --threshold in CI/CD to enforce coverage standards');
-  print('3. Use --incremental for faster feedback during development');
-  print('4. Combine with --branch for comprehensive coverage metrics');
+  print('2. Set --min-coverage in CI/CD to enforce coverage standards');
+  print('3. Analyze specific files or directories to focus on problem areas');
 
   print('\n' + '=' * 60);
   print('\n✨ Learn More');

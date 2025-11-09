@@ -60,7 +60,7 @@ Future<void> main() async {
   print('\n' + '=' * 60);
   print('\n📌 Example 5: Save failure details to report\n');
   print('Command equivalent:');
-  print('  dart run test_reporter:extract_failures test/ --save');
+  print('  dart run test_reporter:extract_failures test/ --save-results');
   print('\nGenerates detailed failure reports in tests_reports/failures/');
 
   // Example 6: Specific test file or directory
@@ -107,7 +107,7 @@ Future<void> main() async {
 
   print('\n' + '=' * 60);
   print('\n📚 Report Output');
-  print('\nWhen --save is enabled, you\'ll find:');
+  print('\nWhen --save-results is enabled, you\'ll find:');
   print('  - Markdown: tests_reports/failures/{module}_failures@timestamp.md');
   print('  - JSON: tests_reports/failures/{module}_failures@timestamp.json');
   print('\nReports include:');
