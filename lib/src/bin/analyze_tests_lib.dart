@@ -166,6 +166,7 @@ class TestAnalyzer {
     this.enableChecklist = true,
     this.minimalChecklist = false,
     this.explicitModuleName,
+    this.includeFixtures = false,
   }) : watch = watchMode ?? false;
   // Terminal colors
   static const String reset = '\x1B[0m';
@@ -211,6 +212,7 @@ class TestAnalyzer {
   final bool enableChecklist;
   final bool minimalChecklist;
   final String? explicitModuleName;
+  final bool includeFixtures;
 
   // Pattern registry for tracking failure patterns by type
   final Map<FailurePatternType, FailurePattern> _patternRegistry = {};
@@ -642,9 +644,16 @@ class TestAnalyzer {
             .readAsString()
             .then((content) => content.contains('flutter:'));
 
+    // Build test arguments - exclude fixtures by default unless --include-fixtures is used
+    final testArgs = ['test', '--reporter=json', '--run-skipped'];
+    if (!includeFixtures) {
+      testArgs.add('--exclude-tags=fixture');
+    }
+    testArgs.add(testFile);
+
     final result = await Process.run(
       isFlutterProject ? 'flutter' : 'dart',
-      ['test', '--reporter=json', '--run-skipped', testFile],
+      testArgs,
       runInShell: Platform.isWindows,
     );
 
@@ -3408,6 +3417,7 @@ void main(List<String> args) async {
   final impactAnalysis = args.contains('--impact');
   final enableChecklist = !args.contains('--no-checklist');
   final minimalChecklist = args.contains('--minimal-checklist');
+  final includeFixtures = args.contains('--include-fixtures');
 
   // Parse run count
   var runCount = 3;
@@ -3512,6 +3522,7 @@ void main(List<String> args) async {
     enableChecklist: enableChecklist,
     minimalChecklist: minimalChecklist,
     explicitModuleName: explicitModuleName,
+    includeFixtures: includeFixtures,
   );
 
   await analyzer.run();
@@ -3539,6 +3550,7 @@ Options:
   --no-fixes           Disable fix suggestions
   --no-checklist       Disable actionable checklists (default: enabled)
   --minimal-checklist  Generate compact checklist format
+  --include-fixtures   Include fixture tests (excluded by default)
   --help, -h           Show this help message
 
 Arguments:
