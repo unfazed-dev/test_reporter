@@ -30,6 +30,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+### Fixed
+
+#### --module-name Auto-Qualification
+
+**Problem**: Manual `--module-name` values were not being qualified with required suffixes (-fo/-fi/-pr), causing inconsistent report naming.
+
+**Solution**: All 3 tools now auto-qualify manual module names:
+- `--module-name utils` + folder path → `utils-fo`
+- `--module-name report_utils` + file path → `report-utils-fi`
+- `--module-name my_tests` + project path → `my-tests-pr`
+
+**Validation**: Throws ArgumentError if pre-qualified name doesn't match detected path type:
+- ❌ `--module-name utils-fi` for folder path (invalid)
+- ✅ `--module-name utils-fo` for folder path (valid)
+
+**Implementation**:
+- Added `ModuleIdentifier.qualifyManualModuleName()` function
+- Updated `analyze_tests_lib.dart`, `analyze_coverage_lib.dart`, `extract_failures_lib.dart`
+- All tools now call `qualifyManualModuleName()` when `--module-name` is provided
+- Help text updated with "(auto-qualified with -fo/-fi/-pr)" note
+
+**Backward Compatibility**: Already-qualified names (e.g., `--module-name utils-fo`) continue to work, now with validation.
+
+---
+
 ## [3.1.0] - 2025-11-06
 
 **Feature Release**: Interactive actionable checklists in all reports.

@@ -295,7 +295,12 @@ void main() {
 
       final aliasResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '-v', '--no-report'],
+        [
+          'bin/analyze_tests.dart',
+          'test/fixtures/passing_test.dart',
+          '-v',
+          '--no-report'
+        ],
       );
 
       expect(verboseResult.exitCode, equals(aliasResult.exitCode));
@@ -315,7 +320,12 @@ void main() {
 
       final shortResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '-p', '--no-report'],
+        [
+          'bin/analyze_tests.dart',
+          'test/fixtures/passing_test.dart',
+          '-p',
+          '--no-report'
+        ],
       );
 
       expect(longResult.exitCode, equals(shortResult.exitCode));
@@ -342,7 +352,11 @@ void main() {
     test('slow threshold defaults to 1.0 seconds', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--no-report'],
+        [
+          'bin/analyze_tests.dart',
+          'test/fixtures/passing_test.dart',
+          '--no-report'
+        ],
       );
 
       expect(result.exitCode, equals(0));

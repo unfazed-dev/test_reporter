@@ -137,7 +137,8 @@ class FailedTestExtractor {
       )
       ..addOption(
         'module-name',
-        help: 'Override module name for reports (v3.0)',
+        help:
+            'Override module name for reports (auto-qualified with -fo/-fi/-pr)',
       )
       ..addFlag(
         'verbose',
@@ -781,9 +782,11 @@ class FailedTestExtractor {
     }
 
     // Extract qualified module name from test path (or use explicit override)
+    // If explicit name provided, qualify it based on path type
     final explicitModuleName = _args['module-name'] as String?;
-    final moduleName =
-        explicitModuleName ?? ModuleIdentifier.getQualifiedModuleName(testPath);
+    final moduleName = explicitModuleName != null
+        ? ModuleIdentifier.qualifyManualModuleName(explicitModuleName, testPath)
+        : ModuleIdentifier.getQualifiedModuleName(testPath);
 
     // Format timestamp as HHMM_DDMMYY
     final simpleTimestamp =

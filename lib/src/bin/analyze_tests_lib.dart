@@ -1932,10 +1932,12 @@ class TestAnalyzer {
           '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
 
       // Extract qualified module name from test path (or use explicit override)
-      final moduleName = explicitModuleName ??
-          (targetFiles.isNotEmpty
-              ? ModuleIdentifier.getQualifiedModuleName(targetFiles.first)
-              : 'all-tests-pr');
+      // If explicit name provided, qualify it based on path type
+      final inferredPath = targetFiles.isNotEmpty ? targetFiles.first : 'test/';
+      final moduleName = explicitModuleName != null
+          ? ModuleIdentifier.qualifyManualModuleName(
+              explicitModuleName!, inferredPath)
+          : ModuleIdentifier.getQualifiedModuleName(inferredPath);
 
       // Build JSON export with all key metrics
       final jsonData = <String, dynamic>{
@@ -3238,7 +3240,8 @@ ArgParser _createArgParser() {
     )
     ..addOption(
       'module-name',
-      help: 'Override module name for reports',
+      help:
+          'Override module name for reports (auto-qualified with -fo/-fi/-pr)',
     );
 }
 

@@ -199,6 +199,64 @@ class ModuleIdentifier {
     return null;
   }
 
+  /// Qualify a manually-specified module name by adding appropriate suffix
+  ///
+  /// This function handles the `--module-name` flag, ensuring manual names
+  /// are properly qualified with type suffixes (-fo/-fi/-pr).
+  ///
+  /// **Behavior:**
+  /// - If name already has a valid suffix, validates it matches the path type
+  /// - If name lacks suffix, detects path type and adds appropriate suffix
+  /// - Converts underscores to hyphens for consistency
+  ///
+  /// **Examples:**
+  /// ```dart
+  /// // Unqualified name → adds suffix based on path
+  /// qualifyManualModuleName('utils', 'lib/src/utils/')
+  /// // Returns: 'utils-fo'
+  ///
+  /// // Already qualified → validates match
+  /// qualifyManualModuleName('utils-fo', 'lib/src/utils/')
+  /// // Returns: 'utils-fo'
+  ///
+  /// // Mismatched type → throws
+  /// qualifyManualModuleName('utils-fi', 'lib/src/utils/')
+  /// // Throws ArgumentError (file suffix for folder path)
+  /// ```
+  ///
+  /// Throws ArgumentError if:
+  /// - Module name is empty
+  /// - Qualified name doesn't match detected path type
+  static String qualifyManualModuleName(String manualName, String path) {
+    if (manualName.isEmpty) {
+      throw ArgumentError('Module name cannot be empty');
+    }
+
+    // Normalize: convert underscores to hyphens, lowercase
+    final normalized = manualName.toLowerCase().replaceAll('_', '-');
+
+    // Check if already qualified (has valid suffix)
+    final parsed = parseQualifiedName(normalized);
+
+    if (parsed != null) {
+      // Already qualified - validate it matches path type
+      final detectedType = _detectPathType(path);
+
+      if (parsed.type != detectedType) {
+        throw ArgumentError(
+          'Module name suffix mismatch: "$normalized" has ${parsed.type.name} '
+          'suffix but path "$path" is detected as ${detectedType.name}',
+        );
+      }
+
+      return normalized; // Already qualified and validated
+    }
+
+    // Not qualified - add suffix based on detected path type
+    final type = _detectPathType(path);
+    return generateQualifiedName(normalized, type);
+  }
+
   /// Validate module name format
   ///
   /// Valid names:

@@ -40,7 +40,11 @@ void main() {
     test('--performance flag enables performance profiling', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--performance'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--performance'
+        ],
       );
 
       // Should run with performance profiling enabled
@@ -50,7 +54,11 @@ void main() {
     test('--verbose/-v flag shows detailed output', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--verbose'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--verbose'
+        ],
       );
 
       // Verbose flag should be recognized
@@ -60,7 +68,11 @@ void main() {
     test('--parallel flag enables parallel execution', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--parallel'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--parallel'
+        ],
       );
 
       // Should run in parallel mode
@@ -70,7 +82,11 @@ void main() {
     test('--no-checklist flag disables checklists', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--no-checklist'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--no-checklist'
+        ],
       );
 
       // Should run without checklist generation
@@ -80,7 +96,11 @@ void main() {
     test('--minimal-checklist flag shows compact checklist', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--minimal-checklist'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--minimal-checklist'
+        ],
       );
 
       // Should generate minimal checklist format
@@ -142,7 +162,11 @@ void main() {
     test('--runs/-r=5 flag runs tests 5 times', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--runs=5'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--runs=5'
+        ],
       );
 
       // Should run tests 5 times
@@ -200,7 +224,11 @@ void main() {
     test('-v alias equals --verbose', () async {
       final longResult = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--verbose'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--verbose'
+        ],
       );
 
       final shortResult = await Process.run(
@@ -228,12 +256,21 @@ void main() {
     test('-r alias equals --runs', () async {
       final longResult = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--runs=2'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--runs=2'
+        ],
       );
 
       final shortResult = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '-r', '2'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '-r',
+          '2'
+        ],
       );
 
       expect(longResult.exitCode, equals(shortResult.exitCode));
@@ -256,7 +293,11 @@ void main() {
       // Without --runs flag, should run 3 times by default
       final result = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--verbose'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--verbose'
+        ],
       );
 
       expect(result.exitCode, anyOf(equals(0), equals(1), equals(2)));

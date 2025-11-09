@@ -282,4 +282,74 @@ void main() {
       );
     });
   });
+
+  group('ModuleIdentifier.qualifyManualModuleName', () {
+    test('should qualify unqualified folder module name', () {
+      expect(
+        ModuleIdentifier.qualifyManualModuleName('utils', 'lib/src/utils/'),
+        equals('utils-fo'),
+      );
+    });
+
+    test('should qualify unqualified file module name', () {
+      expect(
+        ModuleIdentifier.qualifyManualModuleName(
+            'report_utils', 'lib/src/utils/report_utils.dart'),
+        equals('report-utils-fi'),
+      );
+    });
+
+    test('should qualify unqualified project module name', () {
+      expect(
+        ModuleIdentifier.qualifyManualModuleName('test-suite', 'test/'),
+        equals('test-suite-pr'),
+      );
+    });
+
+    test('should keep already qualified folder name', () {
+      expect(
+        ModuleIdentifier.qualifyManualModuleName('utils-fo', 'lib/src/utils/'),
+        equals('utils-fo'),
+      );
+    });
+
+    test('should keep already qualified file name', () {
+      expect(
+        ModuleIdentifier.qualifyManualModuleName(
+            'report-utils-fi', 'lib/src/utils/report_utils.dart'),
+        equals('report-utils-fi'),
+      );
+    });
+
+    test('should validate and keep qualified project name', () {
+      expect(
+        ModuleIdentifier.qualifyManualModuleName('all-tests-pr', 'test/'),
+        equals('all-tests-pr'),
+      );
+    });
+
+    test('should throw on mismatched type (folder name for file path)', () {
+      expect(
+        () => ModuleIdentifier.qualifyManualModuleName(
+            'report-utils-fo', 'lib/src/utils/report_utils.dart'),
+        throwsArgumentError,
+      );
+    });
+
+    test('should throw on mismatched type (file name for folder path)', () {
+      expect(
+        () => ModuleIdentifier.qualifyManualModuleName(
+            'utils-fi', 'lib/src/utils/'),
+        throwsArgumentError,
+      );
+    });
+
+    test('should handle underscores in module name', () {
+      expect(
+        ModuleIdentifier.qualifyManualModuleName(
+            'report_utils', 'lib/src/utils/'),
+        equals('report-utils-fo'),
+      );
+    });
+  });
 }

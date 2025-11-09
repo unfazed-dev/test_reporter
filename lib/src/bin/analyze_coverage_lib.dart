@@ -1615,8 +1615,11 @@ class CoverageAnalyzer {
         '${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}';
 
     // Extract qualified module name from test path (or use explicit override)
-    final moduleName =
-        explicitModuleName ?? ModuleIdentifier.getQualifiedModuleName(testPath);
+    // If explicit name provided, qualify it based on path type
+    final moduleName = explicitModuleName != null
+        ? ModuleIdentifier.qualifyManualModuleName(
+            explicitModuleName!, testPath)
+        : ModuleIdentifier.getQualifiedModuleName(testPath);
 
     // NOTE: Cleanup disabled to retain reports for unified report linking
     // Reports are managed by run_all.dart orchestrator
@@ -2905,7 +2908,8 @@ ArgParser _createArgParser() {
     )
     ..addOption(
       'module-name',
-      help: 'Override module name for reports',
+      help:
+          'Override module name for reports (auto-qualified with -fo/-fi/-pr)',
     )
     // Export/output flags
     ..addFlag(

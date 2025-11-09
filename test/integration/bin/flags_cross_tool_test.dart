@@ -23,13 +23,23 @@ void main() {
       // Test analyze_tests with --verbose
       final testsResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--verbose', '--no-report'],
+        [
+          'bin/analyze_tests.dart',
+          'test/fixtures/passing_test.dart',
+          '--verbose',
+          '--no-report'
+        ],
       );
 
       // Test analyze_coverage with --verbose
       final coverageResult = await Process.run(
         'dart',
-        ['bin/analyze_coverage.dart', 'lib/src/models', '--verbose', '--no-report'],
+        [
+          'bin/analyze_coverage.dart',
+          'lib/src/models',
+          '--verbose',
+          '--no-report'
+        ],
       );
 
       // Test extract_failures with --verbose
@@ -41,12 +51,17 @@ void main() {
       // Test analyze_suite with --verbose
       final suiteResult = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--verbose'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--verbose'
+        ],
       );
 
       // All should recognize and handle --verbose flag
       expect(testsResult.exitCode, anyOf(equals(0), equals(1), equals(2)));
-      expect(coverageResult.exitCode, anyOf(equals(0), equals(1), equals(2), equals(255)));
+      expect(coverageResult.exitCode,
+          anyOf(equals(0), equals(1), equals(2), equals(255)));
       expect(extractResult.exitCode, anyOf(equals(0), equals(1), equals(2)));
       expect(suiteResult.exitCode, anyOf(equals(0), equals(1), equals(2)));
     }, timeout: Timeout(Duration(seconds: 180)));
@@ -55,40 +70,64 @@ void main() {
       // Test analyze_tests with --module-name
       final testsResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--module-name=test-module', '--no-report'],
+        [
+          'bin/analyze_tests.dart',
+          'test/fixtures/passing_test.dart',
+          '--module-name=test-module',
+          '--no-report'
+        ],
       );
 
       // Test analyze_coverage with --module-name
       final coverageResult = await Process.run(
         'dart',
-        ['bin/analyze_coverage.dart', 'lib/src/models', '--module-name=test-module', '--no-report'],
+        [
+          'bin/analyze_coverage.dart',
+          'lib/src/models',
+          '--module-name=test-module',
+          '--no-report'
+        ],
       );
 
       // Test extract_failures with --module-name
       final extractResult = await Process.run(
         'dart',
-        ['bin/extract_failures.dart', 'test/', '--module-name=test-module', '--list-only'],
+        [
+          'bin/extract_failures.dart',
+          'test/',
+          '--module-name=test-module',
+          '--list-only'
+        ],
       );
 
       // Test analyze_suite with --module-name
       final suiteResult = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--module-name=test-module'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--module-name=test-module'
+        ],
       );
 
       // All should recognize and handle --module-name flag
       expect(testsResult.exitCode, anyOf(equals(0), equals(1), equals(2)));
-      expect(coverageResult.exitCode, anyOf(equals(0), equals(1), equals(2), equals(255)));
+      expect(coverageResult.exitCode,
+          anyOf(equals(0), equals(1), equals(2), equals(255)));
       expect(extractResult.exitCode, anyOf(equals(0), equals(1), equals(2)));
       expect(suiteResult.exitCode, anyOf(equals(0), equals(1), equals(2)));
     }, timeout: Timeout(Duration(seconds: 180)));
 
     test('--help/-h flag format consistent across all tools', () async {
       // Test all tools show help text
-      final testsHelp = await Process.run('dart', ['bin/analyze_tests.dart', '--help']);
-      final coverageHelp = await Process.run('dart', ['bin/analyze_coverage.dart', '--help']);
-      final extractHelp = await Process.run('dart', ['bin/extract_failures.dart', '--help']);
-      final suiteHelp = await Process.run('dart', ['bin/analyze_suite.dart', '--help']);
+      final testsHelp =
+          await Process.run('dart', ['bin/analyze_tests.dart', '--help']);
+      final coverageHelp =
+          await Process.run('dart', ['bin/analyze_coverage.dart', '--help']);
+      final extractHelp =
+          await Process.run('dart', ['bin/extract_failures.dart', '--help']);
+      final suiteHelp =
+          await Process.run('dart', ['bin/analyze_suite.dart', '--help']);
 
       // All should exit with 0 and show help
       expect(testsHelp.exitCode, equals(0));
@@ -105,17 +144,28 @@ void main() {
   });
 
   group('checklist flag consistency', () {
-    test('--no-checklist flag works in analyze_tests and analyze_coverage', () async {
+    test('--no-checklist flag works in analyze_tests and analyze_coverage',
+        () async {
       // Test analyze_tests with --no-checklist
       final testsResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--no-checklist', '--no-report'],
+        [
+          'bin/analyze_tests.dart',
+          'test/fixtures/passing_test.dart',
+          '--no-checklist',
+          '--no-report'
+        ],
       );
 
       // Test analyze_coverage with --no-checklist
       final coverageResult = await Process.run(
         'dart',
-        ['bin/analyze_coverage.dart', 'lib/src/models', '--no-checklist', '--no-report'],
+        [
+          'bin/analyze_coverage.dart',
+          'lib/src/models',
+          '--no-checklist',
+          '--no-report'
+        ],
       );
 
       expect(testsResult.exitCode, anyOf(equals(0), equals(1)));
@@ -126,25 +176,44 @@ void main() {
       // Test analyze_tests with --minimal-checklist
       final testsResult = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--minimal-checklist', '--no-report'],
+        [
+          'bin/analyze_tests.dart',
+          'test/fixtures/passing_test.dart',
+          '--minimal-checklist',
+          '--no-report'
+        ],
       );
 
       // Test analyze_coverage with --minimal-checklist
       final coverageResult = await Process.run(
         'dart',
-        ['bin/analyze_coverage.dart', 'lib/src/models', '--minimal-checklist', '--no-report'],
+        [
+          'bin/analyze_coverage.dart',
+          'lib/src/models',
+          '--minimal-checklist',
+          '--no-report'
+        ],
       );
 
       // Test extract_failures with --minimal-checklist
       final extractResult = await Process.run(
         'dart',
-        ['bin/extract_failures.dart', 'test/', '--minimal-checklist', '--list-only'],
+        [
+          'bin/extract_failures.dart',
+          'test/',
+          '--minimal-checklist',
+          '--list-only'
+        ],
       );
 
       // Test analyze_suite with --minimal-checklist
       final suiteResult = await Process.run(
         'dart',
-        ['bin/analyze_suite.dart', 'test/fixtures/passing_test.dart', '--minimal-checklist'],
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--minimal-checklist'
+        ],
       );
 
       // All should recognize the flag
@@ -188,10 +257,14 @@ void main() {
       expect(suiteResult.exitCode, isNonZero);
 
       // All should show error messages (check both stdout and stderr)
-      final testsOutput = testsResult.stderr.toString() + testsResult.stdout.toString();
-      final coverageOutput = coverageResult.stderr.toString() + coverageResult.stdout.toString();
-      final extractOutput = extractResult.stderr.toString() + extractResult.stdout.toString();
-      final suiteOutput = suiteResult.stderr.toString() + suiteResult.stdout.toString();
+      final testsOutput =
+          testsResult.stderr.toString() + testsResult.stdout.toString();
+      final coverageOutput =
+          coverageResult.stderr.toString() + coverageResult.stdout.toString();
+      final extractOutput =
+          extractResult.stderr.toString() + extractResult.stdout.toString();
+      final suiteOutput =
+          suiteResult.stderr.toString() + suiteResult.stdout.toString();
 
       expect(testsOutput, contains('Could not find an option'));
       expect(coverageOutput, contains('Could not find an option'));
@@ -254,7 +327,12 @@ void main() {
     test('negative runs value is handled gracefully', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--runs=-1', '--no-report'],
+        [
+          'bin/analyze_tests.dart',
+          'test/fixtures/passing_test.dart',
+          '--runs=-1',
+          '--no-report'
+        ],
       );
 
       // Should either reject or treat as default
@@ -265,11 +343,17 @@ void main() {
     test('invalid coverage threshold is handled', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_coverage.dart', 'lib/src/models', '--min-coverage=150', '--no-report'],
+        [
+          'bin/analyze_coverage.dart',
+          'lib/src/models',
+          '--min-coverage=150',
+          '--no-report'
+        ],
       );
 
       // Should handle invalid threshold (>100)
-      expect(result.exitCode, anyOf(equals(0), equals(1), equals(2), equals(255)));
+      expect(
+          result.exitCode, anyOf(equals(0), equals(1), equals(2), equals(255)));
     }, timeout: Timeout(Duration(seconds: 120)));
 
     test('zero timeout value is handled', () async {
@@ -288,7 +372,12 @@ void main() {
       // Report disabled makes checklist moot, but shouldn't error
       final result = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--no-report', '--minimal-checklist'],
+        [
+          'bin/analyze_tests.dart',
+          'test/fixtures/passing_test.dart',
+          '--no-report',
+          '--minimal-checklist'
+        ],
       );
 
       // Should run successfully (checklist flag ignored when no report)
@@ -298,7 +387,12 @@ void main() {
     test('--parallel without --workers uses default', () async {
       final result = await Process.run(
         'dart',
-        ['bin/analyze_tests.dart', 'test/fixtures/passing_test.dart', '--parallel', '--no-report'],
+        [
+          'bin/analyze_tests.dart',
+          'test/fixtures/passing_test.dart',
+          '--parallel',
+          '--no-report'
+        ],
       );
 
       // Should use default worker count
@@ -308,10 +402,14 @@ void main() {
 
   group('help text quality', () {
     test('all tools document their primary purpose', () async {
-      final testsHelp = await Process.run('dart', ['bin/analyze_tests.dart', '--help']);
-      final coverageHelp = await Process.run('dart', ['bin/analyze_coverage.dart', '--help']);
-      final extractHelp = await Process.run('dart', ['bin/extract_failures.dart', '--help']);
-      final suiteHelp = await Process.run('dart', ['bin/analyze_suite.dart', '--help']);
+      final testsHelp =
+          await Process.run('dart', ['bin/analyze_tests.dart', '--help']);
+      final coverageHelp =
+          await Process.run('dart', ['bin/analyze_coverage.dart', '--help']);
+      final extractHelp =
+          await Process.run('dart', ['bin/extract_failures.dart', '--help']);
+      final suiteHelp =
+          await Process.run('dart', ['bin/analyze_suite.dart', '--help']);
 
       // Each should have descriptive help text
       expect(testsHelp.stdout.toString(), isNotEmpty);
@@ -324,8 +422,10 @@ void main() {
     });
 
     test('all tools show available flags in help', () async {
-      final testsHelp = await Process.run('dart', ['bin/analyze_tests.dart', '--help']);
-      final coverageHelp = await Process.run('dart', ['bin/analyze_coverage.dart', '--help']);
+      final testsHelp =
+          await Process.run('dart', ['bin/analyze_tests.dart', '--help']);
+      final coverageHelp =
+          await Process.run('dart', ['bin/analyze_coverage.dart', '--help']);
 
       // Should list key flags
       expect(testsHelp.stdout.toString(), contains('--verbose'));
