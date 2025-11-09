@@ -61,6 +61,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:args/args.dart';
 import 'package:test_reporter/src/utils/module_identifier.dart';
 import 'package:test_reporter/src/utils/report_utils.dart';
 
@@ -3409,74 +3410,165 @@ class TestPerformance {
   }
 }
 
+/// Creates and configures the ArgParser for analyze_tests
+///
+/// Defines all CLI flags and options with their defaults, help text, and validation.
+/// This replaces the manual string parsing previously used.
+ArgParser _createArgParser() {
+  return ArgParser()
+    // Output control flags
+    ..addFlag(
+      'verbose',
+      abbr: 'v',
+      help: 'Show detailed output and stack traces',
+      negatable: false,
+    )
+    ..addFlag(
+      'report',
+      help: 'Generate and display test analysis reports',
+      defaultsTo: true,
+      negatable: true,
+    )
+    ..addFlag(
+      'fixes',
+      help: 'Generate fix suggestions for failures',
+      defaultsTo: true,
+      negatable: true,
+    )
+    ..addFlag(
+      'checklist',
+      help: 'Generate actionable checklists',
+      defaultsTo: true,
+      negatable: true,
+    )
+    ..addFlag(
+      'minimal-checklist',
+      help: 'Generate compact checklist format',
+      negatable: false,
+    )
+    // Mode flags
+    ..addFlag(
+      'interactive',
+      abbr: 'i',
+      help: 'Enter interactive debug mode for failed tests',
+      negatable: false,
+    )
+    ..addFlag(
+      'performance',
+      abbr: 'p',
+      help: 'Track and report test performance metrics',
+      negatable: false,
+    )
+    ..addFlag(
+      'watch',
+      abbr: 'w',
+      help: 'Watch for changes and re-run analysis',
+      negatable: false,
+    )
+    ..addFlag(
+      'parallel',
+      help: 'Run tests in parallel for faster execution',
+      negatable: false,
+    )
+    // Advanced analysis flags (STUB - to be removed in Phase 3)
+    ..addFlag(
+      'dependencies',
+      abbr: 'd',
+      help: 'Analyze test dependency graph (STUB - not implemented)',
+      negatable: false,
+    )
+    ..addFlag(
+      'mutation',
+      abbr: 'm',
+      help: 'Run mutation testing to verify test effectiveness (STUB - not implemented)',
+      negatable: false,
+    )
+    ..addFlag(
+      'impact',
+      help: 'Analyze test impact based on code changes (STUB - not implemented)',
+      negatable: false,
+    )
+    // Other flags
+    ..addFlag(
+      'include-fixtures',
+      help: 'Include fixture tests (excluded by default)',
+      negatable: false,
+    )
+    ..addFlag(
+      'help',
+      abbr: 'h',
+      help: 'Show this help message',
+      negatable: false,
+    )
+    // Configuration options
+    ..addOption(
+      'runs',
+      help: 'Number of test runs',
+      defaultsTo: '3',
+    )
+    ..addOption(
+      'slow',
+      help: 'Slow test threshold in seconds',
+      defaultsTo: '1.0',
+    )
+    ..addOption(
+      'workers',
+      help: 'Max parallel workers',
+      defaultsTo: '4',
+    )
+    ..addOption(
+      'module-name',
+      help: 'Override module name for reports',
+    );
+}
+
 /// Main entry point
 void main(List<String> args) async {
-  // Parse arguments
-  final verbose = args.contains('--verbose') || args.contains('-v');
-  final interactive = args.contains('--interactive') || args.contains('-i');
-  final performance = args.contains('--performance') || args.contains('-p');
-  final watch = args.contains('--watch') || args.contains('-w');
-  final noFixes = args.contains('--no-fixes');
-  final noReport = args.contains('--no-report');
-  final help = args.contains('--help') || args.contains('-h');
-  final parallel = args.contains('--parallel');
-  final dependencyAnalysis =
-      args.contains('--dependencies') || args.contains('-d');
-  final mutationTesting = args.contains('--mutation') || args.contains('-m');
-  final impactAnalysis = args.contains('--impact');
-  final enableChecklist = !args.contains('--no-checklist');
-  final minimalChecklist = args.contains('--minimal-checklist');
-  final includeFixtures = args.contains('--include-fixtures');
+  // Create and use ArgParser for consistent, validated flag parsing
+  final parser = _createArgParser();
 
-  // Parse run count
-  var runCount = 3;
-  for (final arg in args) {
-    if (arg.startsWith('--runs=')) {
-      runCount = int.tryParse(arg.substring(7)) ?? 3;
-    }
+  // Parse arguments with error handling
+  late final ArgResults results;
+  try {
+    results = parser.parse(args);
+  } on FormatException catch (e) {
+    print('${TestAnalyzer.red}Error: ${e.message}${TestAnalyzer.reset}');
+    print('');
+    _printUsage(parser);
+    exit(2);
   }
 
-  // Parse slow threshold
-  var slowThreshold = 1.0;
-  for (final arg in args) {
-    if (arg.startsWith('--slow=')) {
-      slowThreshold = double.tryParse(arg.substring(7)) ?? 1.0;
-    }
-  }
+  // Extract flag values from parsed results
+  final verbose = results['verbose'] as bool;
+  final interactive = results['interactive'] as bool;
+  final performance = results['performance'] as bool;
+  final watch = results['watch'] as bool;
+  final generateFixes = results['fixes'] as bool;
+  final generateReport = results['report'] as bool;
+  final help = results['help'] as bool;
+  final parallel = results['parallel'] as bool;
+  final dependencyAnalysis = results['dependencies'] as bool;
+  final mutationTesting = results['mutation'] as bool;
+  final impactAnalysis = results['impact'] as bool;
+  final enableChecklist = results['checklist'] as bool;
+  final minimalChecklist = results['minimal-checklist'] as bool;
+  final includeFixtures = results['include-fixtures'] as bool;
 
-  // Parse max workers for parallel execution
-  var maxWorkers = 4;
-  for (final arg in args) {
-    if (arg.startsWith('--workers=')) {
-      maxWorkers = int.tryParse(arg.substring(10)) ?? 4;
-    }
-  }
+  // Parse numeric options with validation
+  final runCount = int.tryParse(results['runs'] as String) ?? 3;
+  final slowThreshold = double.tryParse(results['slow'] as String) ?? 1.0;
+  final maxWorkers = int.tryParse(results['workers'] as String) ?? 4;
 
-  // Parse explicit module name override
-  String? explicitModuleName;
-  for (var i = 0; i < args.length; i++) {
-    if (args[i] == '--module-name' && i + 1 < args.length) {
-      explicitModuleName = args[i + 1];
-      break;
-    }
-  }
+  // Get module name override (optional)
+  final explicitModuleName = results['module-name'] as String?;
 
   if (help) {
-    _printUsage();
+    _printUsage(parser);
     return;
   }
 
-  // Get target files (non-flag arguments, excluding --module-name value)
-  final targetFiles = <String>[];
-  for (var i = 0; i < args.length; i++) {
-    if (!args[i].startsWith('-')) {
-      // Skip if previous arg was --module-name
-      if (i > 0 && args[i - 1] == '--module-name') {
-        continue;
-      }
-      targetFiles.add(args[i]);
-    }
-  }
+  // Get target files (rest arguments after flags)
+  final targetFiles = results.rest;
 
   // Validate target files/directories exist
   if (targetFiles.isNotEmpty) {
@@ -3519,8 +3611,8 @@ void main(List<String> args) async {
     interactive: interactive,
     performanceMode: performance,
     watchMode: watch,
-    generateFixes: !noFixes,
-    generateReport: !noReport,
+    generateFixes: generateFixes,
+    generateReport: generateReport,
     slowTestThreshold: slowThreshold,
     targetFiles: targetFiles,
     parallel: parallel,
@@ -3537,30 +3629,15 @@ void main(List<String> args) async {
   await analyzer.run();
 }
 
-void _printUsage() {
+/// Prints usage information with ArgParser-generated help text
+void _printUsage(ArgParser parser) {
   print('''
 ${TestAnalyzer.cyan}Flutter/Dart Test Analyzer${TestAnalyzer.reset}
 
 Usage: dart test_analyzer.dart [options] [test_files...]
 
 Options:
-  --verbose, -v        Show detailed output and stack traces
-  --interactive, -i    Enter interactive debug mode for failed tests
-  --performance, -p    Track and report test performance metrics
-  --watch, -w          Watch for changes and re-run analysis
-  --parallel           Run tests in parallel for faster execution
-  --module-name <name> Override module name for reports (v3.0)
-  --dependencies, -d   Analyze test dependency graph
-  --mutation, -m       Run mutation testing to verify test effectiveness
-  --impact             Analyze test impact based on code changes
-  --runs=N             Number of test runs (default: 3)
-  --slow=N             Slow test threshold in seconds (default: 1.0)
-  --workers=N          Max parallel workers (default: 4)
-  --no-fixes           Disable fix suggestions
-  --no-checklist       Disable actionable checklists (default: enabled)
-  --minimal-checklist  Generate compact checklist format
-  --include-fixtures   Include fixture tests (excluded by default)
-  --help, -h           Show this help message
+${parser.usage}
 
 Arguments:
   test_files           Specific test files to analyze (default: all tests)
@@ -3568,16 +3645,16 @@ Arguments:
 Examples:
   ${TestAnalyzer.gray}# Basic analysis of all tests${TestAnalyzer.reset}
   dart test_analyzer.dart
-  
+
   ${TestAnalyzer.gray}# Detailed analysis with performance tracking${TestAnalyzer.reset}
   dart test_analyzer.dart --verbose --performance
-  
+
   ${TestAnalyzer.gray}# Interactive debugging of specific test${TestAnalyzer.reset}
   dart test_analyzer.dart --interactive test/widget_test.dart
-  
+
   ${TestAnalyzer.gray}# Watch mode for continuous testing${TestAnalyzer.reset}
   dart test_analyzer.dart --watch
-  
+
   ${TestAnalyzer.gray}# Run tests 5 times to detect flakiness${TestAnalyzer.reset}
   dart test_analyzer.dart --runs=5
 
