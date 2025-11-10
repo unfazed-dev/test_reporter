@@ -1,32 +1,28 @@
 /// Enhanced Coverage Analysis Tool for Flutter/Dart projects
-/// Version 2.0 - 2025 Enhanced Edition
+/// Version 3.1 - 2025 Enhanced Edition
 ///
-/// Features:
-///   - Line and branch coverage analysis
-///   - Incremental coverage for changed files
-///   - Mutation testing integration
-///   - Coverage diff visualization
-///   - Test impact analysis
-///   - Parallel execution for performance
-///   - Watch mode for continuous monitoring
-///   - JSON export and badge generation
+/// Comprehensive test coverage analysis with auto-fix capabilities,
+/// actionable checklists, and detailed reporting in both markdown and JSON formats.
 ///
-/// Usage: dart coverage_tool.dart [options] [path]
+/// Usage: analyze_coverage [options] [path]
+///
 /// Options:
-///   --fix              Generate missing test cases automatically
-///   --branch           Include branch coverage analysis
-///   --incremental      Only analyze changed files
-///   --mutation         Run mutation testing
-///   --watch            Enable watch mode
-///   --parallel         Use parallel execution
-///   --json             Export JSON report
-///   --badge            Generate coverage badge
-///   --threshold <n>    Set minimum coverage threshold
-///   --exclude <pattern> Exclude files matching pattern
-///   --baseline <file>  Compare against baseline coverage
-///   --impact           Analyze test impact mapping
-///   --no-checklist     Disable actionable checklists (default: enabled)
-///   --minimal-checklist Generate compact checklist format
+///   --fix                  Generate missing test cases automatically
+///   --verbose, -v          Enable verbose output for detailed debugging
+///   --[no-]report          Generate coverage report (defaults to on)
+///   --[no-]checklist       Generate actionable checklists (defaults to on)
+///   --minimal-checklist    Generate compact checklist format
+///   --json                 Export JSON report
+///   --include-fixtures     Include fixture tests (excluded by default)
+///   --min-coverage <n>     Minimum coverage threshold (0-100)
+///   --warn-coverage <n>    Warning coverage threshold (0-100)
+///   --fail-on-decrease     Fail if coverage decreases from baseline
+///   --exclude <pattern>    Exclude files matching pattern (can be used multiple times)
+///   --baseline <file>      Compare against baseline coverage file
+///   --lib <path>           Path to source files (alias: --source-path, defaults to "lib/src")
+///   --test <path>          Path to test files (alias: --test-path, defaults to "test")
+///   --module-name <name>   Override module name for reports (auto-qualified with -fo/-fi)
+///   -h, --help             Show this help message
 
 import 'dart:async';
 import 'dart:convert';
@@ -102,6 +98,7 @@ class CoverageAnalyzer {
     this.generateBadge = false,
     this.truncatePaths = false,
     this.lineLevel = false,
+    this.verbose = false,
   })  : thresholds = thresholds ?? CoverageThresholds(),
         _isFlutterProject = isFlutter,
         baselineFile = baseline ?? baselineFile,
@@ -134,6 +131,7 @@ class CoverageAnalyzer {
   final bool generateBadge;
   final bool truncatePaths;
   final bool lineLevel;
+  final bool verbose;
 
   // Track if thresholds were violated
   bool thresholdViolation = false;
@@ -895,6 +893,25 @@ class CoverageAnalyzer {
     print('Analyzing: $libPath');
     print('Tests: $testPath');
     print('Mode: ${_getAnalysisMode()}');
+
+    if (verbose) {
+      print('');
+      print('[VERBOSE] Configuration:');
+      print('  • Auto-fix: $autoFix');
+      print('  • Generate report: $generateReport');
+      print('  • Export JSON: $exportJson');
+      print('  • Include fixtures: $includeFixtures');
+      print('  • Min coverage threshold: ${thresholds.minimum}%');
+      print('  • Warn coverage threshold: ${thresholds.warning}%');
+      print('  • Fail on decrease: ${thresholds.failOnDecrease}');
+      if (excludePatterns.isNotEmpty) {
+        print('  • Exclude patterns: ${excludePatterns.join(", ")}');
+      }
+      if (baselineFile != null) {
+        print('  • Baseline file: $baselineFile');
+      }
+    }
+
     print('');
 
     // Step 1: Get changed files if incremental
@@ -1225,6 +1242,10 @@ class CoverageAnalyzer {
       args.add(testPath);
     }
 
+    if (verbose) {
+      print('[VERBOSE] Running command: $command ${args.join(" ")}');
+    }
+
     // Run tests with coverage
     final result = await Process.run(
       command,
@@ -1387,6 +1408,14 @@ class CoverageAnalyzer {
     uncoveredLinesData = uncoveredLines;
     totalLinesData = totalLines;
     hitLinesData = hitLines;
+
+    if (verbose) {
+      print('[VERBOSE] Parsed LCOV data:');
+      print('  • Files analyzed: ${totalLines.length}');
+      print(
+          '  • Total lines tracked: ${totalLines.values.fold(0, (a, b) => a + b)}');
+      print('  • Total lines hit: ${hitLines.values.fold(0, (a, b) => a + b)}');
+    }
 
     // Calculate overall coverage for files in the analyzed path
     var totalLinesInPath = 0;
@@ -1976,7 +2005,7 @@ class CoverageAnalyzer {
     report.writeln('## 🛠️ How to Improve Coverage');
     report.writeln();
     report.writeln(
-      '1. **Run with auto-fix:** `dart coverage_tool.dart $libPath --fix`',
+      '1. **Run with auto-fix:** `dart run test_reporter:analyze_coverage $libPath --fix`',
     );
     report.writeln(
       '2. **View HTML report:** `genhtml coverage/lcov.info -o coverage/html && open coverage/html/index.html`',
@@ -2016,40 +2045,35 @@ class CoverageAnalyzer {
     report.writeln();
     report.writeln('```bash');
     report.writeln('# Basic usage');
-    report.writeln('dart analyzer/coverage_tool.dart lib/src/core');
+    report.writeln('dart run test_reporter:analyze_coverage lib/src/core');
     report.writeln();
     report.writeln('# With auto-fix');
-    report.writeln('dart analyzer/coverage_tool.dart lib/src/core --fix');
+    report.writeln('dart run test_reporter:analyze_coverage lib/src/core --fix');
     report.writeln();
-    report.writeln('# Incremental coverage (changed files only)');
-    report
-        .writeln('dart analyzer/coverage_tool.dart lib/src/core --incremental');
+    report.writeln('# With verbose output');
+    report.writeln('dart run test_reporter:analyze_coverage lib/src/core --verbose');
     report.writeln();
-    report.writeln('# With branch coverage');
-    report.writeln('dart analyzer/coverage_tool.dart lib/src/core --branch');
-    report.writeln();
-    report.writeln('# Parallel execution');
-    report.writeln('dart analyzer/coverage_tool.dart lib/src/core --parallel');
-    report.writeln();
-    report.writeln('# With coverage diff');
+    report.writeln('# With baseline comparison');
     report.writeln(
-      'dart analyzer/coverage_tool.dart lib/src/core --baseline=coverage_baseline.json',
+      'dart run test_reporter:analyze_coverage lib/src/core --baseline=coverage_baseline.json',
     );
     report.writeln();
-    report.writeln('# Watch mode');
-    report.writeln('dart analyzer/coverage_tool.dart lib/src/core --watch');
-    report.writeln();
     report.writeln('# Export JSON report');
-    report.writeln('dart analyzer/coverage_tool.dart lib/src/core --json');
+    report.writeln('dart run test_reporter:analyze_coverage lib/src/core --json');
     report.writeln();
     report.writeln('# With coverage thresholds');
     report.writeln(
-      'dart analyzer/coverage_tool.dart lib/src/core --min-coverage=80 --warn-coverage=60',
+      'dart run test_reporter:analyze_coverage lib/src/core --min-coverage=80 --warn-coverage=60',
     );
     report.writeln();
-    report.writeln('# All features');
+    report.writeln('# Exclude generated files');
     report.writeln(
-      'dart analyzer/coverage_tool.dart lib/src/core --fix --json --min-coverage=80',
+      'dart run test_reporter:analyze_coverage lib/src/core --exclude "*.g.dart" --exclude "*.freezed.dart"',
+    );
+    report.writeln();
+    report.writeln('# Full analysis with all options');
+    report.writeln(
+      'dart run test_reporter:analyze_coverage lib/src/core --fix --json --min-coverage=80 --verbose',
     );
     report.writeln('```');
     report.writeln();
@@ -2057,14 +2081,14 @@ class CoverageAnalyzer {
     // Footer
     report.writeln('---');
     report.writeln(
-      '*Generated by coverage_tool.dart v2.0 - Enhanced with 11 new features*',
+      '*Generated by analyze_coverage v3.1 - Comprehensive coverage analysis*',
     );
 
     // Build JSON export with all coverage metrics
     final jsonData = <String, dynamic>{
       'metadata': {
-        'tool': 'coverage_tool',
-        'version': '2.0',
+        'tool': 'analyze_coverage',
+        'version': '3.1',
         'generated': now.toIso8601String(),
         'module': libPath,
         'test_path': testPath,
@@ -2833,29 +2857,30 @@ class FileAnalysis {
 
 /// Prints usage information with ArgParser-generated help text
 void _printUsage(ArgParser parser) {
-  print('Usage: dart coverage_tool.dart [options] [module_path]');
+  print('Usage: analyze_coverage [options] [module_path]');
   print('');
   print('Options:');
   print(parser.usage);
   print('');
   print('Examples:');
   print('  # Basic usage');
-  print('  dart coverage_tool.dart performance');
+  print('  analyze_coverage lib/src');
   print('');
   print('  # With auto-fix');
-  print('  dart coverage_tool.dart lib/src/core --fix');
+  print('  analyze_coverage lib/src/core --fix');
   print('');
   print('  # Coverage thresholds');
-  print('  dart coverage_tool.dart --min-coverage=80 --warn-coverage=60');
+  print('  analyze_coverage lib/src --min-coverage=80 --warn-coverage=60');
   print('');
   print('  # Exclude generated files');
   print(
-      '  dart coverage_tool.dart --exclude "*.g.dart" --exclude "*.freezed.dart"');
+      '  analyze_coverage lib/src --exclude "*.g.dart" --exclude "*.freezed.dart"');
   print('');
-  print('  # Full analysis with all features');
-  print('  dart coverage_tool.dart --fix --json --min-coverage=80');
+  print('  # Full analysis with verbose output');
+  print('  analyze_coverage lib/src --fix --json --min-coverage=80 --verbose');
   print('');
-  print('Note: Coverage badge is automatically embedded in every report');
+  print('  # Using as project dependency');
+  print('  dart run test_reporter:analyze_coverage lib/src --fix');
 }
 
 /// Creates and configures the ArgParser for analyze_coverage
@@ -2885,6 +2910,12 @@ ArgParser _createArgParser() {
     ..addFlag(
       'minimal-checklist',
       help: 'Generate compact checklist format',
+      negatable: false,
+    )
+    ..addFlag(
+      'verbose',
+      abbr: 'v',
+      help: 'Enable verbose output for detailed debugging',
       negatable: false,
     )
     ..addFlag(
@@ -2972,6 +3003,7 @@ void main(List<String> args) async {
   // Extract flag values from parsed results
   final autoFix = results['fix'] as bool;
   final skipReport = !(results['report'] as bool);
+  final verbose = results['verbose'] as bool;
   // Stub flags removed in Phase 3 - defaults from CoverageAnalyzerConfig used instead
   final branchCoverage = false; // results['branch'] as bool;
   final incremental = false; // results['incremental'] as bool;
@@ -3088,6 +3120,7 @@ void main(List<String> args) async {
     ),
     baselineFile: baselineFile,
     explicitModuleName: explicitModuleName,
+    verbose: verbose,
   );
 
   try {

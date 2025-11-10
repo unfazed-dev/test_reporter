@@ -244,7 +244,7 @@ Options:
 ### Coverage Analyzer Options
 
 ```bash
-Usage: dart coverage_tool.dart [options] [module_path]
+Usage: analyze_coverage [options] [module_path]
 
 Basic Options:
   --lib <path>          Path to source files (default: lib/src, alias: --source-path)
@@ -253,6 +253,7 @@ Basic Options:
   --test-path           Explicit test path override
   --module-name         Custom module name for reports
   --fix                 Generate missing test cases automatically
+  --verbose, -v         Enable verbose output for detailed debugging
   --no-report           Skip generating coverage report
   --help, -h            Show this help message
 

@@ -203,6 +203,26 @@ void main() {
 
       print('✓ Test 9: Rest arguments work');
     });
+
+    test('Test 10: --verbose flag should be supported', () {
+      // TDD RED Phase: This test SHOULD FAIL initially
+      // analyze_suite passes --verbose to analyze_coverage
+      // but analyze_coverage doesn't support it yet
+
+      // Parse with --verbose flag
+      final results = parser.parse(['--verbose']);
+
+      // Verify verbose flag is parsed correctly
+      expect(results['verbose'], isTrue,
+          reason: '--verbose should be supported for consistency with analyze_tests');
+
+      // Verbose should default to false when not provided
+      final resultsNoVerbose = parser.parse([]);
+      expect(resultsNoVerbose['verbose'], isFalse,
+          reason: 'verbose should default to false');
+
+      print('✓ Test 10: --verbose flag supported');
+    });
   });
 }
 
@@ -232,6 +252,12 @@ ArgParser _createAnalyzeCoverageArgParser() {
     ..addFlag(
       'minimal-checklist',
       help: 'Generate compact checklist format',
+      negatable: false,
+    )
+    ..addFlag(
+      'verbose',
+      abbr: 'v',
+      help: 'Enable verbose output for detailed debugging',
       negatable: false,
     )
     ..addFlag(

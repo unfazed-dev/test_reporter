@@ -216,7 +216,7 @@ class ReportUtils {
     bool verbose = false,
     String? baseDir,
   }) async {
-    // NOTE: Cleanup is now handled by the calling code (coverage_tool, test_analyzer, run_all)
+    // NOTE: Cleanup is now handled by the calling code (analyze_coverage, analyze_tests, analyze_suite)
     // This prevents accidentally deleting reports that need to be retained for the unified report
 
     final reportPath = await getReportPath(
