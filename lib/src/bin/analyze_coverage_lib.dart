@@ -1223,7 +1223,8 @@ class CoverageAnalyzer {
     if (isFlutterProject) {
       // Flutter project
       command = 'flutter';
-      args = ['test', '--coverage', '--no-test-assets'];
+      args = ['test', '--coverage'];
+      // Note: Removed --no-test-assets to allow widget test coverage
       if (branchCoverage) {
         args.add('--branch-coverage');
       }
@@ -1254,9 +1255,15 @@ class CoverageAnalyzer {
     );
 
     if (result.exitCode != 0) {
-      print('  ⚠️  Some tests failed:');
+      print('  ⚠️  Some tests failed (exit code: ${result.exitCode})');
+      print('     Coverage may be incomplete or unavailable');
       if (result.stderr.toString().isNotEmpty) {
+        print('     Error output:');
         print(result.stderr);
+      }
+      if (verbose && result.stdout.toString().isNotEmpty) {
+        print('[VERBOSE] Test output:');
+        print(result.stdout);
       }
     } else {
       print('  ✅ All tests passed');
@@ -1269,11 +1276,31 @@ class CoverageAnalyzer {
 
     // Check if lcov.info was generated
     final lcovFile = File('coverage/lcov.info');
-    if (!lcovFile.existsSync() || lcovFile.lengthSync() == 0) {
-      print('  ⚠️  Coverage file is empty, attempting alternative method...');
+    if (!lcovFile.existsSync()) {
+      print('  ❌ Coverage file not found!');
+      if (verbose) {
+        print('[VERBOSE] Working directory: ${Directory.current.path}');
+        print('[VERBOSE] Expected file: ${lcovFile.absolute.path}');
+        print('[VERBOSE] Test command exit code: ${result.exitCode}');
+      }
+      if (result.exitCode != 0) {
+        print('     Likely cause: Test failures prevented coverage generation');
+        print('     Fix failing tests first, then coverage will be collected');
+      }
+      print('  ⚠️  Attempting alternative coverage collection method...');
+      await runAlternativeCoverage();
+    } else if (lcovFile.lengthSync() == 0) {
+      print('  ⚠️  Coverage file is empty (0 bytes)');
+      if (verbose) {
+        print('[VERBOSE] File exists at: ${lcovFile.absolute.path}');
+      }
+      print('  ⚠️  Attempting alternative coverage collection method...');
       await runAlternativeCoverage();
     } else {
       print('  ✅ Coverage data generated: ${lcovFile.lengthSync()} bytes');
+      if (verbose) {
+        print('[VERBOSE] Coverage file: ${lcovFile.absolute.path}');
+      }
     }
   }
 
@@ -2048,10 +2075,12 @@ class CoverageAnalyzer {
     report.writeln('dart run test_reporter:analyze_coverage lib/src/core');
     report.writeln();
     report.writeln('# With auto-fix');
-    report.writeln('dart run test_reporter:analyze_coverage lib/src/core --fix');
+    report
+        .writeln('dart run test_reporter:analyze_coverage lib/src/core --fix');
     report.writeln();
     report.writeln('# With verbose output');
-    report.writeln('dart run test_reporter:analyze_coverage lib/src/core --verbose');
+    report.writeln(
+        'dart run test_reporter:analyze_coverage lib/src/core --verbose');
     report.writeln();
     report.writeln('# With baseline comparison');
     report.writeln(
@@ -2059,7 +2088,8 @@ class CoverageAnalyzer {
     );
     report.writeln();
     report.writeln('# Export JSON report');
-    report.writeln('dart run test_reporter:analyze_coverage lib/src/core --json');
+    report
+        .writeln('dart run test_reporter:analyze_coverage lib/src/core --json');
     report.writeln();
     report.writeln('# With coverage thresholds');
     report.writeln(
