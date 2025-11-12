@@ -51,33 +51,25 @@ void main() {
       expect(orchestrator.parallel, isTrue);
     });
 
-    test('should detect source path from test path correctly', () {
-      final orchestrator = TestOrchestrator(testPath: 'test/');
+    test('should map test paths to lib paths correctly', () {
+      final orchestrator1 = TestOrchestrator(testPath: 'test/');
+      final orchestrator2 = TestOrchestrator(testPath: 'test/integration');
+      final orchestrator3 = TestOrchestrator(testPath: 'test/ui');
+      final orchestrator4 = TestOrchestrator(testPath: 'test/src');
 
-      final sourcePath1 = orchestrator.detectSourcePath('test/');
-      final sourcePath2 = orchestrator.detectSourcePath('test/integration/');
-      final sourcePath3 = orchestrator.detectSourcePath('lib');
-      final sourcePath4 = orchestrator.detectSourcePath('lib/src/');
-
-      expect(sourcePath1, equals('lib/src'));
-      expect(sourcePath2, equals('lib/src'));
-      expect(sourcePath3, equals('lib/src'));
-      expect(sourcePath4, equals('lib/src/')); // Already has trailing slash
+      expect(orchestrator1.getSourcePath(), equals('lib/'));
+      expect(orchestrator2.getSourcePath(), equals('lib/integration'));
+      expect(orchestrator3.getSourcePath(), equals('lib/ui'));
+      expect(orchestrator4.getSourcePath(), equals('lib/src'));
     });
 
-    test('should detect test path from source path correctly', () {
-      final orchestrator = TestOrchestrator(testPath: 'test/');
+    test('should respect explicit source path override', () {
+      final orchestrator = TestOrchestrator(
+        testPath: 'test/ui',
+        sourcePathOverride: 'lib/app/ui',
+      );
 
-      final testPath1 = orchestrator.detectTestPath('lib/src/');
-      final testPath2 = orchestrator.detectTestPath('lib/src/utils/');
-      final testPath3 =
-          orchestrator.detectTestPath('lib/src/utils/report_utils.dart');
-      final testPath4 = orchestrator.detectTestPath('test/');
-
-      expect(testPath1, equals('test/src/'));
-      expect(testPath2, equals('test/src/utils/'));
-      expect(testPath3, equals('test/src/utils/report_utils_test.dart'));
-      expect(testPath4, equals('test/'));
+      expect(orchestrator.getSourcePath(), equals('lib/app/ui'));
     });
 
     test('should extract module name correctly', () {

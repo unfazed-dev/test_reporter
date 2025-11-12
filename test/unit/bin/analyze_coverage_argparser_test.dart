@@ -214,7 +214,8 @@ void main() {
 
       // Verify verbose flag is parsed correctly
       expect(results['verbose'], isTrue,
-          reason: '--verbose should be supported for consistency with analyze_tests');
+          reason:
+              '--verbose should be supported for consistency with analyze_tests');
 
       // Verbose should default to false when not provided
       final resultsNoVerbose = parser.parse([]);
