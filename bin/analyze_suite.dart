@@ -99,6 +99,12 @@ void main(List<String> arguments) async {
     print(parser.usage);
     print(
         '\nNote: Reports are ALWAYS generated (this tool\'s primary purpose).');
+    print('      Generates 4 reports in tests_reports/:');
+    print('        - quality/      (coverage analysis)');
+    print('        - reliability/  (test reliability)');
+    print('        - failures/     (failed tests, if any)');
+    print('        - suite/        (unified dashboard)');
+    print('');
     print('      Use individual tools (analyze_tests, analyze_coverage) with');
     print('      --no-report if you need to skip report generation.');
     exit(0);

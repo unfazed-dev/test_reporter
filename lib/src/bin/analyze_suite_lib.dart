@@ -17,10 +17,15 @@
 /// 3. Combines results into a single comprehensive report
 /// 4. Provides unified insights and recommendations
 ///
-/// ## Report Output
-/// - Saves to `tests_reports/`
-/// - Format: `{module_name}_report@HHMM_DDMMYY.md`
-/// - Includes both markdown (human-readable) and JSON (machine-parseable)
+/// ## Report Output - Generates 4 Reports
+/// All reports are saved to `tests_reports/` with subdirectories:
+/// - `quality/` - Coverage analysis report (from analyze_coverage)
+/// - `reliability/` - Test reliability report (from analyze_tests)
+/// - `failures/` - Failed tests report (conditional, if failures exist)
+/// - `suite/` - Unified dashboard report (combines all metrics)
+///
+/// Format: `{module_name}_report_{type}@HHMM_DDMMYY.md`
+/// Both markdown (human-readable) and JSON (machine-parseable) formats
 ///
 /// ## Exit Codes
 /// - 0: All tools succeeded
@@ -79,71 +84,27 @@ class TestOrchestrator {
   /// Extract module name from test path for report naming (or use explicit override)
   String extractModuleName() {
     return explicitModuleName ??
-        ModuleIdentifier.getQualifiedModuleName(testPath);
+        ModuleIdentifier.getQualifiedModuleName(testPathOverride ?? testPath);
   }
 
-  /// Detect source path from test path for coverage analysis
-  ///
-  /// Maps test paths to their corresponding source paths using simple transformations.
-  /// - lib paths pass through unchanged
-  /// - lib → lib/src
-  /// - test/ → lib/ (then to lib/src)
-  /// - test paths default to lib/src
-  String detectSourcePath(String inputPath) {
-    final normalized = inputPath.replaceAll(r'\', '/');
+  /// Maps test path to corresponding source path
+  /// Examples:
+  ///   - test/ui → lib/ui
+  ///   - test/src → lib/src
+  ///   - test/core → lib/core
+  /// Can be overridden with --source-path flag
+  String getSourcePath() {
+    // Use explicit override if provided
+    if (sourcePathOverride != null) return sourcePathOverride!;
 
-    // If already a lib path, return as-is (unless it's just 'lib')
-    if (normalized.startsWith('lib/')) {
-      return normalized;
-    }
-    if (normalized == 'lib') {
-      return 'lib/src';
+    // Map test/ subdirectories to lib/ subdirectories
+    if (testPath.startsWith('test/')) {
+      final subPath = testPath.substring('test/'.length);
+      return 'lib/$subPath'; // test/ui → lib/ui
     }
 
-    // test/ → lib/src
-    if (normalized == 'test/') {
-      return 'lib/src';
-    }
-
-    // Default fallback for all test paths
-    return 'lib/src';
-  }
-
-  /// Detect test path from source path for test analysis
-  ///
-  /// Maps source paths to their corresponding test paths using simple transformations.
-  /// - test paths pass through unchanged
-  /// - lib/src/foo.dart → test/src/foo_test.dart (preserves src/)
-  /// - lib/src/utils → test/src/utils (preserves src/)
-  /// - Other paths default to test/
-  String detectTestPath(String inputPath) {
-    final normalized = inputPath.replaceAll(r'\', '/');
-
-    // If already a test path, return as-is
-    if (normalized.startsWith('test/')) {
-      return normalized;
-    }
-
-    // Handle lib/src paths - preserve the src/ in the mapping
-    if (normalized.startsWith('lib/src/')) {
-      final relativePath = normalized.substring('lib/'.length); // Keep src/
-
-      // File: add _test suffix if not present
-      if (relativePath.endsWith('.dart')) {
-        if (relativePath.endsWith('_test.dart')) {
-          return 'test/$relativePath';
-        }
-        final baseName =
-            relativePath.substring(0, relativePath.length - '.dart'.length);
-        return 'test/${baseName}_test.dart';
-      }
-
-      // Directory
-      return 'test/$relativePath';
-    }
-
-    // Default fallback
-    return 'test/';
+    // Default fallback for non-test paths
+    return 'lib/';
   }
 
   Future<void> runAll() async {
@@ -168,9 +129,9 @@ class TestOrchestrator {
 
   Future<bool> runCoverageTool() async {
     try {
-      // Detect source path from test path for coverage analysis
-      final sourcePath = sourcePathOverride ?? detectSourcePath(testPath);
-      // Use the original testPath as the test path for coverage analyzer
+      // Use path mapping: test/ui → lib/ui (or explicit override)
+      final sourcePath = getSourcePath();
+      // Use explicit test path or the provided testPath as-is
       final actualTestPath = testPathOverride ?? testPath;
 
       if (verbose) {
@@ -221,50 +182,77 @@ class TestOrchestrator {
 
       final exitCode = await process.exitCode;
 
-      if (exitCode == 0) {
-        // Add small delay to ensure file is fully written
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-        print('  ✅ Coverage analysis complete');
+      // Add small delay to ensure file is fully written
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
-        // Extract coverage data from most recent report
-        final coverageReport = await findLatestReport('report_coverage');
-        if (verbose) print('  📊 Coverage report found: $coverageReport');
+      // ALWAYS attempt to read the report, regardless of exit code
+      // Exit codes indicate quality issues (low coverage), not report generation failure
+      final coverageReport = await findLatestReport('report_coverage');
 
-        if (coverageReport != null) {
-          final jsonData = await ReportUtils.extractJsonFromReport(
-            coverageReport,
-          );
-
-          if (verbose) {
-            print(
-                '  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
-            if (jsonData != null) {
-              print('  📋 JSON keys: ${jsonData.keys.toList()}');
-              print('  📊 Coverage summary: ${jsonData['summary']}');
-            }
-          }
-
-          if (jsonData != null) {
-            results['coverage'] = jsonData;
-            reportPaths['coverage'] = coverageReport;
-
-            if (verbose) {
-              print('  📄 Coverage report retained: $coverageReport');
-            }
-          } else {
-            if (verbose)
-              print('  ⚠️  Failed to extract JSON from coverage report');
-          }
-        } else {
-          if (verbose) print('  ⚠️  No coverage report found');
+      if (coverageReport == null) {
+        print('  ❌ No coverage report generated - tool may have crashed');
+        if (verbose) {
+          print('[VERBOSE] Expected report in tests_reports/quality/');
+          print('[VERBOSE] Tool exit code: $exitCode');
         }
-
-        return true;
-      } else {
-        print('  ❌ Coverage analysis failed with exit code $exitCode');
         failures.add('analyze_coverage');
         return false;
       }
+
+      if (verbose) print('  📊 Coverage report found: $coverageReport');
+
+      // Extract JSON data from report
+      final jsonData = await ReportUtils.extractJsonFromReport(coverageReport);
+
+      if (jsonData == null) {
+        print('  ❌ Failed to extract data from coverage report');
+        if (verbose) print('[VERBOSE] Report file may be corrupted');
+        failures.add('analyze_coverage');
+        return false;
+      }
+
+      if (verbose) {
+        print('  🔍 JSON extraction: SUCCESS');
+        print('  📋 JSON keys: ${jsonData.keys.toList()}');
+      }
+
+      // Validate that coverage data is actually present
+      final summary = jsonData['summary'] as Map<String, dynamic>?;
+      if (summary != null) {
+        final totalLines = summary['total_lines'] as int? ?? 0;
+        final coverage = summary['coverage_percentage'] as double? ?? 0.0;
+
+        if (totalLines == 0) {
+          print('  ⚠️  Warning: Coverage data appears empty (0 lines tracked)');
+          if (verbose) {
+            print('[VERBOSE] This usually means coverage generation failed');
+            print('[VERBOSE] Check coverage tool output above for errors');
+          }
+        } else if (verbose) {
+          print(
+              '  ✅ Coverage data validated: $totalLines lines, ${coverage.toStringAsFixed(1)}% covered');
+        }
+      }
+
+      // Store coverage data
+      results['coverage'] = jsonData;
+      reportPaths['coverage'] = coverageReport;
+
+      if (verbose) {
+        print('  📄 Coverage report retained: $coverageReport');
+      }
+
+      // Log exit code as informational (not fatal)
+      if (exitCode == 0) {
+        print('  ✅ Coverage analysis complete');
+      } else if (exitCode == 1) {
+        print('  ⚠️  Coverage analysis complete (quality thresholds not met)');
+        // Don't add to failures - report was generated successfully
+      } else {
+        print('  ⚠️  Coverage analysis complete (exit code: $exitCode)');
+      }
+
+      return true; // Report was successfully read
     } catch (e) {
       print('  ❌ Coverage tool error: $e');
       failures.add('analyze_coverage');
@@ -274,8 +262,9 @@ class TestOrchestrator {
 
   Future<bool> runTestAnalyzer() async {
     try {
-      // Detect test path from input for test analysis
-      final actualTestPath = detectTestPath(testPath);
+      // Use provided test path as-is (no path detection)
+      // ✅ FIXED: Use testPathOverride if provided
+      final actualTestPath = testPathOverride ?? testPath;
 
       if (verbose) {
         print('  [INFO] Input path: $testPath');
@@ -325,82 +314,60 @@ class TestOrchestrator {
 
       final exitCode = await process.exitCode;
 
-      if (exitCode == 0) {
-        print('  ✅ Test analysis complete');
+      // Add small delay to ensure file is fully written
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
-        // Extract analyzer data from most recent report
-        final analyzerReport = await findLatestReport('report_tests');
-        if (verbose) print('  📊 Analyzer report found: $analyzerReport');
+      // ALWAYS attempt to read the report, regardless of exit code
+      // Exit codes indicate quality issues (test failures), not report generation failure
+      final analyzerReport = await findLatestReport('report_tests');
 
-        if (analyzerReport != null) {
-          final jsonData = await ReportUtils.extractJsonFromReport(
-            analyzerReport,
-          );
-
-          if (verbose) {
-            print(
-                '  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
-            if (jsonData != null) {
-              print('  📋 JSON keys: ${jsonData.keys.toList()}');
-              print('  📊 Test analysis summary: ${jsonData['summary']}');
-            }
-          }
-
-          if (jsonData != null) {
-            results['test_analysis'] = jsonData;
-            reportPaths['analyzer'] = analyzerReport;
-
-            if (verbose) {
-              print('  📄 Analyzer report retained: $analyzerReport');
-            }
-          } else {
-            if (verbose)
-              print('  ⚠️  Failed to extract JSON from analyzer report');
-          }
-        } else {
-          if (verbose) print('  ⚠️  No analyzer report found');
+      if (analyzerReport == null) {
+        print('  ❌ No test analysis report generated - tool may have crashed');
+        if (verbose) {
+          print('[VERBOSE] Expected report in tests_reports/reliability/');
+          print('[VERBOSE] Tool exit code: $exitCode');
         }
-
-        return true;
-      } else if (exitCode == 1) {
-        print('  ⚠️  Test analysis complete with test failures');
-
-        // Still extract data even if tests failed
-        final analyzerReport = await findLatestReport('report_tests');
-        if (verbose) print('  📊 Analyzer report found: $analyzerReport');
-
-        if (analyzerReport != null) {
-          final jsonData = await ReportUtils.extractJsonFromReport(
-            analyzerReport,
-          );
-
-          if (verbose) {
-            print(
-                '  🔍 JSON extraction result: ${jsonData != null ? 'SUCCESS' : 'FAILED'}');
-            if (jsonData != null) {
-              print('  📋 JSON keys: ${jsonData.keys.toList()}');
-            }
-          }
-
-          if (jsonData != null) {
-            results['test_analysis'] = jsonData;
-            reportPaths['analyzer'] = analyzerReport;
-            if (verbose)
-              print('  📄 Analyzer report retained: $analyzerReport');
-          } else {
-            if (verbose)
-              print('  ⚠️  Failed to extract JSON from analyzer report');
-          }
-        } else {
-          if (verbose) print('  ⚠️  No analyzer report found');
-        }
-
-        return true; // Don't consider test failures as tool failures
-      } else {
-        print('  ❌ Test analysis failed with exit code $exitCode');
         failures.add('analyze_tests');
         return false;
       }
+
+      if (verbose) print('  📊 Analyzer report found: $analyzerReport');
+
+      // Extract JSON data from report
+      final jsonData = await ReportUtils.extractJsonFromReport(analyzerReport);
+
+      if (jsonData == null) {
+        print('  ❌ Failed to extract data from test analysis report');
+        if (verbose) print('[VERBOSE] Report file may be corrupted');
+        failures.add('analyze_tests');
+        return false;
+      }
+
+      if (verbose) {
+        print('  🔍 JSON extraction: SUCCESS');
+        print('  📋 JSON keys: ${jsonData.keys.toList()}');
+        print('  📊 Test analysis summary: ${jsonData['summary']}');
+      }
+
+      // Store test analysis data
+      results['test_analysis'] = jsonData;
+      reportPaths['analyzer'] = analyzerReport;
+
+      if (verbose) {
+        print('  📄 Analyzer report retained: $analyzerReport');
+      }
+
+      // Log exit code as informational (not fatal)
+      if (exitCode == 0) {
+        print('  ✅ Test analysis complete');
+      } else if (exitCode == 1) {
+        print('  ⚠️  Test analysis complete (some tests failed)');
+        // Don't add to failures - report was generated successfully
+      } else {
+        print('  ⚠️  Test analysis complete (exit code: $exitCode)');
+      }
+
+      return true; // Report was successfully read
     } catch (e) {
       print('  ❌ Test analyzer error: $e');
       failures.add('analyze_tests');
@@ -640,7 +607,16 @@ class TestOrchestrator {
       report.writeln(
           '- 📈 **[Coverage Analysis](../quality/$coverageFile)** - Code coverage breakdown, untested code, testability');
     } else {
-      report.writeln('- 📈 **Coverage Analysis** - ⚠️ Not available');
+      // Provide context about why coverage is not available
+      if (failures.contains('analyze_coverage') && consistentFailures > 0) {
+        report.writeln(
+            '- 📈 **Coverage Analysis** - ⚠️ Not available (test failures prevented coverage generation)');
+      } else if (failures.contains('analyze_coverage')) {
+        report.writeln(
+            '- 📈 **Coverage Analysis** - ⚠️ Not available (coverage tool failed, check logs)');
+      } else {
+        report.writeln('- 📈 **Coverage Analysis** - ⚠️ Not available');
+      }
     }
     report.writeln();
 
@@ -699,28 +675,23 @@ class TestOrchestrator {
 
       print('  ✅ Unified report saved to: $reportPath');
 
-      // Delete intermediate reports (coverage and tests)
-      // The suite report already contains all their data in embedded JSON
-      if (verbose) print('\n🧹 Deleting intermediate reports...');
-
-      // Delete coverage report if exists
-      if (reportPaths.containsKey('coverage')) {
-        final coveragePath = reportPaths['coverage']!;
-        final coverageFile = File(coveragePath);
-        if (await coverageFile.exists()) {
-          await coverageFile.delete();
-          if (verbose) print('  ✅ Deleted: $coveragePath');
+      // ✅ CHANGED: Keep intermediate reports (coverage and reliability)
+      // Previously deleted to avoid clutter, but users expect all 4 reports:
+      // - quality/ (coverage)
+      // - reliability/ (test analysis)
+      // - failures/ (failed tests, conditional)
+      // - suite/ (unified dashboard)
+      //
+      // All reports are now retained for developer use.
+      if (verbose) {
+        print('\n📊 All reports retained:');
+        if (reportPaths.containsKey('coverage')) {
+          print('  ✅ Coverage report: ${reportPaths['coverage']}');
         }
-      }
-
-      // Delete test reliability report if exists
-      if (reportPaths.containsKey('analyzer')) {
-        final analyzerPath = reportPaths['analyzer']!;
-        final analyzerFile = File(analyzerPath);
-        if (await analyzerFile.exists()) {
-          await analyzerFile.delete();
-          if (verbose) print('  ✅ Deleted: $analyzerPath');
+        if (reportPaths.containsKey('analyzer')) {
+          print('  ✅ Reliability report: ${reportPaths['analyzer']}');
         }
+        print('  ✅ Suite report: $reportPath');
       }
 
       // Check if there are failures to determine if we need a failed report
@@ -758,9 +729,11 @@ class TestOrchestrator {
         verbose: verbose,
       );
 
-      // Clean up ALL empty subdirectories
-      if (verbose) print('\n🧹 Cleaning up empty report directories...');
-      await _cleanupEmptyDirectories(verbose);
+      // ✅ DISABLED: Don't cleanup "empty" directories
+      // This was deleting quality/ and reliability/ directories after reading reports
+      // We want to KEEP all 4 report directories with their reports
+      // if (verbose) print('\n🧹 Cleaning up empty report directories...');
+      // await _cleanupEmptyDirectories(verbose);
 
       if (verbose) print('  ✅ Cleanup complete');
     } catch (e) {
@@ -1296,25 +1269,7 @@ class TestOrchestrator {
 
   /// Clean up all empty report subdirectories
   ///
-  /// Checks reliability/, quality/, failures/, and suite/ subdirectories
-  /// and deletes them if they contain no reports
-  Future<void> _cleanupEmptyDirectories(bool verbose) async {
-    try {
-      final reportDir = await ReportUtils.getReportDirectory();
-      final subdirs = ['reliability', 'quality', 'failures', 'suite'];
-
-      for (final subdir in subdirs) {
-        final dir = Directory(p.join(reportDir, subdir));
-        if (await dir.exists()) {
-          final isEmpty = await dir.list().isEmpty;
-          if (isEmpty) {
-            await dir.delete();
-            if (verbose) print('  🗑️  Removed empty $subdir/ directory');
-          }
-        }
-      }
-    } catch (e) {
-      if (verbose) print('  ⚠️  Error cleaning up directories: $e');
-    }
-  }
+  // ✅ REMOVED: _cleanupEmptyDirectories() function
+  // This function was deleting report directories after reading them
+  // We want to keep all 4 report directories (quality/, reliability/, failures/, suite/)
 }

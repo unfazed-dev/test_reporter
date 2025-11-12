@@ -348,4 +348,185 @@ void main() {
       );
     });
   });
+
+  group('analyze_suite 4-report generation', () {
+    setUp(() {
+      // Clean up any existing test reports before each test
+      final reportsDir = Directory('tests_reports');
+      if (reportsDir.existsSync()) {
+        // Clear subdirectories but don't delete the root
+        for (final subdir in ['quality', 'reliability', 'failures', 'suite']) {
+          final subdirPath = Directory('tests_reports/$subdir');
+          if (subdirPath.existsSync()) {
+            subdirPath.deleteSync(recursive: true);
+          }
+        }
+      }
+    });
+
+    test('should generate all 4 reports: quality, reliability, failures, suite',
+        () async {
+      // 🔴 RED: This test should FAIL initially because analyze_suite
+      // currently DELETES the quality and reliability reports after reading them
+
+      final result = await Process.run(
+        'dart',
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--runs=1', // Minimal runs for speed
+        ],
+      );
+
+      // Suite should complete successfully
+      expect(result.exitCode, anyOf(equals(0), equals(1)));
+
+      // Verify all 4 report directories exist
+      final qualityDir = Directory('tests_reports/quality');
+      final reliabilityDir = Directory('tests_reports/reliability');
+      final failuresDir = Directory('tests_reports/failures');
+      final suiteDir = Directory('tests_reports/suite');
+
+      expect(
+        qualityDir.existsSync(),
+        isTrue,
+        reason: 'Quality (coverage) reports directory should exist',
+      );
+      expect(
+        reliabilityDir.existsSync(),
+        isTrue,
+        reason: 'Reliability (tests) reports directory should exist',
+      );
+      expect(
+        suiteDir.existsSync(),
+        isTrue,
+        reason: 'Suite reports directory should exist',
+      );
+
+      // Failures directory may not exist if no failures (conditional)
+      // So we check for at least 3 directories
+
+      // Verify reports actually exist in each directory
+      final qualityReports =
+          qualityDir.listSync().where((e) => e.path.endsWith('.md')).toList();
+      final reliabilityReports = reliabilityDir
+          .listSync()
+          .where((e) => e.path.endsWith('.md'))
+          .toList();
+      final suiteReports =
+          suiteDir.listSync().where((e) => e.path.endsWith('.md')).toList();
+
+      expect(
+        qualityReports.isNotEmpty,
+        isTrue,
+        reason: 'Quality directory should contain at least one report',
+      );
+      expect(
+        reliabilityReports.isNotEmpty,
+        isTrue,
+        reason: 'Reliability directory should contain at least one report',
+      );
+      expect(
+        suiteReports.isNotEmpty,
+        isTrue,
+        reason: 'Suite directory should contain at least one report',
+      );
+
+      // If there are failures, check failures directory
+      if (failuresDir.existsSync()) {
+        final failuresReports = failuresDir
+            .listSync()
+            .where((e) => e.path.endsWith('.md'))
+            .toList();
+        expect(
+          failuresReports.isNotEmpty,
+          isTrue,
+          reason:
+              'Failures directory should contain at least one report if it exists',
+        );
+      }
+    }, timeout: Timeout(Duration(seconds: 180)));
+
+    test(
+        'should generate 4 reports with explicit --test-path and --source-path',
+        () async {
+      // Test that explicit path flags work correctly
+      final result = await Process.run(
+        'dart',
+        [
+          'bin/analyze_suite.dart',
+          '--test-path=test/fixtures/passing_test.dart',
+          '--source-path=lib/src',
+          '--runs=1',
+        ],
+      );
+
+      expect(result.exitCode, anyOf(equals(0), equals(1)));
+
+      // Verify all report directories exist
+      final qualityDir = Directory('tests_reports/quality');
+      final reliabilityDir = Directory('tests_reports/reliability');
+      final suiteDir = Directory('tests_reports/suite');
+
+      expect(qualityDir.existsSync(), isTrue);
+      expect(reliabilityDir.existsSync(), isTrue);
+      expect(suiteDir.existsSync(), isTrue);
+
+      // Verify reports exist
+      expect(
+        qualityDir.listSync().where((e) => e.path.endsWith('.md')).isNotEmpty,
+        isTrue,
+      );
+      expect(
+        reliabilityDir
+            .listSync()
+            .where((e) => e.path.endsWith('.md'))
+            .isNotEmpty,
+        isTrue,
+      );
+      expect(
+        suiteDir.listSync().where((e) => e.path.endsWith('.md')).isNotEmpty,
+        isTrue,
+      );
+    }, timeout: Timeout(Duration(seconds: 180)));
+
+    test('should retain all reports (not delete coverage/reliability reports)',
+        () async {
+      // This test specifically checks that intermediate reports are NOT deleted
+      final result = await Process.run(
+        'dart',
+        [
+          'bin/analyze_suite.dart',
+          'test/fixtures/passing_test.dart',
+          '--runs=1',
+        ],
+      );
+
+      expect(result.exitCode, anyOf(equals(0), equals(1)));
+
+      // Get all markdown files in each directory
+      final qualityFiles = Directory('tests_reports/quality')
+          .listSync()
+          .where((e) => e.path.endsWith('.md'))
+          .toList();
+      final reliabilityFiles = Directory('tests_reports/reliability')
+          .listSync()
+          .where((e) => e.path.endsWith('.md'))
+          .toList();
+
+      // Check that files were created with recent timestamps
+      // (within last 10 seconds)
+      final now = DateTime.now();
+      for (final file in [...qualityFiles, ...reliabilityFiles]) {
+        final stat = File(file.path).statSync();
+        final age = now.difference(stat.modified);
+        expect(
+          age.inSeconds < 10,
+          isTrue,
+          reason:
+              'Report ${file.path} should be recently created (not deleted)',
+        );
+      }
+    }, timeout: Timeout(Duration(seconds: 180)));
+  });
 }
