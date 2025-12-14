@@ -217,7 +217,7 @@ print('Coverage: ${pct.toStringAsFixed(1)}%');
 | 1 | Test failures or threshold violations |
 | 2 | Tool error (bad arguments, etc.) |
 
-See `templates/github-actions.yml` for complete workflow.
+See `references/workflows.md` for complete CI workflow examples.
 
 ## Troubleshooting
 
