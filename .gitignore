@@ -20,3 +20,4 @@ coverage/
 # Claude Code configuration (local only)
 .claude/
 .agent/
+CLAUDE.md
