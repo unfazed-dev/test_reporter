@@ -57,7 +57,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete details.
 
 ## Features
 
-### >� Test Analyzer (`analyze_tests`)
+### 🧪 Test Analyzer (`analyze_tests`)
 - **Flaky Test Detection** - Runs tests multiple times to identify intermittent failures
 - **Pattern Recognition** - Detects null errors, timeouts, assertions, type errors, etc.
 - **Performance Profiling** - Identifies slow tests and performance bottlenecks
@@ -66,17 +66,14 @@ See [CHANGELOG.md](CHANGELOG.md) for complete details.
 - **Watch Mode** - Continuous testing with auto re-run on file changes
 - **Actionable Checklists** - 3-tier priority checklists (🔴 failing, 🟠 flaky, 🟡 slow)
 
-### =� Coverage Analyzer (`analyze_coverage`)
-- **Line & Branch Coverage** - Comprehensive coverage analysis
+### 📊 Coverage Analyzer (`analyze_coverage`)
+- **Line Coverage** - Comprehensive line-by-line coverage analysis
 - **Auto-Fix Generation** - Automatically generate missing test cases with `--fix`
-- **Incremental Analysis** - Only analyze changed files (git diff)
 - **Coverage Thresholds** - Set minimum/warning thresholds with failure on decrease
-- **Mutation Testing** - Verify test effectiveness by simulating code mutations
-- **Parallel Execution** - Speed up analysis with parallel test runs
 - **JSON Export** - Machine-readable coverage reports
 - **Actionable Checklists** - File-by-file test coverage action items
 
-### = Failure Extractor (`extract_failures`)
+### 📋 Failure Extractor (`extract_failures`)
 - **Failed Test Detection** - Parses JSON reporter output to identify failures
 - **Smart Rerun Commands** - Generates optimized commands to rerun only failed tests
 - **Batch Processing** - Groups failed tests by file for efficient re-execution
@@ -84,7 +81,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete details.
 - **Detailed Reporting** - Comprehensive failure analysis and statistics
 - **Actionable Checklists** - 3-step triage workflow per failing test
 
-### <� Suite Analyzer (`analyze_suite`)
+### 🚀 Suite Analyzer (`analyze_suite`)
 - **Unified Orchestrator** - Runs all analysis tools in sequence
 - **Combined Reports** - Single comprehensive report with all insights
 - **Configurable Runs** - Set number of test runs for flaky detection
@@ -117,7 +114,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  test_reporter: ^3.0.0
+  test_reporter: ^3.1.0
 ```
 
 Then run:
@@ -307,28 +304,27 @@ All tools generate reports in the `tests_reports/` directory:
 
 ```
 tests_reports/
-   tests/         # Test reliability reports (analyze_tests)
-   coverage/      # Coverage analysis reports (analyze_coverage)
-   failures/      # Failed test extraction reports (extract_failures)
-   suite/         # Unified suite reports (analyze_suite)
+├──  tests/         # Test reliability reports (analyze_tests)
+├──  coverage/      # Coverage analysis reports (analyze_coverage)
+├──  failures/      # Failed test extraction reports (extract_failures)
+└──  suite/         # Unified suite reports (analyze_suite)
 ```
 
 ### Report Naming Convention
 
 Reports follow this pattern:
 ```
-{module_name}-{qualifier}_{tool}_{type}@YYYYMMDD-HHMM.{md|json}
+{module_name}-{qualifier}_report_{type}@HHMM_DDMMYY.{md|json}
 ```
 
 **Qualifiers**:
 - `-fo`: Folder analysis (e.g., `test/auth/` → `auth-fo`)
 - `-fi`: File analysis (e.g., `test/auth_test.dart` → `auth-fi`)
-- `-pr`: Project-wide analysis (e.g., `test/` → `test-pr`)
 
 **Examples**:
-- `auth-fo_report_coverage@20251105-1435.md` (folder coverage analysis)
-- `auth-service-fi_report_tests@20251105-0920.json` (file test analysis)
-- `all-tests-pr_report_suite@20251105-1000.md` (project-wide suite report)
+- `auth-fo_report_coverage@1435_041125.md` (folder coverage analysis)
+- `auth-service-fi_report_tests@0920_041125.json` (file test analysis)
+- `test-fo_report_suite@1000_041125.md` (project-wide suite report)
 
 **Module Name Generation**:
 - Automatically extracted from input path using ModuleIdentifier
@@ -359,7 +355,7 @@ All tools now use centralized utilities for consistency:
 
 **ModuleIdentifier** (`lib/src/utils/module_identifier.dart`):
 - Consistent qualified module naming
-- Generates `-fo` (folder), `-fi` (file), `-pr` (project) suffixes
+- Generates `-fo` (folder) and `-fi` (file) suffixes
 - Parses qualified names back to components
 
 **ReportManager** (`lib/src/utils/report_manager.dart`):
@@ -371,6 +367,11 @@ All tools now use centralized utilities for consistency:
 - Cross-tool report discovery
 - Query reports by toolName, reportType, or moduleName
 - Session-wide report tracking
+
+**ChecklistUtils** (`lib/src/utils/checklist_utils.dart`):
+- Interactive GitHub-flavored markdown checklists
+- 3-tier priority system (critical, important, optional)
+- Reusable components for all 4 analyzers
 
 ### Entry Point Pattern
 
@@ -459,8 +460,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 For bugs, feature requests, or questions:
 1. Check existing [issues](https://github.com/unfazed-dev/test_reporter/issues)
 2. Create a new issue with detailed information
-3. For development questions, see [.agent/](agent/) documentation
+3. For development questions, see [.agent/](.agent/) documentation
 
 ---
 
-Made with d for the Flutter/Dart community
+Made with ❤️ for the Flutter/Dart community
