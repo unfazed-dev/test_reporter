@@ -16,3 +16,7 @@ coverage/
 # Reports (generated) - only at root level
 /reports/
 /tests_reports/
+
+# Claude Code configuration (local only)
+.claude/
+.agent/
