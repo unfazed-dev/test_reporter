@@ -1,6 +1,5 @@
 # test_reporter
 
-[![pub package](https://img.shields.io/pub/v/test_reporter.svg)](https://pub.dev/packages/test_reporter)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Comprehensive Flutter/Dart test reporting toolkit providing coverage analysis, flaky test detection, failure extraction, and unified reporting. Built for developers who want deep insights into their test suites.
