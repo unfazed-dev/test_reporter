@@ -409,14 +409,10 @@ typedef AnalysisResult = ({
 final (success: ok, totalTests: count) = await runAnalysis();
 ```
 
-For more details, see [CLAUDE.md](CLAUDE.md).
-
 ## Contributing
 
-Contributions are welcome! This project has comprehensive development documentation:
+Contributions are welcome!
 
-- **CLAUDE.md** - Quick reference for AI-assisted development
-- **.agent/** - Detailed SOPs and templates for extending functionality
 
 ### Development Setup
 
@@ -435,31 +431,21 @@ dart analyze
 dart format .
 ```
 
-### Adding Features
-
-See SOPs in `.agent/guides/`:
-- Adding new failure patterns
-- Creating new analyzers
-- Extending report types
-- Publishing releases
-
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+BSD 3 License - see [LICENSE](LICENSE) file for details.
 
 ## Links
 
 - **Repository**: https://github.com/unfazed-dev/test_reporter
 - **Issues**: https://github.com/unfazed-dev/test_reporter/issues
 - **Pub.dev**: https://pub.dev/packages/test_reporter
-- **Documentation**: See [CLAUDE.md](CLAUDE.md) and [.agent/](.agent/)
 
 ## Support
 
 For bugs, feature requests, or questions:
 1. Check existing [issues](https://github.com/unfazed-dev/test_reporter/issues)
 2. Create a new issue with detailed information
-3. For development questions, see [.agent/](.agent/) documentation
 
 ---
 
